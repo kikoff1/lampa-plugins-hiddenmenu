@@ -2,41 +2,34 @@
     const plugin_id = 'hide_left_menu_items';
     const plugin = {
         name: plugin_id,
-        version: '1.1.0',
+        version: '1.2.0',
         description: 'Дозволяє обрати, які пункти меню зліва ховати',
         run() {
             const saved = Lampa.Storage.get(plugin_id, []);
 
-            const updateMenu = () => {
-                Lampa.Listener.follow('menu', (event) => {
-                    if (event.type === 'build') {
-                        event.body = event.body.filter(item => !saved.includes(item.title));
+            // Без подій — переписуємо сам метод побудови
+            const originalBuild = Lampa.Menu.main;
+
+            Lampa.Menu.main = function () {
+                const menu = originalBuild.apply(this, arguments);
+                menu.forEach((item, i) => {
+                    if (saved.includes(item.title)) {
+                        menu.splice(i, 1);
                     }
                 });
+                return menu;
             };
 
-            updateMenu();
-
-            // Додаємо сторінку в налаштуваннях
+            // Панель налаштувань
             Lampa.SettingsApi.add({
                 component: plugin_id,
                 name: 'Меню (зліва)',
                 description: 'Оберіть, які пункти меню зліва приховати',
                 onRender: (body) => {
-                    // Всі можливі пункти меню, які можуть бути присутні
                     const possibleItems = [
-                        'Головна',
-                        'Фільми',
-                        'Серіали',
-                        'Аніме',
-                        'Мультфільми',
-                        'ТБ',
-                        'Торренти',
-                        'Історія',
-                        'Вибране',
-                        'Стрічка',
-                        'Релізи',
-                        'Спорт',
+                        'Головна', 'Фільми', 'Серіали', 'Аніме',
+                        'Мультфільми', 'ТБ', 'Торренти', 'Історія',
+                        'Вибране', 'Стрічка', 'Релізи', 'Спорт',
                         'Плейлисти'
                     ];
 
@@ -47,27 +40,20 @@
                         item.find('.settings-param__name').text(title);
                         item.on('change', (e) => {
                             const checked = e.currentTarget.querySelector('input').checked;
-                            if (checked) {
-                                if (!saved.includes(title)) saved.push(title);
-                            } else {
+                            if (checked && !saved.includes(title)) saved.push(title);
+                            else if (!checked) {
                                 const index = saved.indexOf(title);
                                 if (index > -1) saved.splice(index, 1);
                             }
                             Lampa.Storage.set(plugin_id, saved);
+                            window.location.reload(); // перезавантажує додаток для оновлення меню
                         });
                         body.append(item);
                     });
                 }
             });
 
-            // Додаємо пункт у список плагінів
             Lampa.Plugin.create(plugin_id, {
                 title: 'Сховати пункти з лівого меню',
                 version: plugin.version,
                 description: plugin.description
-            });
-        }
-    };
-
-    Lampa.Plugin.register(plugin);
-})();
