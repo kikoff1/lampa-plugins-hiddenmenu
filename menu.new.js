@@ -17,6 +17,8 @@
         'Спорт'
     ];
 
+    let lastSettings = {};
+
     function initPlugin() {
         if (window.plugin_hide_menu_ready) return;
         window.plugin_hide_menu_ready = true;
@@ -45,45 +47,10 @@
             });
         });
 
-        // Слухаємо зміну налаштувань
-        Lampa.Listener.follow('settings', e => {
-            if (e.type === "change" && e.component === "hide_menu") {
-                updateMenuVisibility();
-            }
-        });
+        // Періодично перевіряємо, чи змінилися налаштування
+        setInterval(() => {
+            const current = Lampa.Storage.get("hide_menu") || {};
+            const changed = JSON.stringify(current) !== JSON.stringify(lastSettings);
 
-        updateMenuVisibility();
-    }
-
-    // Оновлюємо видимість пунктів меню на основі збережених налаштувань
-    function updateMenuVisibility() {
-        const menuItems = document.querySelectorAll(menuSelector);
-        const userSettings = Lampa.Storage.get("hide_menu") || {};
-
-        menuItems.forEach(item => {
-            const textElem = item.querySelector('.menu__text');
-            if (!textElem) return;
-
-            const text = textElem.textContent.trim();
-
-            if (controlItems.includes(text)) {
-                const paramName = `hide_menu_${text.toLowerCase().replace(/\s+/g, "_")}`;
-
-                // Якщо параметр не був збережений — не змінюємо
-                if (!(paramName in userSettings)) return;
-
-                const show = parseInt(userSettings[paramName]) === 1;
-                item.style.display = show ? "" : "none";
-            }
-        });
-    }
-
-    // Запускаємо плагін після готовності додатку
-    if (window.appready) {
-        initPlugin();
-    } else {
-        Lampa.Listener.follow("app", e => {
-            if (e.type === "ready") initPlugin();
-        });
-    }
-})();
+            if (changed) {
+                lastSettings = current;
