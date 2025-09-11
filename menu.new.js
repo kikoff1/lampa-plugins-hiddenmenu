@@ -55,9 +55,10 @@
         updateMenuVisibility();
     }
 
-    // Оновлюємо видимість пунктів меню на основі налаштувань
+    // Оновлюємо видимість пунктів меню на основі збережених налаштувань
     function updateMenuVisibility() {
         const menuItems = document.querySelectorAll(menuSelector);
+        const userSettings = Lampa.Storage.get("hide_menu") || {};
 
         menuItems.forEach(item => {
             const textElem = item.querySelector('.menu__text');
@@ -67,12 +68,11 @@
 
             if (controlItems.includes(text)) {
                 const paramName = `hide_menu_${text.toLowerCase().replace(/\s+/g, "_")}`;
-                const saved = Lampa.Storage.get(paramName, "hide_menu");
 
-                // Якщо користувач не змінював налаштування — не змінюємо відображення
-                if (saved === undefined || saved === null) return;
+                // Якщо параметр не був збережений — не змінюємо
+                if (!(paramName in userSettings)) return;
 
-                const show = parseInt(saved) === 1;
+                const show = parseInt(userSettings[paramName]) === 1;
                 item.style.display = show ? "" : "none";
             }
         });
