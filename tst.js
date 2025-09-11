@@ -15,8 +15,8 @@
         { id: 'history', title: 'Історія' },
         { id: 'subscribe', title: 'Підписки' },
         { id: 'schedule', title: 'Розклад' },
-        { id: 'torrents', title: 'Торренти' },
-        { id: 'sport', title: 'Спорт' }
+        { id: 'mytorrents', title: 'Торренти' },
+        { id: 'cub_sport', title: 'Спорт' }
     ];
 
     function addSettingsComponent() {
