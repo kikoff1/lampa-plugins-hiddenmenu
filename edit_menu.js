@@ -36,7 +36,7 @@
             </svg>`
         });
 
-        // Додаємо параметри для кожного пункту
+        // Додаємо параметри
         controlItems.forEach(title => {
             const paramName = `hide_menu_${title.toLowerCase().replace(/\s+/g, "_")}`;
 
@@ -45,20 +45,24 @@
                 param: {
                     name: paramName,
                     type: "select",
-                    values: { "1": "Показати", "0": "Приховати" },
-                    default: "1" // дефолт — Показати
+                    values: {
+                        "1": "Показати",
+                        "0": "Приховати"
+                    },
+                    default: "1"
                 },
                 field: { name: title }
             });
         });
 
-        // Оновлюємо меню при зміні налаштувань
-        Lampa.Listener.follow('settings', e => {
-            if (e.type === "change" && e.component === "hide_menu") {
+        // При зміні налаштувань – оновлюємо меню
+        Lampa.Listener.follow("settings", e => {
+            if (e.component === "hide_menu" && e.type === "change") {
                 updateMenuVisibility();
             }
         });
 
+        // Ініціалізація
         updateMenuVisibility();
     }
 
@@ -66,23 +70,23 @@
         const menuItems = document.querySelectorAll(menuSelector);
 
         menuItems.forEach(item => {
-            const textElem = item.querySelector('.menu__text');
+            const textElem = item.querySelector(".menu__text");
             if (!textElem) return;
 
             const text = textElem.textContent.trim();
-            if (!controlItems.includes(text)) return;
 
-            const paramName = `hide_menu_${text.toLowerCase().replace(/\s+/g, "_")}`;
-            const storedValue = Lampa.Storage.get(paramName, "hide_menu");
+            if (controlItems.includes(text)) {
+                const paramName = `hide_menu_${text.toLowerCase().replace(/\s+/g, "_")}`;
+                const value = Lampa.Storage.get(paramName, "hide_menu");
 
-            // Якщо значення не задане — вважаємо, що треба Показати (тобто НЕ ховати)
-            const show = storedValue === "0" ? false : true;
+                const show = (value === "0") ? false : true;
 
-            item.style.display = show ? "" : "none";
+                item.style.display = show ? "" : "none";
+            }
         });
     }
 
-    // Чекаємо на готовність застосунку
+    // Запуск при готовності застосунку
     if (window.appready) {
         initPlugin();
     } else {
