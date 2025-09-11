@@ -1,5 +1,5 @@
 (() => {
-    const menuSelector = ".menu .menu__list .menu__item";  // Селектор пунктів меню
+    const menuSelector = ".menu .menu__list .menu__item";  // селектор пунктів меню
     const controlItems = [
         'Стрічка',
         'Фільми',
@@ -15,16 +15,12 @@
         'Розклад',
         'Торренти',
         'Спорт'
-
     ];
 
-    let lastSettings = {};
-
     function initPlugin() {
-        if (window.plugin_hide_menu_ready) return;
+        if(window.plugin_hide_menu_ready) return;
         window.plugin_hide_menu_ready = true;
 
-        // Додаємо компонент в налаштування
         Lampa.SettingsApi.addComponent({
             component: "hide_menu",
             icon: `<svg height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -34,24 +30,57 @@
             name: "Приховати пункти меню"
         });
 
-        // Додаємо параметри для кожного пункту меню
         controlItems.forEach(title => {
             Lampa.SettingsApi.addParam({
                 component: "hide_menu",
                 param: {
                     name: `hide_menu_${title.toLowerCase().replace(/\s+/g, "_")}`,
                     type: "select",
-                    values: { 1: "Показати", 0: "Приховати" },
+                    values: {1: "Показати", 0: "Приховати"},
                     default: 1
                 },
-                field: { name: title }
+                field: {name: title}
             });
         });
 
-        // Періодично перевіряємо, чи змінилися налаштування
-        setInterval(() => {
-            const current = Lampa.Storage.get("hide_menu") || {};
-            const changed = JSON.stringify(current) !== JSON.stringify(lastSettings);
+        // Слухаємо зміну налаштувань і одразу оновлюємо меню
+        Lampa.Listener.follow('settings', e => {
+            if(e.type === "change" && e.component === "hide_menu") {
+                updateMenuVisibility();
+            }
+        });
 
-            if (changed) {
-                lastSettings = current;
+        updateMenuVisibility();
+    }
+
+    function updateMenuVisibility() {
+        const menuItems = document.querySelectorAll(menuSelector);
+
+        menuItems.forEach(item => {
+            const textElem = item.querySelector('.menu__text');
+            if(!textElem) return;
+            const text = textElem.textContent.trim();
+
+            if(controlItems.includes(text)) {
+                const paramName = `hide_menu_${text.toLowerCase().replace(/\s+/g, "_")}`;
+                const value = Lampa.Storage.get(paramName, "hide_menu");
+
+                // Відладка: перевіряємо що приходить в value
+                // console.log(paramName, value);
+
+                // Показуємо, якщо value не "0"
+                const show = value !== "0";
+
+                item.style.display = show ? "" : "none";
+            }
+        });
+    }
+
+    if(window.appready) {
+        initPlugin();
+    } else {
+        Lampa.Listener.follow("app", e => {
+            if(e.type === "ready") initPlugin();
+        });
+    }
+})();
