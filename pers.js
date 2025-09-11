@@ -22,9 +22,9 @@
             cs: "Osobnosti",
             bg: "Личности"
         },
-        subscribe: {
+        subscriibbe: {
             ru: "Подписаться",
-            en: "Subscribe",
+            en: "subscriibbe",
             uk: "Підписатися",
             be: "Падпісацца",
             pt: "Inscrever",
@@ -33,9 +33,9 @@
             cs: "Přihlásit se",
             bg: "Абонирай се"
         },
-        unsubscribe: {
+        unsubscriibbe: {
             ru: "Отписаться",
-            en: "Unsubscribe",
+            en: "Unsubscriibbe",
             uk: "Відписатися",
             be: "Адпісацца",
             pt: "Cancelar inscrição",
@@ -83,6 +83,7 @@
         return lang || 'en';
     }
     
+    // Обновленные функции работы с хранилищем
     function initStorage() {
         var current = Lampa.Storage.get(PERSONS_KEY);
         if (!current || current.length === 0) {
@@ -108,7 +109,7 @@
         return index === -1;
     }
     
-    function isPersonSubscribed(personId) {
+    function isPersonsubscriibbed(personId) {
         var personIds = getPersonIds();
         return personIds.includes(personId);
     }
@@ -116,21 +117,21 @@
     function addButtonToContainer(bottomBlock) {
         log("[PERSON-PLUGIN] Container found, adding button");
         
-        // Удаление существующей кнопки плагина
-        var existingButton = bottomBlock.querySelector('.button--subscribe-plugin');
+        // Удаление существующей кнопки
+        var existingButton = bottomBlock.querySelector('.button--subscriibbe-plugin');
         if (existingButton && existingButton.parentNode) {
             existingButton.parentNode.removeChild(existingButton);
         }
         
-        var isSubscribed = isPersonSubscribed(currentPersonId);
-        var buttonText = isSubscribed ? 
-            Lampa.Lang.translate('persons_plugin_unsubscribe') : 
-            Lampa.Lang.translate('persons_plugin_subscribe');
+        var issubscriibbed = isPersonsubscriibbed(currentPersonId);
+        var buttonText = issubscriibbed ? 
+            Lampa.Lang.translate('persons_plugin_unsubscriibbe') : 
+            Lampa.Lang.translate('persons_plugin_subscriibbe');
         
-        // Создание кнопки плагина
+        // Создание кнопки
         var button = document.createElement('div');
-        button.className = 'full-start__button selector button--subscribe-plugin';
-        button.classList.add(isSubscribed ? 'button--unsubscribe' : 'button--subscribe');
+        button.className = 'full-start__button selector button--subscriibbe-plugin';
+        button.classList.add(issubscriibbed ? 'button--unsubscriibbe' : 'button--subscriibbe');
         button.setAttribute('data-focusable', 'true');
         
         button.innerHTML = 
@@ -144,11 +145,11 @@
         button.addEventListener('hover:enter', function() {
             var wasAdded = togglePersonSubscription(currentPersonId);
             var newText = wasAdded ? 
-                Lampa.Lang.translate('persons_plugin_unsubscribe') : 
-                Lampa.Lang.translate('persons_plugin_subscribe');
+                Lampa.Lang.translate('persons_plugin_unsubscriibbe') : 
+                Lampa.Lang.translate('persons_plugin_subscriibbe');
             
-            button.classList.remove('button--subscribe', 'button--unsubscribe');
-            button.classList.add(wasAdded ? 'button--unsubscribe' : 'button--subscribe');
+            button.classList.remove('button--subscriibbe', 'button--unsubscriibbe');
+            button.classList.add(wasAdded ? 'button--unsubscriibbe' : 'button--subscriibbe');
             
             var span = button.querySelector('span');
             if (span) span.textContent = newText;
@@ -167,7 +168,7 @@
         return button;
     }
     
-    function addSubscribeButton() {
+    function addsubscriibbeButton() {
         if (!currentPersonId) {
             error("[PERSON-PLUGIN] Cannot add button: currentPersonId is null");
             return;
@@ -183,84 +184,301 @@
             
             // Используем setTimeout для проверки появления элемента
             var attempts = 0;
-            var interval = setInterval(function() {
-                bottomBlock = document.querySelector('.person-start__bottom');
+            var maxAttempts = 10;
+            
+            function checkContainer() {
                 attempts++;
-                if (bottomBlock) {
-                    addButtonToContainer(bottomBlock);
-                    clearInterval(interval);
+                var container = document.querySelector('.person-start__bottom');
+                
+                if (container) {
+                    addButtonToContainer(container);
+                } else if (attempts < maxAttempts) {
+                    setTimeout(checkContainer, 300);
+                } else {
+                    error("[PERSON-PLUGIN] Container not found after max attempts");
                 }
-                if (attempts > 50) { // после ~5 секунд отменяем попытки
-                    clearInterval(interval);
-                    error("[PERSON-PLUGIN] Container not found after multiple attempts");
-                }
-            }, 100);
+            }
+            
+            setTimeout(checkContainer, 300);
         }
+
     }
     
     function updatePersonsList() {
-        // Обновление списка персон, если это необходимо
-        // Пока заглушка
-        log("[PERSON-PLUGIN] Persons list updated");
+        // Проверяем, находимся ли мы на странице плагина
+        var activity = Lampa.Activity.active();
+        if (activity && activity.component === 'category_full' && activity.source === PLUGIN_NAME) {
+            log("[PERSON-PLUGIN] Updating persons list");
+            Lampa.Activity.reload();
+        }
     }
-    
-    // Добавление стилей для кнопок плагина
+
     function addButtonStyles() {
-        if (document.getElementById('subscribe-button-styles')) return;
+        if (document.getElementById('subscriibbe-button-styles')) return;
         
         var css = [
-            '.full-start__button.selector.button--subscribe-plugin.button--subscribe {',
+            '.full-start__button.selector.button--subscriibbe-plugin.button--subscriibbe {',
             '    color: #4CAF50;',
             '}',
-            '.full-start__button.selector.button--subscribe-plugin.button--unsubscribe {',
+            '',
+            '.full-start__button.selector.button--subscriibbe-plugin.button--unsubscriibbe {',
             '    color: #F44336;',
             '}'
-        ].join('\n');
+        ].join('');
         
         var style = document.createElement('style');
-        style.id = 'subscribe-button-styles';
+        style.id = 'subscriibbe-button-styles';
         style.textContent = css;
         document.head.appendChild(style);
     }
-    
-    // Добавление стилей для скрытия старой кнопки "подписаться" без влияния на новую кнопку
-    function addHideOldButtonStyles() {
-        if (document.getElementById('hide-old-subscribe-style')) return;
+
+    // Класс для сервиса персон в стиле ES5
+    function PersonsService() {
+        var self = this;
+        var cache = {};
         
-        var css = `
-            /* Скрываем старые кнопки "подписаться", которые не имеют класс .button--subscribe-plugin */
-            button.button--subscribe:not(.button--subscribe-plugin),
-            .full-start__button.button--subscribe:not(.button--subscribe-plugin) {
-                display: none !important;
+        this.list = function(params, onComplete, onError) {
+            var page = parseInt(params.page, 10) || 1;
+            var startIndex = (page - 1) * PAGE_SIZE;
+            var endIndex = startIndex + PAGE_SIZE;
+            
+            var personIds = getPersonIds();
+            var pageIds = personIds.slice(startIndex, endIndex);
+            
+            if (pageIds.length === 0) {
+                onComplete({
+                    results: [],
+                    page: page,
+                    total_pages: Math.ceil(personIds.length / PAGE_SIZE),
+                    total_results: personIds.length
+                });
+                return;
             }
-        `;
-        
-        var style = document.createElement('style');
-        style.id = 'hide-old-subscribe-style';
-        style.textContent = css;
-        document.head.appendChild(style);
+            
+            var loaded = 0;
+            var results = [];
+            var currentLang = getCurrentLanguage();
+            
+            for (var i = 0; i < pageIds.length; i++) {
+                (function(i) {
+                    var personId = pageIds[i];
+                    
+                    if (cache[personId]) {
+                        results.push(cache[personId]);
+                        checkComplete();
+                        return;
+                    }
+                    
+                    var path = 'person/' + personId + 
+                               '?api_key=' + Lampa.TMDB.key() + 
+                               '&language=' + currentLang;
+                    var url = Lampa.TMDB.api(path);
+                    
+                    new Lampa.Reguest().silent(url, function(response) {
+                        try {
+                            var json = typeof response === 'string' ? JSON.parse(response) : response;
+                            
+                            if (json && json.id) {
+                                var personCard = {
+                                    id: json.id,
+                                    title: json.name,
+                                    name: json.name,
+                                    poster_path: json.profile_path,
+                                    profile_path: json.profile_path,
+                                    type: "actor",
+                                    source: "tmdb",
+                                    original_type: "person",
+                                    media_type: "person",
+                                    known_for_department: json.known_for_department,
+                                    gender: json.gender || 0,
+                                    popularity: json.popularity || 0
+                                };
+                                
+                                cache[personId] = personCard;
+                                results.push(personCard);
+                            }
+                        } catch (e) {
+                            error("[PERSON-PLUGIN] Error parsing person data", e);
+                        }
+                        checkComplete();
+                    }, function(errorMsg) {
+                        error("[PERSON-PLUGIN] Error loading person data", errorMsg);
+                        checkComplete();
+                    });
+                })(i);
+            }
+            
+            function checkComplete() {
+                loaded++;
+                if (loaded >= pageIds.length) {
+                    var validResults = results.filter(function(item) {
+                        return !!item;
+                    });
+                    
+                    validResults.sort(function(a, b) {
+                        return pageIds.indexOf(a.id) - pageIds.indexOf(b.id);
+                    });
+                    
+                    onComplete({
+                        results: validResults,
+                        page: page,
+                        total_pages: Math.ceil(personIds.length / PAGE_SIZE),
+                        total_results: personIds.length
+                    });
+                }
+            }
+        };
     }
-    
+
     function startPlugin() {
+        // Добавляем переводы в Lampa
+        Lampa.Lang.add({
+            // Переводы для интерфейса плагина
+            persons_plugin_title: pluginTranslations.persons_title,
+            persons_plugin_subscriibbe: pluginTranslations.subscriibbe,
+            persons_plugin_unsubscriibbe: pluginTranslations.unsubscriibbe,
+            persons_plugin_not_found: pluginTranslations.persons_not_found,
+            
+            // Совместимость со старыми ключами
+            persons_title: pluginTranslations.persons_title
+        });
+        
         initStorage();
         
-        // Добавляем нужные стили
+        var personsService = new PersonsService();
+        Lampa.Api.sources[PLUGIN_NAME] = personsService;
+        
+        // Создаем пункт меню
+        var menuItem = $(
+            '<li class="menu__item selector" data-action="' + PLUGIN_NAME + '">' +
+                '<div class="menu__ico">' + ICON_SVG + '</div>' +
+                '<div class="menu__text">' + Lampa.Lang.translate('persons_plugin_title') + '</div>' +
+            '</li>'
+        );
+        
+        menuItem.on("hover:enter", function() {
+            Lampa.Activity.push({
+                component: "category_full",
+                source: PLUGIN_NAME,
+                title: Lampa.Lang.translate('persons_plugin_title'),
+                page: 1,
+                url: PLUGIN_NAME + '__main'
+            });
+        });
+        
+        $(".menu .menu__list").eq(0).append(menuItem);
+        
+        // Функция для ожидания появления контейнера
+        function waitForContainer(callback) {
+            log("[PERSON-PLUGIN] Waiting for container to appear...");
+            var attempts = 0;
+            var maxAttempts = 15; // 15 попыток * 200ms = 3 секунды
+            var containerSelector = '.person-start__bottom';
+            
+            function check() {
+                attempts++;
+                var container = document.querySelector(containerSelector);
+                
+                if (container) {
+                    log("[PERSON-PLUGIN] Container found after", attempts, "attempts");
+                    callback();
+                } else if (attempts < maxAttempts) {
+                    setTimeout(check, 200);
+                } else {
+                    error("[PERSON-PLUGIN] Container not found after max attempts");
+                }
+            }
+            
+            // Проверяем сразу, может контейнер уже есть
+            var initialCheck = document.querySelector(containerSelector);
+            if (initialCheck) {
+                log("[PERSON-PLUGIN] Container found immediately");
+                callback();
+            } else {
+                setTimeout(check, 300);
+            }
+        }
+        
+        // Улучшенная проверка текущей активности при запуске
+        function checkCurrentActivity() {
+            log("[PERSON-PLUGIN] Checking current activity on startup");
+            var activity = Lampa.Activity.active();
+            
+            if (activity && activity.component === 'actor') {
+                log("[PERSON-PLUGIN] Current activity is actor page");
+                
+                // Получаем ID из разных возможных источников
+                if (activity.id) {
+                    currentPersonId = parseInt(activity.id, 10);
+                } 
+                else if (activity.params && activity.params.id) {
+                    currentPersonId = parseInt(activity.params.id, 10);
+                }
+                // Если ID не найден в стандартных местах, пробуем из URL
+                else {
+                    var match = location.pathname.match(/\/view\/actor\/(\d+)/);
+                    if (match && match[1]) {
+                        currentPersonId = parseInt(match[1], 10);
+                        log("[PERSON-PLUGIN] Got actor ID from URL:", currentPersonId);
+                    }
+                }
+                
+                if (currentPersonId) {
+                    log("[PERSON-PLUGIN] Found actor ID:", currentPersonId);
+                    
+                    // Используем улучшенное ожидание контейнера
+                    waitForContainer(function() {
+                        addsubscriibbeButton();
+                    });
+                } else {
+                    error("[PERSON-PLUGIN] No ID found in current activity");
+                }
+            }
+        }
+        
+        // Слушаем события активности
+        Lampa.Listener.follow('activity', function(e) {
+            log("[PERSON-PLUGIN] Activity event:", e.type, "component:", e.component);
+            
+            // Для страницы актера
+            if (e.type === 'start' && e.component === 'actor') {
+                log("[PERSON-PLUGIN] Actor page started");
+                
+                if (e.object && e.object.id) {
+                    currentPersonId = parseInt(e.object.id, 10);
+                    log("[PERSON-PLUGIN] Found actor ID in e.object.id:", currentPersonId);
+                    
+                    // Используем улучшенное ожидание контейнера
+                    waitForContainer(function() {
+                        addsubscriibbeButton();
+                    });
+                }
+            }
+            // При активации страницы плагина
+            else if (e.type === 'resume' && e.component === 'category_full' && e.object && e.object.source === PLUGIN_NAME) {
+                log("[PERSON-PLUGIN] Persons list resumed");
+                // Обновляем список при возврате
+                setTimeout(function() {
+                    Lampa.Activity.reload();
+                }, 100);
+            }
+        });
+    
+        // Запускаем проверку текущей активности
+        setTimeout(checkCurrentActivity, 1500);
+        
+        // Добавляем стили
         addButtonStyles();
-        addHideOldButtonStyles();
-        
-        // Предполагается, что currentPersonId где-то устанавливается, например:
-        // currentPersonId = Lampa.Player ? Lampa.Player.personId : null;
-        // Для демонстрации просто поставим заглушку:
-        currentPersonId = 123; // Пример ID, заменить на реальный
-        
-        addSubscribeButton();
-        
-        log("[PERSON-PLUGIN] Plugin started");
     }
-    
-    // Запускаем плагин после загрузки страницы
-    document.addEventListener('DOMContentLoaded', function() {
+
+    // Запуск плагина
+    if (window.appready) {
         startPlugin();
-    });
-    
-}();
+    } else {
+        Lampa.Listener.follow('app', function(e) {
+            if (e.type === 'ready') {
+                startPlugin();
+            }
+        });
+    }
+}(); 
