@@ -15,7 +15,7 @@
         addControlItems();
 
         Lampa.Listener.follow('settings', handleSettingsChange);
-        updateMenuVisibility();
+        updateMenuVisibility();  // Оновити видимість при старті
     }
 
     // Додаємо компонент до налаштувань
@@ -76,15 +76,16 @@
                 const paramName = getParamName(text);
                 const show = getVisibilityFromStorage(paramName);
 
-                item.style.display = show ? "" : "none";
+                item.style.display = show ? "" : "none";  // Відображати чи приховувати
             }
         });
     }
 
     // Отримуємо значення видимості з локального сховища, якщо параметр не знайдений — використовуємо значення за замовчуванням (1)
     function getVisibilityFromStorage(paramName) {
+        // Отримуємо значення з локального сховища або встановлюємо "1" (Показати) по дефолту, якщо значення відсутнє
         const storedValue = Lampa.Storage.get(paramName, "hide_menu");
-        return storedValue === null || storedValue === "1" ? 1 : 0;  // Якщо значення відсутнє або значення "1" — показати
+        return (storedValue === null || storedValue === "1") ? 1 : 0;  // Якщо значення відсутнє або 1 — Показати
     }
 
     // Ініціалізація плагіна після готовності додатку
