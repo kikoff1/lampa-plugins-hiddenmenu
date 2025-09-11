@@ -1,91 +1,73 @@
 (() => {
-    const menuSelector = ".menu .menu__list .menu__item"; // Селектор пунктів меню
-    const controlItems = [
-        'Стрічка', 'Фільми', 'Серіали', 'Мультфільми', 'Особи', 'Каталог',
-        'Фільтр', 'Релізи', 'Вибране', 'Історія', 'Підписки', 'Розклад', 
-        'Торренти', 'Спорт'
+    "use strict";
+
+    const MENU_COMPONENT = 'hide_standard_menu';
+    const menuItems = [
+        { id: 'main', title: 'Головна' },
+        { id: 'movie', title: 'Фільми' },
+        { id: 'tv', title: 'Серіали' },
+        { id: 'tv_channels', title: 'ТВ' },
+        { id: 'book', title: 'Закладки' },
+        { id: 'search', title: 'Пошук' },
+        { id: 'about', title: 'Про програму' },
+        { id: 'settings', title: 'Налаштування' }
     ];
 
-    // Ініціалізація плагіна
-    function initPlugin() {
-        if (window.plugin_hide_menu_ready) return;
-        window.plugin_hide_menu_ready = true;
-
-        // Додаємо компонент до налаштувань
-        addSettingsComponent();
-
-        // Додаємо параметри для кожного пункту меню
-        controlItems.forEach(title => addMenuItemSetting(title));
-
-        // Прослуховуємо зміни налаштувань
-        Lampa.Listener.follow('settings', e => {
-            if (e.type === "change" && e.component === "hide_menu") {
-                updateMenuVisibility();
-            }
-        });
-
-        // Оновлення видимості меню при ініціалізації
-        updateMenuVisibility();
-    }
-
-    // Додавання компонента до налаштувань
     function addSettingsComponent() {
         Lampa.SettingsApi.addComponent({
-            component: "hide_menu",
-            icon: getIconSvg(),
-            name: "Приховати пункти меню"
+            component: MENU_COMPONENT,
+            icon: `
+                <svg xmlns="http://www.w3.org/2000/svg" height="36" viewBox="0 0 24 24" fill="white">
+                    <path d="M0 0h24v24H0z" fill="none"/>
+                    <path d="M3 18h6v-2H3v2zm0-5h12v-2H3v2zm0-7v2h18V6H3z"/>
+                </svg>
+            `,
+            name: "Приховати меню"
+        });
+
+        menuItems.forEach(({ id, title }) => {
+            Lampa.SettingsApi.addParam({
+                component: MENU_COMPONENT,
+                param: {
+                    name: `hide_${id}`,
+                    type: "select",
+                    values: { 0: "Показати", 1: "Приховати" },
+                    default: 0
+                },
+                field: { name: title }
+            });
         });
     }
 
-    // Генерація іконки SVG
-    function getIconSvg() {
-        return `<svg height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 4C7 4 2 7 2 12C2 17 7 20 12 20C17 20 22 17 22 12C22 7 17 4 12 4ZM12 18C8.14 18 5 14.86 5 11C5 7.14 8.14 4 12 4C15.86 4 19 7.14 19 11C19 14.86 15.86 18 12 18Z" fill="white"/>
-                    <circle cx="12" cy="11" r="3" fill="white"/>
-                  </svg>`;
-    }
-
-    // Додавання параметра для кожного пункту меню
-    function addMenuItemSetting(title) {
-        Lampa.SettingsApi.addParam({
-            component: "hide_menu",
-            param: {
-                name: getParamName(title),
-                type: "select",
-                values: {1: "Показати", 0: "Приховати"},
-                default: 1
-            },
-            field: {name: title}
+    function toggleMenuVisibility() {
+        menuItems.forEach(({ id }) => {
+            const shouldHide = +Lampa.Storage.get(`hide_${id}`, MENU_COMPONENT) === 1;
+            const item = $(`.menu__list .menu__item[data-action="${id}"]`);
+            item.toggle(!shouldHide);
         });
     }
 
-    // Формуємо ім'я параметра для кожного пункту меню
-    function getParamName(title) {
-        return `hide_menu_${title.toLowerCase().replace(/\s+/g, "_")}`;
-    }
+    function init() {
+        if (window.plugin_hide_standard_ready) return;
 
-    // Оновлення видимості пунктів меню
-    function updateMenuVisibility() {
-        document.querySelectorAll(menuSelector).forEach(item => {
-            const textElem = item.querySelector('.menu__text');
-            if (!textElem) return;
+        addSettingsComponent();
 
-            const text = textElem.textContent.trim();
-            if (controlItems.includes(text)) {
-                const paramName = getParamName(text);
-                const show = parseInt(Lampa.Storage.get(paramName, "hide_menu"), 10) === 1;
-
-                item.style.display = show ? "" : "none"; // Показуємо або приховуємо пункт
+        Lampa.Listener.follow('settings', (e) => {
+            if (['open', 'change'].includes(e.type)) {
+                setTimeout(toggleMenuVisibility, 100);
             }
         });
+
+        setTimeout(toggleMenuVisibility, 1500); // Початкове приховування після запуску
+
+        window.plugin_hide_standard_ready = true;
     }
 
-    // Ініціалізація плагіна після готовності додатку
     if (window.appready) {
-        initPlugin();
+        init();
     } else {
-        Lampa.Listener.follow("app", e => {
-            if (e.type === "ready") initPlugin();
+        Lampa.Listener.follow("app", (e) => {
+            if (e.type === "ready") init();
         });
     }
 })();
