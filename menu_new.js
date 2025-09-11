@@ -35,17 +35,25 @@
             name: "Приховати пункти меню"
         });
 
+        // Ініціалізуємо параметри та дефолтні значення у сховищі
         controlItems.forEach(title => {
+            const paramName = `hide_menu_${title.toLowerCase().replace(/\s+/g, "_")}`;
+
             Lampa.SettingsApi.addParam({
                 component: "hide_menu",
                 param: {
-                    name: `hide_menu_${title.toLowerCase().replace(/\s+/g, "_")}`,
+                    name: paramName,
                     type: "select",
                     values: {1: "Показати", 0: "Приховати"},
                     default: 1
                 },
                 field: {name: title}
             });
+
+            // Встановлюємо дефолтне значення, якщо параметр відсутній
+            if(Lampa.Storage.get(paramName, "hide_menu") === null) {
+                Lampa.Storage.set(paramName, "1", "hide_menu");
+            }
         });
 
         Lampa.Listener.follow('settings', e => {
@@ -67,10 +75,15 @@
 
             if(controlItems.includes(text)) {
                 const paramName = `hide_menu_${text.toLowerCase().replace(/\s+/g, "_")}`;
-                const value = Lampa.Storage.get(paramName, "hide_menu");
+                let value = Lampa.Storage.get(paramName, "hide_menu");
 
-                // Якщо параметр відсутній, вважаємо, що пункт треба показати
-                const show = (value === null || value === undefined) ? true : (parseInt(value) === 1);
+                // Обробляємо випадки, коли значення відсутнє або некоректне
+                let show;
+                if(value === null || value === undefined || value === "null" || value === "") {
+                    show = true;
+                } else {
+                    show = (parseInt(value) === 1);
+                }
 
                 item.style.display = show ? "" : "none";
             }
