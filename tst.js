@@ -3,14 +3,20 @@
 
     const MENU_COMPONENT = 'hide_standard_menu';
     const menuItems = [
-        {  title: 'Головна' },
-        {  title: 'Фільми' },
-        {  title: 'Серіали' },
-        {  title: 'ТВ' },
-        {  title: 'Закладки' },
-        {  title: 'Пошук' },
-        {  title: 'Про програму' },
-        {  title: 'Налаштування' }
+        { id: 'feed', title: 'Стрічка' },
+        { id: 'movie', title: 'Фільми' },
+        { id: 'tv', title: 'Серіали' },
+        { id: 'cartoon', title: 'Мультфільми' },
+        { id: 'person', title: 'Особи' },
+        { id: 'catalog', title: 'Каталог' },
+        { id: 'filter', title: 'Фільтр' },
+        { id: 'release', title: 'Релізи' },
+        { id: 'favorites', title: 'Вибране' },
+        { id: 'history', title: 'Історія' },
+        { id: 'subscribe', title: 'Підписки' },
+        { id: 'schedule', title: 'Розклад' },
+        { id: 'torrents', title: 'Торренти' },
+        { id: 'sport', title: 'Спорт' }
     ];
 
     function addSettingsComponent() {
@@ -29,59 +35,3 @@
             Lampa.SettingsApi.addParam({
                 component: MENU_COMPONENT,
                 param: {
-                    name: `hide_${id}`,
-                    type: "select",
-                    values: { 0: "Показати", 1: "Приховати" },
-                    default: 0
-                },
-                field: { name: title }
-            });
-        });
-    }
-
-    function toggleMenuVisibility() {
-        menuItems.forEach(({ id }) => {
-            const shouldHide = +Lampa.Storage.get(`hide_${id}`, MENU_COMPONENT) === 1;
-            const item = $(`.menu__list .menu__item[data-action="${id}"]`);
-            if (item.length) item.toggle(!shouldHide);
-        });
-    }
-
-    function observeMenuList() {
-        const observer = new MutationObserver(() => {
-            const menuReady = document.querySelector('.menu__list');
-            if (menuReady) {
-                toggleMenuVisibility();
-                observer.disconnect();
-            }
-        });
-
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-    }
-
-    function init() {
-        if (window.plugin_hide_standard_ready) return;
-
-        addSettingsComponent();
-        observeMenuList();
-
-        Lampa.Listener.follow('settings', (e) => {
-            if (['open', 'change'].includes(e.type)) {
-                toggleMenuVisibility();
-            }
-        });
-
-        window.plugin_hide_standard_ready = true;
-    }
-
-    if (window.appready) {
-        init();
-    } else {
-        Lampa.Listener.follow("app", (e) => {
-            if (e.type === "ready") init();
-        });
-    }
-})();
