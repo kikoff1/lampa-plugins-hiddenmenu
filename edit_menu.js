@@ -2,7 +2,7 @@
     const menuSelector = ".menu .menu__list .menu__item"; // Селектор пунктів меню
     const controlItems = [
         'Стрічка', 'Фільми', 'Серіали', 'Мультфільми', 'Особи', 'Каталог',
-        'Фільтр', 'Релізи', 'Вибране', 'Історія', 'Підписки', 'Розклад',
+        'Фільтр', 'Релізи', 'Вибране', 'Історія', 'Підписки', 'Розклад', 
         'Торренти', 'Спорт'
     ];
 
@@ -14,17 +14,21 @@
         // Додаємо компонент до налаштувань
         addSettingsComponent();
 
-        // Додаємо пункти меню до налаштувань
-        addControlItems();
+        // Додаємо параметри для кожного пункту меню
+        controlItems.forEach(title => addMenuItemSetting(title));
 
-        // Прослуховування змін налаштувань
-        Lampa.Listener.follow('settings', handleSettingsChange);
+        // Прослуховуємо зміни налаштувань
+        Lampa.Listener.follow('settings', e => {
+            if (e.type === "change" && e.component === "hide_menu") {
+                updateMenuVisibility();
+            }
+        });
 
-        // Оновлення видимості меню після ініціалізації
+        // Оновлення видимості меню при ініціалізації
         updateMenuVisibility();
     }
 
-    // Додавання іконки та компонента до налаштувань
+    // Додавання компонента до налаштувань
     function addSettingsComponent() {
         Lampa.SettingsApi.addComponent({
             component: "hide_menu",
@@ -41,19 +45,17 @@
                   </svg>`;
     }
 
-    // Додавання пункти меню до налаштувань
-    function addControlItems() {
-        controlItems.forEach(title => {
-            Lampa.SettingsApi.addParam({
-                component: "hide_menu",
-                param: {
-                    name: getParamName(title),
-                    type: "select",
-                    values: {1: "Показати", 0: "Приховати"},
-                    default: 1  // За замовчуванням всі пункти повинні бути показані
-                },
-                field: {name: title}
-            });
+    // Додавання параметра для кожного пункту меню
+    function addMenuItemSetting(title) {
+        Lampa.SettingsApi.addParam({
+            component: "hide_menu",
+            param: {
+                name: getParamName(title),
+                type: "select",
+                values: {1: "Показати", 0: "Приховати"},
+                default: 1
+            },
+            field: {name: title}
         });
     }
 
@@ -62,36 +64,20 @@
         return `hide_menu_${title.toLowerCase().replace(/\s+/g, "_")}`;
     }
 
-    // Обробка зміни налаштувань
-    function handleSettingsChange(e) {
-        if (e.type === "change" && e.component === "hide_menu") {
-            updateMenuVisibility();
-        }
-    }
-
     // Оновлення видимості пунктів меню
     function updateMenuVisibility() {
-        const menuItems = document.querySelectorAll(menuSelector);
-
-        menuItems.forEach(item => {
+        document.querySelectorAll(menuSelector).forEach(item => {
             const textElem = item.querySelector('.menu__text');
             if (!textElem) return;
 
             const text = textElem.textContent.trim();
             if (controlItems.includes(text)) {
                 const paramName = getParamName(text);
-                const show = getVisibilityFromStorage(paramName);
+                const show = parseInt(Lampa.Storage.get(paramName, "hide_menu"), 10) === 1;
 
-                item.style.display = show ? "" : "none"; // Якщо видимість = 1, показуємо елемент, інакше — приховуємо
+                item.style.display = show ? "" : "none"; // Показуємо або приховуємо пункт
             }
         });
-    }
-
-    // Отримуємо значення видимості з локального сховища
-    // Якщо параметр відсутній, встановлюємо значення за замовчуванням (1)
-    function getVisibilityFromStorage(paramName) {
-        const storedValue = Lampa.Storage.get(paramName, "hide_menu");
-        return storedValue === null || storedValue === "1" ? 1 : 0; // Якщо немає значення або значення "1", показуємо
     }
 
     // Ініціалізація плагіна після готовності додатку
