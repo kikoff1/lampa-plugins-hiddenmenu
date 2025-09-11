@@ -3,14 +3,21 @@
 
     const MENU_COMPONENT = 'hide_standard_menu';
     const menuItems = [
-        { id: 'main', title: 'Головна' },
+        { id: 'feed', title: 'Стрічка' },
         { id: 'movie', title: 'Фільми' },
         { id: 'tv', title: 'Серіали' },
-        { id: 'tv_channels', title: 'ТВ' },
-        { id: 'book', title: 'Закладки' },
-        { id: 'search', title: 'Пошук' },
-        { id: 'about', title: 'Про програму' },
-        { id: 'settings', title: 'Налаштування' }
+        { id: 'anime', title: 'Аніме' },
+        { id: 'myperson', title: 'Особи' },
+        { id: 'catalog', title: 'Каталог' },
+        { id: 'filter', title: 'Фільтр' },
+        { id: 'relise', title: 'Релізи' },
+        { id: 'favorite', title: 'Вибране' },
+        { id: 'history', title: 'Історія' },
+        { id: 'subscribes', title: 'Підписки' },
+        { id: 'timetable', title: 'Розклад' },
+        { id: 'mytorrents', title: 'Торренти' },
+        { id: 'sport', title: 'Спорт' },           // ✅ виправлено
+        { id: 'about', title: 'Інформація' }
     ];
 
     function addSettingsComponent() {
@@ -40,10 +47,21 @@
     }
 
     function toggleMenuVisibility() {
-        menuItems.forEach(({ id }) => {
+        menuItems.forEach(({ id, title }) => {
             const shouldHide = +Lampa.Storage.get(`hide_${id}`, MENU_COMPONENT) === 1;
-            const item = $(`.menu__list .menu__item[data-action="${id}"]`);
-            item.toggle(!shouldHide);
+
+            // Особлива обробка для пункту "Спорт", якщо він не має data-action
+            if (id === 'sport') {
+                $('.menu__list .menu__item').each(function () {
+                    const text = $(this).text().trim();
+                    if (text === title) {
+                        $(this).toggle(!shouldHide);
+                    }
+                });
+            } else {
+                const item = $(`.menu__list .menu__item[data-action="${id}"]`);
+                item.toggle(!shouldHide);
+            }
         });
     }
 
