@@ -44,7 +44,7 @@
                     name: getParamName(title),
                     type: "select",
                     values: {1: "Показати", 0: "Приховати"},
-                    default: 1
+                    default: 1  // Значення за замовчуванням: "Показати"
                 },
                 field: {name: title}
             });
@@ -81,9 +81,10 @@
         });
     }
 
-    // Отримуємо значення видимості з локального сховища
+    // Отримуємо значення видимості з локального сховища, якщо параметр не знайдений — використовуємо значення за замовчуванням (1)
     function getVisibilityFromStorage(paramName) {
-        return parseInt(Lampa.Storage.get(paramName, "hide_menu")) === 1;
+        const storedValue = Lampa.Storage.get(paramName, "hide_menu");
+        return storedValue === null ? 1 : parseInt(storedValue);  // Якщо в сховищі немає значення, повертаємо 1 (показати)
     }
 
     // Ініціалізація плагіна після готовності додатку
