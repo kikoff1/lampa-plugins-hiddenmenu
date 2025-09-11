@@ -45,12 +45,12 @@
                     component: 'online_cinemas'
                 },
                 field: {
-                    name: 'Настройки актёров',
-                    description: 'Показывать кнопку актёров'
+                    name: 'Настройки акторів',
+                    description: 'Показывать кнопку акторів'
                 },
                 onChange: () => {
                     Lampa.Settings.create('online_cinemas', {
-                        title: 'Настройки актёров',
+                        title: 'Настройки акторів',
                         template: 'settings_online_cinemas',
                         onBack: () => Lampa.Settings.create('interface')
                     });
@@ -65,7 +65,7 @@
                     default: this.settings.showActors
                 },
                 field: {
-                    name: 'Показывать кнопку актёров'
+                    name: 'Показывать кнопку акторів'
                 }
             });
         },
@@ -88,7 +88,7 @@
             const ico = '<svg xmlns="http://www.w3.org/2000/svg" width="2.2em" height="2.2em" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="4"><path stroke-linejoin="round" d="M24 44c11.046 0 20-8.954 20-20S35.046 4 24 4S4 12.954 4 24s8.954 20 20 20Z"/><path d="M30 24v-4.977C30 16.226 28.136 14 24 14s-6 2.226-6 5.023V24"/><path stroke-linejoin="round" d="M30 24h-6v-4.977C24 16.226 25.864 14 30 14s6 2.226 6 5.023V24h-6Zm-18 0h6v-4.977C24 16.226 22.136 14 18 14s-6 2.226-6 5.023V24h6Z"/></g></svg>';
             const button = $(`<li class="menu__item selector online-cinemas-actors" data-action="actors">
                 <div class="menu__ico">${ico}</div>
-                <div class="menu__text">Актёры</div>
+                <div class="menu__text">Актори</div>
             </li>`);
 
             button.on('hover:enter', this.showActors.bind(this));
@@ -99,7 +99,7 @@
         showActors: function() {
             Lampa.Activity.push({
                 url: "person/popular",
-                title: "Актёры",
+                title: "Актори",
                 region: "RU",
                 language: "ru-RU",
                 component: "category_full",
