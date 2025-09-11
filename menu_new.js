@@ -36,10 +36,7 @@
                 param: {
                     name: `hide_menu_${title.toLowerCase().replace(/\s+/g, "_")}`,
                     type: "select",
-                    values: [
-                        {value: 1, title: "Показати"},
-                        {value: 0, title: "Приховати"}
-                    ],
+                    values: {1: "Показати", 0: "Приховати"},
                     default: 1
                 },
                 field: {name: title}
@@ -48,11 +45,11 @@
 
         Lampa.Listener.follow('settings', e => {
             if(e.type === "change" && e.component === "hide_menu") {
-                updateMenuVisibility();  // Оновлюємо видимість лише після зміни налаштувань
+                updateMenuVisibility();
             }
         });
 
-        // НЕ викликаємо updateMenuVisibility() одразу, щоб спочатку все було видно
+        updateMenuVisibility();
     }
 
     function updateMenuVisibility() {
@@ -65,10 +62,12 @@
 
             if(controlItems.includes(text)) {
                 const paramName = `hide_menu_${text.toLowerCase().replace(/\s+/g, "_")}`;
-                let value = Lampa.Storage.get(paramName, "hide_menu");
-                if(value === null || value === undefined) value = "1"; // за замовчуванням показуємо
-                
-                const show = parseInt(value) === 1;
+                const value = Lampa.Storage.get(paramName, "hide_menu");
+
+                // Показуємо пункт, якщо параметр відсутній або встановлений у "1"
+                // Приховуємо лише якщо явно обрано "0"
+                const show = value !== "0";
+
                 item.style.display = show ? "" : "none";
             }
         });
