@@ -35,3 +35,45 @@
             Lampa.SettingsApi.addParam({
                 component: MENU_COMPONENT,
                 param: {
+                    name: `hide_${id}`,
+                    type: "select",
+                    values: { 0: "Показати", 1: "Приховати" },
+                    default: 0
+                },
+                field: { name: title }
+            });
+        });
+    }
+
+    function toggleMenuVisibility() {
+        menuItems.forEach(({ id }) => {
+            const shouldHide = +Lampa.Storage.get(`hide_${id}`, MENU_COMPONENT) === 1;
+            const item = $(`.menu__list .menu__item[data-action="${id}"]`);
+            item.toggle(!shouldHide);
+        });
+    }
+
+    function init() {
+        if (window.plugin_hide_standard_ready) return;
+
+        addSettingsComponent();
+
+        Lampa.Listener.follow('settings', (e) => {
+            if (['open', 'change'].includes(e.type)) {
+                setTimeout(toggleMenuVisibility, 100);
+            }
+        });
+
+        setTimeout(toggleMenuVisibility, 1500); // Початкове приховування після запуску
+
+        window.plugin_hide_standard_ready = true;
+    }
+
+    if (window.appready) {
+        init();
+    } else {
+        Lampa.Listener.follow("app", (e) => {
+            if (e.type === "ready") init();
+        });
+    }
+})();
