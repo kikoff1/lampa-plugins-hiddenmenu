@@ -21,6 +21,11 @@
         if(window.plugin_hide_menu_ready) return;
         window.plugin_hide_menu_ready = true;
 
+        if(!window.Lampa || !Lampa.SettingsApi || !Lampa.Listener || !Lampa.Storage) {
+            console.warn("Lampa API не знайдено, плагін не може ініціалізуватися");
+            return;
+        }
+
         Lampa.SettingsApi.addComponent({
             component: "hide_menu",
             icon: `<svg height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -64,9 +69,8 @@
                 const paramName = `hide_menu_${text.toLowerCase().replace(/\s+/g, "_")}`;
                 const value = Lampa.Storage.get(paramName, "hide_menu");
 
-                // Показуємо пункт, якщо параметр відсутній або встановлений у "1"
-                // Приховуємо лише якщо явно обрано "0"
-                const show = value !== "0";
+                // Якщо параметр відсутній, вважаємо, що пункт треба показати
+                const show = (value === null || value === undefined) ? true : (parseInt(value) === 1);
 
                 item.style.display = show ? "" : "none";
             }
@@ -76,8 +80,14 @@
     if(window.appready) {
         initPlugin();
     } else {
-        Lampa.Listener.follow("app", e => {
-            if(e.type === "ready") initPlugin();
-        });
+        if(window.Lampa && Lampa.Listener) {
+            Lampa.Listener.follow("app", e => {
+                if(e.type === "ready") initPlugin();
+            });
+        } else {
+            window.addEventListener("load", () => {
+                if(window.appready) initPlugin();
+            });
+        }
     }
 })();
