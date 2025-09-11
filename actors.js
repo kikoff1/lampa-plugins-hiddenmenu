@@ -97,8 +97,8 @@
             Lampa.Activity.push({
                 url: "person/popular",
                 title: "Актори",
-                region: "RU",
-                language: "ru-RU",
+                region: "UJ",
+                language: "uk-UK",
                 component: "category_full",
                 source: "tmdb",
                 card_type: "true",
