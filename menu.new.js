@@ -21,6 +21,11 @@
         if(window.plugin_hide_menu_ready) return;
         window.plugin_hide_menu_ready = true;
 
+        if(!window.Lampa || !Lampa.SettingsApi || !Lampa.Listener || !Lampa.Storage) {
+            console.warn("Lampa API не знайдено, плагін не може ініціалізуватися");
+            return;
+        }
+
         Lampa.SettingsApi.addComponent({
             component: "hide_menu",
             icon: `<svg height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -65,11 +70,8 @@
                 const paramName = `hide_menu_${text.toLowerCase().replace(/\s+/g, "_")}`;
                 const value = Lampa.Storage.get(paramName, "hide_menu");
 
-                // Відладка: перевіряємо що приходить в value
-                // console.log(paramName, value);
-
-                // Показуємо, якщо value не "0"
-                const show = value !== "0";
+                // Якщо значення не визначене, вважаємо за показати
+                const show = (value === null || value === undefined) ? true : (value !== "0");
 
                 item.style.display = show ? "" : "none";
             }
@@ -79,8 +81,15 @@
     if(window.appready) {
         initPlugin();
     } else {
-        Lampa.Listener.follow("app", e => {
-            if(e.type === "ready") initPlugin();
-        });
+        if(window.Lampa && Lampa.Listener) {
+            Lampa.Listener.follow("app", e => {
+                if(e.type === "ready") initPlugin();
+            });
+        } else {
+            // На всяк випадок, якщо Lampa ще не підвантажено, можна спробувати чекати window.appready
+            window.addEventListener("load", () => {
+                if(window.appready) initPlugin();
+            });
+        }
     }
 })();
