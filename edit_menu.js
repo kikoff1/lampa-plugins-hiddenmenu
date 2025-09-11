@@ -1,8 +1,8 @@
 (() => {
-    const menuSelector = ".menu .menu__list .menu__item";  // Селектор пунктів меню
+    const menuSelector = ".menu .menu__list .menu__item"; // Селектор пунктів меню
     const controlItems = [
         'Стрічка', 'Фільми', 'Серіали', 'Мультфільми', 'Особи', 'Каталог',
-        'Фільтр', 'Релізи', 'Вибране', 'Історія', 'Підписки', 'Розклад', 
+        'Фільтр', 'Релізи', 'Вибране', 'Історія', 'Підписки', 'Розклад',
         'Торренти', 'Спорт'
     ];
 
@@ -11,14 +11,20 @@
         if (window.plugin_hide_menu_ready) return;
         window.plugin_hide_menu_ready = true;
 
+        // Додаємо компонент до налаштувань
         addSettingsComponent();
+
+        // Додаємо пункти меню до налаштувань
         addControlItems();
 
+        // Прослуховування змін налаштувань
         Lampa.Listener.follow('settings', handleSettingsChange);
-        updateMenuVisibility();  // Оновити видимість при старті
+
+        // Оновлення видимості меню після ініціалізації
+        updateMenuVisibility();
     }
 
-    // Додаємо компонент до налаштувань
+    // Додавання іконки та компонента до налаштувань
     function addSettingsComponent() {
         Lampa.SettingsApi.addComponent({
             component: "hide_menu",
@@ -27,7 +33,7 @@
         });
     }
 
-    // Генерація іконки SVG для компонента
+    // Генерація іконки SVG
     function getIconSvg() {
         return `<svg height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M12 4C7 4 2 7 2 12C2 17 7 20 12 20C17 20 22 17 22 12C22 7 17 4 12 4ZM12 18C8.14 18 5 14.86 5 11C5 7.14 8.14 4 12 4C15.86 4 19 7.14 19 11C19 14.86 15.86 18 12 18Z" fill="white"/>
@@ -35,7 +41,7 @@
                   </svg>`;
     }
 
-    // Додаємо пункти меню в налаштування
+    // Додавання пункти меню до налаштувань
     function addControlItems() {
         controlItems.forEach(title => {
             Lampa.SettingsApi.addParam({
@@ -44,14 +50,14 @@
                     name: getParamName(title),
                     type: "select",
                     values: {1: "Показати", 0: "Приховати"},
-                    default: 1  // Значення за замовчуванням: "Показати"
+                    default: 1  // За замовчуванням всі пункти повинні бути показані
                 },
                 field: {name: title}
             });
         });
     }
 
-    // Формуємо ім'я параметра на основі назви
+    // Формуємо ім'я параметра для кожного пункту меню
     function getParamName(title) {
         return `hide_menu_${title.toLowerCase().replace(/\s+/g, "_")}`;
     }
@@ -76,16 +82,16 @@
                 const paramName = getParamName(text);
                 const show = getVisibilityFromStorage(paramName);
 
-                item.style.display = show ? "" : "none";  // Відображати чи приховувати
+                item.style.display = show ? "" : "none"; // Якщо видимість = 1, показуємо елемент, інакше — приховуємо
             }
         });
     }
 
-    // Отримуємо значення видимості з локального сховища, якщо параметр не знайдений — використовуємо значення за замовчуванням (1)
+    // Отримуємо значення видимості з локального сховища
+    // Якщо параметр відсутній, встановлюємо значення за замовчуванням (1)
     function getVisibilityFromStorage(paramName) {
-        // Отримуємо значення з локального сховища або встановлюємо "1" (Показати) по дефолту, якщо значення відсутнє
         const storedValue = Lampa.Storage.get(paramName, "hide_menu");
-        return (storedValue === null || storedValue === "1") ? 1 : 0;  // Якщо значення відсутнє або 1 — Показати
+        return storedValue === null || storedValue === "1" ? 1 : 0; // Якщо немає значення або значення "1", показуємо
     }
 
     // Ініціалізація плагіна після готовності додатку
