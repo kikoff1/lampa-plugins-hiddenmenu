@@ -84,7 +84,7 @@
     // Отримуємо значення видимості з локального сховища, якщо параметр не знайдений — використовуємо значення за замовчуванням (1)
     function getVisibilityFromStorage(paramName) {
         const storedValue = Lampa.Storage.get(paramName, "hide_menu");
-        return storedValue === null ? 1 : parseInt(storedValue);  // Якщо в сховищі немає значення, повертаємо 1 (показати)
+        return storedValue === null || storedValue === "1" ? 1 : 0;  // Якщо значення відсутнє або значення "1" — показати
     }
 
     // Ініціалізація плагіна після готовності додатку
