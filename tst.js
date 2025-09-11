@@ -3,14 +3,14 @@
 
     const MENU_COMPONENT = 'hide_standard_menu';
     const menuItems = [
-        { id: 'main', title: 'Головна' },
-        { id: 'movie', title: 'Фільми' },
-        { id: 'tv', title: 'Серіали' },
-        { id: 'tv_channels', title: 'ТВ' },
-        { id: 'book', title: 'Закладки' },
-        { id: 'search', title: 'Пошук' },
-        { id: 'about', title: 'Про програму' },
-        { id: 'settings', title: 'Налаштування' }
+        {  title: 'Головна' },
+        {  title: 'Фільми' },
+        {  title: 'Серіали' },
+        {  title: 'ТВ' },
+        {  title: 'Закладки' },
+        {  title: 'Пошук' },
+        {  title: 'Про програму' },
+        {  title: 'Налаштування' }
     ];
 
     function addSettingsComponent() {
