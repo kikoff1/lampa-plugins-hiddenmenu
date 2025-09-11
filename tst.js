@@ -6,17 +6,18 @@
         { id: 'feed', title: 'Стрічка' },
         { id: 'movie', title: 'Фільми' },
         { id: 'tv', title: 'Серіали' },
-        { id: 'cartoon', title: 'Мультфільми' },
-        { id: 'person', title: 'Особи' },
+        { id: 'anime', title: 'Аніме' },
+        { id: 'myperson', title: 'Особи' },
         { id: 'catalog', title: 'Каталог' },
         { id: 'filter', title: 'Фільтр' },
-        { id: 'release', title: 'Релізи' },
-        { id: 'favorites', title: 'Вибране' },
+        { id: 'relise', title: 'Релізи' },
+        { id: 'favorite', title: 'Вибране' },
         { id: 'history', title: 'Історія' },
-        { id: 'subscribe', title: 'Підписки' },
-        { id: 'schedule', title: 'Розклад' },
+        { id: 'subscribes', title: 'Підписки' },
+        { id: 'timetable', title: 'Розклад' },
         { id: 'mytorrents', title: 'Торренти' },
-        { id: 'cub_sport', title: 'Спорт' }
+        { id: 'undefined', title: 'Спорт' },
+        { id: 'about', title: 'Інформація' },
     ];
 
     function addSettingsComponent() {
