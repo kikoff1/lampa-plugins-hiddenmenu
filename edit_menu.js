@@ -17,7 +17,8 @@
         { id: 'timetable', title: 'Розклад' },
         { id: 'mytorrents', title: 'Торренти' },
         { id: 'sport', title: 'Спорт' },           // ✅ виправлено
-        { id: 'about', title: 'Інформація' }
+        { id: 'about', title: 'Інформація' },
+       { id: 'console', title: 'Консоль' }
     ];
 
     function addSettingsComponent() {
