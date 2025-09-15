@@ -1,28 +1,61 @@
-// Переконайтесь, що DOM повністю завантажений
-document.addEventListener("DOMContentLoaded", function() {
-    // Заміна кнопок
-    const buttons = {
-        'Онлайн': { text: 'Онлайн', color: '#4CAF50' },
-        'Торренти': { text: 'Торренти', color: '#2196F3' },
-        'Трейлери': { text: 'Трейлери', color: '#FF5722' }
-    };
+(() => {
+    Lampa.Plugins.add({
+        title: 'Custom Buttons',
+        description: 'Заміняє стандартні кнопки на 3 кольорові (Онлайн, Торрент, YouTube)',
+        version: '1.1',
+        author: 'ChatGPT',
+        type: 'button',
 
-    // Знайдемо всі кнопки
-    const buttonElements = document.querySelectorAll('button, a, .button'); // Замініть на точні селектори вашого сайту
+        run() {
+            // Відслідковуємо відкриття картки фільму
+            Lampa.Listener.follow('full', (e) => {
+                if (e.type === 'build') {
+                    let buttons = e.body.find('.full-start-buttons'); // контейнер кнопок
+                    if (buttons.length) {
+                        buttons.empty(); // видаляємо стандартні
 
-    buttonElements.forEach(button => {
-        // Якщо текст кнопки співпадає з одним із наших
-        if (buttons[button.textContent.trim()]) {
-            // Заміна тексту
-            button.textContent = buttons[button.textContent.trim()].text;
-            // Заміна кольору фону
-            button.style.backgroundColor = buttons[button.textContent.trim()].color;
-            button.style.color = 'white'; // Колір тексту білий
-            button.style.border = 'none'; // Прибираємо рамки, щоб виглядало чисто
-            button.style.padding = '10px 20px'; // Встановлюємо padding для кращого вигляду
-            button.style.borderRadius = '5px'; // Закругляємо кути
-            button.style.cursor = 'pointer'; // Додаємо ефект курсору
-            button.style.transition = 'background-color 0.3s'; // Анімація при наведенні
-        }
+                        // Додаємо тільки 3 кастомні кнопки
+                        buttons.append(`
+                            <div class="custom-btn online">▶ Онлайн</div>
+                            <div class="custom-btn torrent">⬇ Торрент</div>
+                            <div class="custom-btn trailer">▶ YouTube</div>
+                        `);
+
+                        // Події для натискань
+                        buttons.find('.custom-btn.online').on('click', () => {
+                            Lampa.Noty.show('Відкриття онлайн-плеєра');
+                        });
+
+                        buttons.find('.custom-btn.torrent').on('click', () => {
+                            Lampa.Noty.show('Відкриття торрентів');
+                        });
+
+                        buttons.find('.custom-btn.trailer').on('click', () => {
+                            Lampa.Noty.show('Відкриття трейлера з YouTube');
+                        });
+                    }
+                }
+            });
+        },
+
+        style: `
+            .custom-btn {
+                display: inline-block;
+                margin: 6px;
+                padding: 10px 18px;
+                border-radius: 12px;
+                font-size: 15px;
+                font-weight: bold;
+                cursor: pointer;
+                transition: transform 0.2s, opacity 0.2s;
+            }
+            .custom-btn:hover {
+                transform: scale(1.05);
+                opacity: 0.9;
+            }
+            .custom-btn.online { background: #4285F4; color: #fff; }
+            .custom-btn.torrent { background: #4CAF50; color: #fff; }
+            .custom-btn.trailer { background: #FF0000; color: #fff; }
+        `
     });
-});
+})();
