@@ -1,10 +1,18 @@
 (function() {
     setTimeout(function() {
-        
+        const clearBtnId = 'CLEARCACHE';
+
         // Видалення існуючої кнопки
         $('#' + clearBtnId).remove();
 
-        
+        // Додавання CSS
+        if (!document.getElementById('clearcache-style')) {
+            const css = `
+                /* Новий стиль для кнопки Стрічка */
+                .head__action.selector.open--feed svg path {
+                    fill: #2196F3 !important;
+                }
+                
                 /* Решта вашого оригінального CSS */
                 #${clearBtnId} svg path {
                     fill: lime !important;
