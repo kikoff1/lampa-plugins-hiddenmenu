@@ -1,8 +1,24 @@
 (function () {
     'use strict';
 
-    const pluginTitle = 'Persons Plugin';
     let currentPersonId = null;
+
+    // ------------------------
+    // Приховуємо стандартну кнопку "Підписатися"
+    // ------------------------
+    function hideDefaultSubscribeButton() {
+        if (document.getElementById('hide-subscribe-style')) return;
+
+        const style = document.createElement('style');
+        style.id = 'hide-subscribe-style';
+        style.textContent = `
+            .full-start__button.button--subscribe,
+            .full-start__button.button--unsubscribe {
+                display: none !important;
+            }
+        `;
+        document.head.appendChild(style);
+    }
 
     // ------------------------
     // Storage helpers
@@ -29,7 +45,7 @@
     }
 
     // ------------------------
-    // Button rendering
+    // Наша кнопка Subscriibbe
     // ------------------------
     function addButtonToContainer(container) {
         const existingButton = container.querySelector(".button--subscriibbe-plugin");
@@ -60,8 +76,6 @@
 
             const span = button.querySelector("span");
             if (span) span.textContent = newText;
-
-            updatePersonsList();
         });
 
         container.append(button);
@@ -88,93 +102,14 @@
     }
 
     // ------------------------
-    // PersonsService (фільмографія)
-    // ------------------------
-    function PersonsService() {}
-
-    PersonsService.list = function (params, onComplete, onError) {
-        let results = [];
-        let remaining = getSubscribedPersons().length;
-
-        if (remaining === 0) {
-            onComplete([]);
-            return;
-        }
-
-        const currentLang = Lampa.Storage.field('tmdb_lang') || 'uk-UA';
-
-        getSubscribedPersons().forEach(personId => {
-            const url = Lampa.TMDB.api(`person/${personId}/combined_credits?api_key=${Lampa.TMDB.key()}&language=${currentLang}`);
-
-            new Lampa.Reguest().silent(url, function (response) {
-                try {
-                    const json = typeof response === 'string' ? JSON.parse(response) : response;
-                    if (json && (json.cast || []).length) {
-                        const credits = json.cast.map(item => ({
-                            id: item.id,
-                            title: item.title || item.name,
-                            name: item.title || item.name,
-                            poster_path: item.poster_path,
-                            type: item.media_type,
-                            source: "tmdb",
-                            media_type: item.media_type
-                        }));
-                        results.push(...credits);
-                    }
-                } catch (e) {}
-
-                if (--remaining === 0) {
-                    onComplete(results);
-                }
-            }, function () {
-                if (--remaining === 0) {
-                    onComplete(results);
-                }
-            });
-        });
-    };
-
-    // ------------------------
-    // Update menu
-    // ------------------------
-    function updatePersonsList() {
-        Lampa.Arrays.removeLast(Lampa.Menu.listeners, onMenu);
-        Lampa.Menu.listeners.push(onMenu);
-    }
-
-    function onMenu(menu) {
-        menu.push({
-            title: "Persons",
-            id: "persons",
-            icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-3-3.87"/><path d="M4 21v-2a4 4 0 0 1 3-3.87"/><circle cx="12" cy="7" r="4"/></svg>',
-            action: function () {
-                Lampa.Activity.push({
-                    url: '',
-                    title: "Persons Subscriptions",
-                    component: 'category_full',
-                    page: 1,
-                    source: 'persons',
-                    card_type: true
-                });
-            }
-        });
-    }
-
-    Lampa.Component.add('persons', PersonsService);
-
-    // ------------------------
     // Activity hook (actor page)
     // ------------------------
     Lampa.Listener.follow('activity', function (e) {
         if (e.type === 'component' && e.component === 'actor') {
             currentPersonId = e.data.id;
+            hideDefaultSubscribeButton();
             addSubscribeButton();
         }
     });
-
-    // ------------------------
-    // Init
-    // ------------------------
-    updatePersonsList();
 
 })();
