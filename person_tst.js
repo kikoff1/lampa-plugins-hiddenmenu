@@ -1,123 +1,45 @@
 (function () {
-    "use strict";
+    'use strict';
 
-    // ==== Приховування стандартної кнопки "Підписатися" ====
-    function hideDefaultSubscribeButton() {
-        if (document.getElementById("hide-subscribe-style")) return;
-
-        const css = `
-            .button--subscribe {
-                display: none !important;
-            }
-        `;
-
-        const style = document.createElement("style");
-        style.id = "hide-subscribe-style";
-        style.textContent = css;
-        document.head.appendChild(style);
-    }
-
-    // ==== Константи ====
-    const PLUGIN_NAME = "persons_plugin";
-    const PERSONS_KEY = "saved_persons";
-    const PAGE_SIZE = 20;
+    const pluginTitle = 'Persons Plugin';
     let currentPersonId = null;
 
-    // ==== Переклади ====
-    const pluginTranslations = {
-        persons_title: {
-            ru: "Персоны",
-            en: "Persons",
-            uk: "Персони",
-            be: "Асобы",
-            pt: "Pessoas",
-            zh: "人物",
-            he: "אנשים",
-            cs: "Osobnosti",
-            bg: "Личности",
-        },
-        subscribe: {
-            ru: "Подписаться",
-            en: "Subscribe",
-            uk: "Підписатися",
-            be: "Падпісацца",
-            pt: "Inscrever",
-            zh: "订阅",
-            he: "הירשם",
-            cs: "Přihlásit se",
-            bg: "Абонирай се",
-        },
-        unsubscribe: {
-            ru: "Отписаться",
-            en: "Unsubscribe",
-            uk: "Відписатися",
-            be: "Адпісацца",
-            pt: "Cancelar inscrição",
-            zh: "退订",
-            he: "בטל מנוי",
-            cs: "Odhlásit se",
-            bg: "Отписване",
-        },
-        persons_not_found: {
-            ru: "Персоны не найдены",
-            en: "No persons found",
-            uk: "Особи не знайдені",
-            be: "Асобы не знойдзены",
-            pt: "Nenhuma pessoa encontrada",
-            zh: "未找到人物",
-            he: "לא נמצאו אנשים",
-            cs: "Nebyly nalezeny žádné osoby",
-            bg: "Не са намерени хора",
-        },
-    };
-
-    // ==== Іконка в меню ====
-    const ICON_SVG =
-        '<svg height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
-        '<path d="M16 11C17.66 11 18.99 9.66 18.99 8C18.99 6.34 17.66 5 16 5C14.34 5 13 6.34 13 8C13 9.66 14.34 11 16 11ZM8 11C9.66 11 10.99 9.66 10.99 8C10.99 6.34 9.66 5 8 5C6.34 5 5 6.34 5 8C5 9.66 6.34 11 8 11ZM8 13C5.67 13 1 14.17 1 16.5V19H15V16.5C15 14.17 10.33 13 8 13ZM16 13C15.71 13 15.38 13.02 15.03 13.05C16.19 13.89 17 15.02 17 16.5V19H23V16.5C23 14.17 18.33 13 16 13Z" fill="currentColor"/></svg>';
-
-    // ==== Допоміжні функції ====
-    function getCurrentLanguage() {
-        return localStorage.getItem("language") || "en";
+    // ------------------------
+    // Storage helpers
+    // ------------------------
+    function getSubscribedPersons() {
+        return Lampa.Storage.get('persons_subscriptions', '[]', true);
     }
 
-    function initStorage() {
-        if (!Lampa.Storage.get(PERSONS_KEY)) {
-            Lampa.Storage.set(PERSONS_KEY, []);
+    function isPersonSubscribed(id) {
+        return getSubscribedPersons().includes(id);
+    }
+
+    function togglePersonSubscription(id) {
+        let subs = getSubscribedPersons();
+        if (subs.includes(id)) {
+            subs = subs.filter(pid => pid !== id);
+            Lampa.Storage.set('persons_subscriptions', JSON.stringify(subs));
+            return false;
+        } else {
+            subs.push(id);
+            Lampa.Storage.set('persons_subscriptions', JSON.stringify(subs));
+            return true;
         }
     }
 
-    function getPersonIds() {
-        return Lampa.Storage.get(PERSONS_KEY, []);
-    }
-
-    function togglePersonSubscription(personId) {
-        let personIds = getPersonIds();
-        const index = personIds.indexOf(personId);
-
-        if (index === -1) personIds.push(personId);
-        else personIds.splice(index, 1);
-
-        Lampa.Storage.set(PERSONS_KEY, personIds);
-        return index === -1; // true якщо додано
-    }
-
-    function isPersonSubscribed(personId) {
-        return getPersonIds().includes(personId);
-    }
-
-    // ==== Кнопка підписки в картці актора ====
+    // ------------------------
+    // Button rendering
+    // ------------------------
     function addButtonToContainer(container) {
-        const existingButton = container.querySelector(".button--subscribe-plugin");
+        const existingButton = container.querySelector(".button--subscriibbe-plugin");
         if (existingButton) existingButton.remove();
 
         const isSubscribed = isPersonSubscribed(currentPersonId);
-        const buttonText = isSubscribed
-            ? Lampa.Lang.translate("persons_plugin_unsubscribe")
-            : Lampa.Lang.translate("persons_plugin_subscribe");
+        const buttonText = isSubscribed ? "Unsubscriibbe" : "Subscriibbe";
 
         const button = document.createElement("div");
-        button.className = "full-start__button selector button--subscribe-plugin";
+        button.className = "full-start__button selector button--subscriibbe-plugin";
         button.classList.add(isSubscribed ? "button--unsubscribe" : "button--subscribe");
         button.setAttribute("data-focusable", "true");
 
@@ -131,9 +53,7 @@
 
         button.addEventListener("hover:enter", function () {
             const wasAdded = togglePersonSubscription(currentPersonId);
-            const newText = wasAdded
-                ? Lampa.Lang.translate("persons_plugin_unsubscribe")
-                : Lampa.Lang.translate("persons_plugin_subscribe");
+            const newText = wasAdded ? "Unsubscriibbe" : "Subscriibbe";
 
             button.classList.remove("button--subscribe", "button--unsubscribe");
             button.classList.add(wasAdded ? "button--unsubscribe" : "button--subscribe");
@@ -155,9 +75,8 @@
 
         function tryInsert() {
             attempts++;
-            const container =
-                document.querySelector(".full-start__buttons") ||
-                document.querySelector(".person-start__bottom");
+            const container = document.querySelector(".full-start__buttons") ||
+                              document.querySelector(".person-start__bottom");
             if (container) {
                 addButtonToContainer(container);
             } else if (attempts < maxAttempts) {
@@ -168,197 +87,94 @@
         tryInsert();
     }
 
-    // ==== Оновлення списку ====
-    function updatePersonsList() {
-        const activity = Lampa.Activity.active();
-        if (activity && activity.component === "category_full" && activity.source === PLUGIN_NAME) {
-            Lampa.Activity.reload();
+    // ------------------------
+    // PersonsService (фільмографія)
+    // ------------------------
+    function PersonsService() {}
+
+    PersonsService.list = function (params, onComplete, onError) {
+        let results = [];
+        let remaining = getSubscribedPersons().length;
+
+        if (remaining === 0) {
+            onComplete([]);
+            return;
         }
-    }
 
-    // ==== Стилі для кнопки ====
-    function addButtonStyles() {
-        if (document.getElementById("subscribe-button-styles")) return;
-        const css = `
-            .full-start__button.selector.button--subscribe-plugin.button--subscribe {
-                color: #4CAF50;
-            }
-            .full-start__button.selector.button--subscribe-plugin.button--unsubscribe {
-                color: #F44336;
-            }`;
-        const style = document.createElement("style");
-        style.id = "subscribe-button-styles";
-        style.textContent = css;
-        document.head.appendChild(style);
-    }
+        const currentLang = Lampa.Storage.field('tmdb_lang') || 'uk-UA';
 
-    // ==== Сервіс для завантаження акторів ====
-    function PersonsService() {
-        const cache = {};
+        getSubscribedPersons().forEach(personId => {
+            const url = Lampa.TMDB.api(`person/${personId}/combined_credits?api_key=${Lampa.TMDB.key()}&language=${currentLang}`);
 
-        this.list = function (params, onComplete) {
-            const page = parseInt(params.page, 10) || 1;
-            const startIndex = (page - 1) * PAGE_SIZE;
-            const endIndex = startIndex + PAGE_SIZE;
-            const personIds = getPersonIds();
-            const pageIds = personIds.slice(startIndex, endIndex);
-
-            if (pageIds.length === 0) {
-                onComplete({
-                    results: [],
-                    page: page,
-                    total_pages: Math.ceil(personIds.length / PAGE_SIZE),
-                    total_results: personIds.length,
-                });
-                return;
-            }
-
-            let loaded = 0;
-            const results = [];
-            const currentLang = getCurrentLanguage();
-
-            pageIds.forEach((personId) => {
-                if (cache[personId]) {
-                    results.push(cache[personId]);
-                    checkComplete();
-                    return;
-                }
-
-                const url = Lampa.TMDB.api(
-                    `person/${personId}?api_key=${Lampa.TMDB.key()}&language=${currentLang}`
-                );
-                new Lampa.Reguest().silent(
-                    url,
-                    function (response) {
-                        try {
-                            const json =
-                                typeof response === "string" ? JSON.parse(response) : response;
-                            if (json && json.id) {
-                                const personCard = {
-                                    id: json.id,
-                                    title: json.name,
-                                    name: json.name,
-                                    poster_path: json.profile_path,
-                                    type: "actor",
-                                    source: "tmdb",
-                                    media_type: "person",
-                                };
-                                cache[personId] = personCard;
-                                results.push(personCard);
-                            }
-                        } catch (e) {}
-                        checkComplete();
-                    },
-                    function () {
-                        checkComplete();
+            new Lampa.Reguest().silent(url, function (response) {
+                try {
+                    const json = typeof response === 'string' ? JSON.parse(response) : response;
+                    if (json && (json.cast || []).length) {
+                        const credits = json.cast.map(item => ({
+                            id: item.id,
+                            title: item.title || item.name,
+                            name: item.title || item.name,
+                            poster_path: item.poster_path,
+                            type: item.media_type,
+                            source: "tmdb",
+                            media_type: item.media_type
+                        }));
+                        results.push(...credits);
                     }
-                );
-            });
+                } catch (e) {}
 
-            function checkComplete() {
-                loaded++;
-                if (loaded >= pageIds.length) {
-                    onComplete({
-                        results: results.filter(Boolean),
-                        page: page,
-                        total_pages: Math.ceil(personIds.length / PAGE_SIZE),
-                        total_results: personIds.length,
-                    });
+                if (--remaining === 0) {
+                    onComplete(results);
                 }
-            }
-        };
-    }
-
-    // ==== Старт плагіна ====
-    function startPlugin() {
-        hideDefaultSubscribeButton();
-
-        Lampa.Lang.add({
-            persons_plugin_title: pluginTranslations.persons_title,
-            persons_plugin_subscribe: pluginTranslations.subscribe,
-            persons_plugin_unsubscribe: pluginTranslations.unsubscribe,
-            persons_plugin_not_found: pluginTranslations.persons_not_found,
-        });
-
-        initStorage();
-
-        const personsService = new PersonsService();
-        Lampa.Api.sources[PLUGIN_NAME] = personsService;
-
-        const menuItem = $(
-            '<li class="menu__item selector" data-action="' +
-                PLUGIN_NAME +
-                '">' +
-                '<div class="menu__ico">' +
-                ICON_SVG +
-                "</div>" +
-                '<div class="menu__text">' +
-                Lampa.Lang.translate("persons_plugin_title") +
-                "</div>" +
-                "</li>"
-        );
-
-        menuItem.on("hover:enter", function () {
-            Lampa.Activity.push({
-                component: "category_full",
-                source: PLUGIN_NAME,
-                title: Lampa.Lang.translate("persons_plugin_title"),
-                page: 1,
-                url: PLUGIN_NAME + "__main",
+            }, function () {
+                if (--remaining === 0) {
+                    onComplete(results);
+                }
             });
         });
+    };
 
-        $(".menu .menu__list").eq(0).append(menuItem);
-
-        function waitForContainer(callback) {
-            let attempts = 0;
-            const max = 15;
-
-            function check() {
-                attempts++;
-                if (document.querySelector(".full-start__buttons") || document.querySelector(".person-start__bottom")) {
-                    callback();
-                } else if (attempts < max) setTimeout(check, 200);
-            }
-
-            setTimeout(check, 200);
-        }
-
-        function checkCurrentActivity() {
-            const activity = Lampa.Activity.active();
-            if (activity && activity.component === "actor") {
-                currentPersonId = parseInt(
-                    activity.id || activity.params?.id || location.pathname.match(/\/actor\/(\d+)/)?.[1],
-                    10
-                );
-                if (currentPersonId) {
-                    waitForContainer(addSubscribeButton);
-                }
-            }
-        }
-
-        Lampa.Listener.follow("activity", function (e) {
-            if (e.type === "start" && e.component === "actor" && e.object?.id) {
-                currentPersonId = parseInt(e.object.id, 10);
-                waitForContainer(addSubscribeButton);
-            } else if (
-                e.type === "resume" &&
-                e.component === "category_full" &&
-                e.object?.source === PLUGIN_NAME
-            ) {
-                setTimeout(() => Lampa.Activity.reload(), 100);
-            }
-        });
-
-        setTimeout(checkCurrentActivity, 1500);
-        addButtonStyles();
+    // ------------------------
+    // Update menu
+    // ------------------------
+    function updatePersonsList() {
+        Lampa.Arrays.removeLast(Lampa.Menu.listeners, onMenu);
+        Lampa.Menu.listeners.push(onMenu);
     }
 
-    if (window.appready) {
-        startPlugin();
-    } else {
-        Lampa.Listener.follow("app", function (e) {
-            if (e.type === "ready") startPlugin();
+    function onMenu(menu) {
+        menu.push({
+            title: "Persons",
+            id: "persons",
+            icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-3-3.87"/><path d="M4 21v-2a4 4 0 0 1 3-3.87"/><circle cx="12" cy="7" r="4"/></svg>',
+            action: function () {
+                Lampa.Activity.push({
+                    url: '',
+                    title: "Persons Subscriptions",
+                    component: 'category_full',
+                    page: 1,
+                    source: 'persons',
+                    card_type: true
+                });
+            }
         });
     }
+
+    Lampa.Component.add('persons', PersonsService);
+
+    // ------------------------
+    // Activity hook (actor page)
+    // ------------------------
+    Lampa.Listener.follow('activity', function (e) {
+        if (e.type === 'component' && e.component === 'actor') {
+            currentPersonId = e.data.id;
+            addSubscribeButton();
+        }
+    });
+
+    // ------------------------
+    // Init
+    // ------------------------
+    updatePersonsList();
+
 })();
