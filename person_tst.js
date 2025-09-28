@@ -187,4 +187,178 @@
                 color: #F44336;
             }`;
         const style = document.createElement("style");
-        style.id = "subscribe-button
+        style.id = "subscribe-button-styles";
+        style.textContent = css;
+        document.head.appendChild(style);
+    }
+
+    // ==== Сервіс для завантаження акторів ====
+    function PersonsService() {
+        const cache = {};
+
+        this.list = function (params, onComplete) {
+            const page = parseInt(params.page, 10) || 1;
+            const startIndex = (page - 1) * PAGE_SIZE;
+            const endIndex = startIndex + PAGE_SIZE;
+            const personIds = getPersonIds();
+            const pageIds = personIds.slice(startIndex, endIndex);
+
+            if (pageIds.length === 0) {
+                onComplete({
+                    results: [],
+                    page: page,
+                    total_pages: Math.ceil(personIds.length / PAGE_SIZE),
+                    total_results: personIds.length,
+                });
+                return;
+            }
+
+            let loaded = 0;
+            const results = [];
+            const currentLang = getCurrentLanguage();
+
+            pageIds.forEach((personId) => {
+                if (cache[personId]) {
+                    results.push(cache[personId]);
+                    checkComplete();
+                    return;
+                }
+
+                const url = Lampa.TMDB.api(
+                    `person/${personId}?api_key=${Lampa.TMDB.key()}&language=${currentLang}`
+                );
+                new Lampa.Reguest().silent(
+                    url,
+                    function (response) {
+                        try {
+                            const json =
+                                typeof response === "string" ? JSON.parse(response) : response;
+                            if (json && json.id) {
+                                const personCard = {
+                                    id: json.id,
+                                    title: json.name,
+                                    name: json.name,
+                                    poster_path: json.profile_path,
+                                    type: "actor",
+                                    source: "tmdb",
+                                    media_type: "person",
+                                };
+                                cache[personId] = personCard;
+                                results.push(personCard);
+                            }
+                        } catch (e) {}
+                        checkComplete();
+                    },
+                    function () {
+                        checkComplete();
+                    }
+                );
+            });
+
+            function checkComplete() {
+                loaded++;
+                if (loaded >= pageIds.length) {
+                    onComplete({
+                        results: results.filter(Boolean),
+                        page: page,
+                        total_pages: Math.ceil(personIds.length / PAGE_SIZE),
+                        total_results: personIds.length,
+                    });
+                }
+            }
+        };
+    }
+
+    // ==== Старт плагіна ====
+    function startPlugin() {
+        hideDefaultSubscribeButton();
+
+        Lampa.Lang.add({
+            persons_plugin_title: pluginTranslations.persons_title,
+            persons_plugin_subscribe: pluginTranslations.subscribe,
+            persons_plugin_unsubscribe: pluginTranslations.unsubscribe,
+            persons_plugin_not_found: pluginTranslations.persons_not_found,
+        });
+
+        initStorage();
+
+        const personsService = new PersonsService();
+        Lampa.Api.sources[PLUGIN_NAME] = personsService;
+
+        const menuItem = $(
+            '<li class="menu__item selector" data-action="' +
+                PLUGIN_NAME +
+                '">' +
+                '<div class="menu__ico">' +
+                ICON_SVG +
+                "</div>" +
+                '<div class="menu__text">' +
+                Lampa.Lang.translate("persons_plugin_title") +
+                "</div>" +
+                "</li>"
+        );
+
+        menuItem.on("hover:enter", function () {
+            Lampa.Activity.push({
+                component: "category_full",
+                source: PLUGIN_NAME,
+                title: Lampa.Lang.translate("persons_plugin_title"),
+                page: 1,
+                url: PLUGIN_NAME + "__main",
+            });
+        });
+
+        $(".menu .menu__list").eq(0).append(menuItem);
+
+        function waitForContainer(callback) {
+            let attempts = 0;
+            const max = 15;
+
+            function check() {
+                attempts++;
+                if (document.querySelector(".full-start__buttons") || document.querySelector(".person-start__bottom")) {
+                    callback();
+                } else if (attempts < max) setTimeout(check, 200);
+            }
+
+            setTimeout(check, 200);
+        }
+
+        function checkCurrentActivity() {
+            const activity = Lampa.Activity.active();
+            if (activity && activity.component === "actor") {
+                currentPersonId = parseInt(
+                    activity.id || activity.params?.id || location.pathname.match(/\/actor\/(\d+)/)?.[1],
+                    10
+                );
+                if (currentPersonId) {
+                    waitForContainer(addSubscribeButton);
+                }
+            }
+        }
+
+        Lampa.Listener.follow("activity", function (e) {
+            if (e.type === "start" && e.component === "actor" && e.object?.id) {
+                currentPersonId = parseInt(e.object.id, 10);
+                waitForContainer(addSubscribeButton);
+            } else if (
+                e.type === "resume" &&
+                e.component === "category_full" &&
+                e.object?.source === PLUGIN_NAME
+            ) {
+                setTimeout(() => Lampa.Activity.reload(), 100);
+            }
+        });
+
+        setTimeout(checkCurrentActivity, 1500);
+        addButtonStyles();
+    }
+
+    if (window.appready) {
+        startPlugin();
+    } else {
+        Lampa.Listener.follow("app", function (e) {
+            if (e.type === "ready") startPlugin();
+        });
+    }
+})();
