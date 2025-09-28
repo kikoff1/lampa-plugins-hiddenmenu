@@ -6,7 +6,6 @@
         if (document.getElementById('hide-subscribe-style')) return;
 
         const css = `.button--subscribe { display: none !important; }`;
-
         const style = document.createElement('style');
         style.id = 'hide-subscribe-style';
         style.textContent = css;
@@ -17,9 +16,7 @@
     var PLUGIN_NAME = "persons_plugin";
     var PERSONS_KEY = "saved_persons";
     var PAGE_SIZE = 20;
-    var DEFAULT_PERSON_IDS = [];
     var currentPersonId = null;
-    var my_logging = true;
 
     var pluginTranslations = {
         persons_title: {
@@ -27,25 +24,21 @@
             zh: "人物", he: "אנשים", cs: "Osobnosti", bg: "Личности"
         },
         subscriibbe: {
-            ru: "Подписаться", en: "subscriibbe", uk: "Підписатися", be: "Падпісацца", pt: "Inscrever",
-            zh: "订阅", he: "הירשם", cs: "Přihlásit se", bg: "Абонирай се"
+            ru: "Подписаться", en: "subscriibbe", uk: "Підписатися", be: "Падпісацца",
+            pt: "Inscrever", zh: "订阅", he: "הירשם", cs: "Přihlásit se", bg: "Абонирай се"
         },
         unsubscriibbe: {
-            ru: "Отписаться", en: "Unsubscriibbe", uk: "Відписатися", be: "Адпісацца", pt: "Cancelar inscrição",
-            zh: "退订", he: "בטל מנוי", cs: "Odhlásit se", bg: "Отписване"
+            ru: "Отписаться", en: "Unsubscriibbe", uk: "Відписатися", be: "Адпісацца",
+            pt: "Cancelar inscrição", zh: "退订", he: "בטל מנוי", cs: "Odhlásit se", bg: "Отписване"
         },
         persons_not_found: {
             ru: "Персоны не найдены", en: "No persons found", uk: "Особи не знайдені", be: "Асобы не знойдзены",
-            pt: "Nenhuma pessoa encontrada", zh: "未找到人物", he: "לא נמצאו אנשים",
-            cs: "Nebyly nalezeny žádné osoby", bg: "Не са намерени хора"
+            pt: "Nenhuma pessoa encontrada", zh: "未找到人物", he: "לא נמצאו אנשים", cs: "Nebyly nalezeny žádné osoby",
+            bg: "Не са намерени хора"
         }
     };
 
     var ICON_SVG = '<svg height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 11C17.66 11 18.99 9.66 18.99 8C18.99 6.34 17.66 5 16 5C14.34 5 13 6.34 13 8C13 9.66 14.34 11 16 11ZM8 11C9.66 11 10.99 9.66 10.99 8C10.99 6.34 9.66 5 8 5C6.34 5 5 6.34 5 8C5 9.66 6.34 11 8 11ZM8 13C5.67 13 1 14.17 1 16.5V19H15V16.5C15 14.17 10.33 13 8 13ZM16 13C15.71 13 15.38 13.02 15.03 13.05C16.19 13.89 17 15.02 17 16.5V19H23V16.5C23 14.17 18.33 13 16 13Z" fill="currentColor"/></svg>';
-
-    function log() {
-        if (my_logging) console.log.apply(console, arguments);
-    }
 
     function getCurrentLanguage() {
         return localStorage.getItem('language') || 'en';
@@ -54,7 +47,7 @@
     function initStorage() {
         var current = Lampa.Storage.get(PERSONS_KEY);
         if (!current || current.length === 0) {
-            Lampa.Storage.set(PERSONS_KEY, DEFAULT_PERSON_IDS);
+            Lampa.Storage.set(PERSONS_KEY, []);
         }
     }
 
@@ -79,11 +72,11 @@
 
     function addButtonToContainer(bottomBlock) {
         var existingButton = bottomBlock.querySelector('.button--subscriibbe-plugin');
-        if (existingButton) existingButton.remove();
+        if (existingButton && existingButton.parentNode) existingButton.remove();
 
         var issubscriibbed = isPersonsubscriibbed(currentPersonId);
-        var buttonText = issubscriibbed ? 
-            Lampa.Lang.translate('persons_plugin_unsubscriibbe') : 
+        var buttonText = issubscriibbed ?
+            Lampa.Lang.translate('persons_plugin_unsubscriibbe') :
             Lampa.Lang.translate('persons_plugin_subscriibbe');
 
         var button = document.createElement('div');
@@ -125,14 +118,12 @@
         else {
             let attempts = 0;
             const maxAttempts = 10;
-
             function tryAgain() {
                 attempts++;
                 var container = document.querySelector('.person-start__bottom');
                 if (container) addButtonToContainer(container);
                 else if (attempts < maxAttempts) setTimeout(tryAgain, 300);
             }
-
             setTimeout(tryAgain, 300);
         }
     }
@@ -156,9 +147,7 @@
     }
 
     function PersonsService() {
-        var self = this;
         var cache = {};
-
         this.list = function (params, onComplete) {
             var page = parseInt(params.page, 10) || 1;
             var startIndex = (page - 1) * PAGE_SIZE;
@@ -167,7 +156,7 @@
             var pageIds = personIds.slice(startIndex, endIndex);
 
             if (pageIds.length === 0) {
-                onComplete({ results: [], page: page, total_pages: Math.ceil(personIds.length / PAGE_SIZE), total_results: personIds.length });
+                onComplete({ results: [], page: page, total_pages: 0, total_results: 0 });
                 return;
             }
 
@@ -175,39 +164,32 @@
             var results = [];
             var currentLang = getCurrentLanguage();
 
-            for (var i = 0; i < pageIds.length; i++) {
-                (function (i) {
-                    var personId = pageIds[i];
-                    if (cache[personId]) {
-                        results.push(cache[personId]);
-                        checkComplete();
-                        return;
-                    }
+            for (let i = 0; i < pageIds.length; i++) {
+                let personId = pageIds[i];
+                if (cache[personId]) {
+                    results.push(cache[personId]);
+                    checkComplete();
+                    continue;
+                }
 
-                    var url = Lampa.TMDB.api(`person/${personId}?api_key=${Lampa.TMDB.key()}&language=${currentLang}`);
-                    new Lampa.Reguest().silent(url, function (response) {
-                        try {
-                            var json = typeof response === 'string' ? JSON.parse(response) : response;
-                            if (json && json.id) {
-                                var personCard = {
-                                    id: json.id,
-                                    title: json.name,
-                                    name: json.name,
-                                    poster_path: json.profile_path,
-                                    type: "person",            // <-- важливо
-                                    source: PLUGIN_NAME,
-                                    url: 'plugin_person_' + json.id,
-                                    media_type: "person"
-                                };
-                                cache[personId] = personCard;
-                                results.push(personCard);
-                            }
-                        } catch (e) {}
-                        checkComplete();
-                    }, function () {
-                        checkComplete();
-                    });
-                })(i);
+                var url = Lampa.TMDB.api(`person/${personId}?api_key=${Lampa.TMDB.key()}&language=${currentLang}`);
+                new Lampa.Reguest().silent(url, function (json) {
+                    if (json && json.id) {
+                        var personCard = {
+                            id: json.id,
+                            title: json.name,
+                            name: json.name,
+                            poster_path: json.profile_path,
+                            type: "card",
+                            source: "tmdb",
+                            url: 'person/' + json.id,
+                            media_type: "person"
+                        };
+                        cache[personId] = personCard;
+                        results.push(personCard);
+                    }
+                    checkComplete();
+                }, function () { checkComplete(); });
             }
 
             function checkComplete() {
@@ -258,6 +240,19 @@
 
         $(".menu .menu__list").eq(0).append(menuItem);
 
+        // === обробка відкриття персони зі списку ===
+        Lampa.Listener.follow('full', function (e) {
+            if (e.type === 'open' && e.card && e.card.media_type === 'person' && e.card.id) {
+                Lampa.Activity.push({
+                    url: Lampa.TMDB.api('person/' + e.card.id + '?api_key=' + Lampa.TMDB.key() + '&language=' + getCurrentLanguage()),
+                    component: 'actor',
+                    id: e.card.id,
+                    name: e.card.title,
+                    source: 'tmdb'
+                });
+            }
+        });
+
         function waitForContainer(callback) {
             let attempts = 0;
             const max = 15;
@@ -272,10 +267,8 @@
         function checkCurrentActivity() {
             var activity = Lampa.Activity.active();
             if (activity && activity.component === 'actor') {
-                currentPersonId = parseInt(activity.id || activity.params?.id || location.pathname.match(/\/actor\/(\d+)/)?.[1], 10);
-                if (currentPersonId) {
-                    waitForContainer(addsubscriibbeButton);
-                }
+                currentPersonId = parseInt(activity.id, 10);
+                if (currentPersonId) waitForContainer(addsubscriibbeButton);
             }
         }
 
@@ -285,19 +278,6 @@
                 waitForContainer(addsubscriibbeButton);
             } else if (e.type === 'resume' && e.component === 'category_full' && e.object?.source === PLUGIN_NAME) {
                 setTimeout(() => Lampa.Activity.reload(), 100);
-            }
-        });
-
-        // нове: відкриття actor page при кліку на картку персони
-        Lampa.Listener.follow('full', function (e) {
-            if (e.type === 'open' && e.card && e.card.type === 'person' && e.card.id) {
-                Lampa.Activity.push({
-                    url: 'https://www.themoviedb.org/person/' + e.card.id,
-                    component: 'actor',
-                    id: e.card.id,
-                    name: e.card.title,
-                    source: 'tmdb'
-                });
             }
         });
 
