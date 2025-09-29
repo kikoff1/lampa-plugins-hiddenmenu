@@ -1,357 +1,172 @@
-(function() {
-    "use strict";
+(function () {
+    'use strict';
 
-    // ==== ПРИХОВАННЯ СТАНДАРТНОЇ КНОПКИ "ПІДПИСАТИСЯ" ====
-    function hideSubscribeButton() {
+    const STORAGE_KEY = 'subscribed_persons';
+    const PAGE_SIZE = 20;
+    let currentPersonId = null;
+
+    const ICON_ACTORS = '<svg xmlns="http://www.w3.org/2000/svg" width="2.2em" height="2.2em" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="4"><path stroke-linejoin="round" d="M24 44c11.046 0 20-8.954 20-20S35.046 4 24 4S4 12.954 4 24s8.954 20 20 20Z"/><path d="M30 24v-4.977C30 16.226 28.136 14 24 14s-6 2.226-6 5.023V24"/><path stroke-linejoin="round" d="M30 24h-6v-4.977C24 16.226 25.864 14 30 14s6 2.226 6 5.023V24h-6Zm-18 0h6v-4.977C24 16.226 22.136 14 18 14s-6 2.226-6 5.023V24h6Z"/></g></svg>';
+    const ICON_SUBS = '<svg height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 11C17.66 11 18.99 9.66 18.99 8C18.99 6.34 17.66 5 16 5C14.34 5 13 6.34 13 8C13 9.66 14.34 11 16 11ZM8 11C9.66 11 10.99 9.66 10.99 8C10.99 6.34 9.66 5 8 5C6.34 5 5 6.34 5 8C5 9.66 6.34 11 8 11ZM8 13C5.67 13 1 14.17 1 16.5V19H15V16.5C15 14.17 10.33 13 8 13ZM16 13C15.71 13 15.38 13.02 15.03 13.05C16.19 13.89 17 15.02 17 16.5V19H23V16.5C23 14.17 18.33 13 16 13Z" fill="currentColor"/></svg>';
+
+    // Приховує стандартні кнопки підписок
+    function hideDefaultSubscribeButtons() {
         if (document.getElementById('hide-subscribe-style')) return;
-
-        const css = `
-            .button--subscribe {
-                display: none !important;
-            }
-        `;
-
         const style = document.createElement('style');
         style.id = 'hide-subscribe-style';
-        style.textContent = css;
+        style.textContent = `.button--subscribe { display: none !important; }`;
         document.head.appendChild(style);
     }
 
-    // ==== ОСНОВНА ЛОГІКА ПЛАГІНА ====
-    var PLUGIN_NAME = "persons_plugin";
-    var PERSONS_KEY = "saved_persons";
-    var PAGE_SIZE = 20;
-    var DEFAULT_PERSON_IDS = [];
-    var currentPersonId = null;
-    var my_logging = true;
-
-    var pluginTranslations = {
-        persons_title: {
-            ru: "Персоны",
-            en: "Persons",
-            uk: "Персони",
-            be: "Асобы",
-            pt: "Pessoas",
-            zh: "人物",
-            he: "אנשים",
-            cs: "Osobnosti",
-            bg: "Личности"
-        },
-        subscriibbe: {
-            ru: "Подписаться",
-            en: "subscriibbe",
-            uk: "Підписатися",
-            be: "Падпісацца",
-            pt: "Inscrever",
-            zh: "订阅",
-            he: "הירשם",
-            cs: "Přihlásit se",
-            bg: "Абонирай се"
-        },
-        unsubscriibbe: {
-            ru: "Отписаться",
-            en: "Unsubscriibbe",
-            uk: "Відписатися",
-            be: "Адпісацца",
-            pt: "Cancelar inscrição",
-            zh: "退订",
-            he: "בטל מנוי",
-            cs: "Odhlásit se",
-            bg: "Отписване"
-        },
-        persons_not_found: {
-            ru: "Персоны не найдены",
-            en: "No persons found",
-            uk: "Особи не знайдені",
-            be: "Асобы не знойдзены",
-            pt: "Nenhuma pessoa encontrada",
-            zh: "未找到人物",
-            he: "לא נמצאו אנשים",
-            cs: "Nebyly nalezeny žádné osoby",
-            bg: "Не са намерени хора"
-        }
-    };
-
-    var ICON_SVG = '<svg height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 11C17.66 11 18.99 9.66 18.99 8C18.99 6.34 17.66 5 16 5C14.34 5 13 6.34 13 8C13 9.66 14.34 11 16 11ZM8 11C9.66 11 10.99 9.66 10.99 8C10.99 6.34 9.66 5 8 5C6.34 5 5 6.34 5 8C5 9.66 6.34 11 8 11ZM8 13C5.67 13 1 14.17 1 16.5V19H15V16.5C15 14.17 10.33 13 8 13ZM16 13C15.71 13 15.38 13.02 15.03 13.05C16.19 13.89 17 15.02 17 16.5V19H23V16.5C23 14.17 18.33 13 16 13Z" fill="currentColor"/></svg>';
-
-    function log() {
-        if (my_logging && console && console.log) {
-            try {
-                console.log.apply(console, arguments);
-            } catch (e) {}
-        }
+    function getSubscribed() {
+        return Lampa.Storage.get(STORAGE_KEY, []);
     }
 
-    function error() {
-        if (my_logging && console && console.error) {
-            try {
-                console.error.apply(console, arguments);
-            } catch (e) {}
-        }
-    }
-
-    function getCurrentLanguage() {
-        return localStorage.getItem('language') || 'en';
-    }
-
-    function initStorage() {
-        var current = Lampa.Storage.get(PERSONS_KEY);
-        if (!current || current.length === 0) {
-            Lampa.Storage.set(PERSONS_KEY, DEFAULT_PERSON_IDS);
-        }
-    }
-
-    function getPersonIds() {
-        return Lampa.Storage.get(PERSONS_KEY, []);
-    }
-
-    function togglePersonSubscription(personId) {
-        var personIds = getPersonIds();
-        var index = personIds.indexOf(personId);
-
-        if (index === -1) personIds.push(personId);
-        else personIds.splice(index, 1);
-
-        Lampa.Storage.set(PERSONS_KEY, personIds);
+    function toggleSubscription(id) {
+        let subs = getSubscribed();
+        const index = subs.indexOf(id);
+        if (index === -1) subs.push(id);
+        else subs.splice(index, 1);
+        Lampa.Storage.set(STORAGE_KEY, subs);
         return index === -1;
     }
 
-    function isPersonsubscriibbed(personId) {
-        return getPersonIds().includes(personId);
+    function isSubscribed(id) {
+        return getSubscribed().includes(id);
     }
 
-    function addButtonToContainer(bottomBlock) {
-        var existingButton = bottomBlock.querySelector('.button--subscriibbe-plugin');
-        if (existingButton && existingButton.parentNode) {
-            existingButton.parentNode.removeChild(existingButton);
-        }
-
-        var issubscriibbed = isPersonsubscriibbed(currentPersonId);
-        var buttonText = issubscriibbed ? 
-            Lampa.Lang.translate('persons_plugin_unsubscriibbe') : 
-            Lampa.Lang.translate('persons_plugin_subscriibbe');
-
-        var button = document.createElement('div');
-        button.className = 'full-start__button selector button--subscriibbe-plugin';
-        button.classList.add(issubscriibbed ? 'button--unsubscriibbe' : 'button--subscriibbe');
-        button.setAttribute('data-focusable', 'true');
-
-        button.innerHTML =
-            '<svg width="25" height="30" viewBox="0 0 25 30" fill="none" xmlns="http://www.w3.org/2000/svg">' +
-            '<path d="M6.01892 24C6.27423 27.3562 9.07836 30 12.5 30C15.9216 30 18.7257 27.3562 18.981 24H15.9645C15.7219 25.6961 14.2632 27 12.5 27C10.7367 27 9.27804 25.6961 9.03542 24H6.01892Z" fill="currentColor"></path>' +
-            '<path d="M3.81972 14.5957V10.2679C3.81972 5.41336 7.7181 1.5 12.5 1.5C17.2819 1.5 21.1803 5.41336 21.1803 10.2679V14.5957C21.1803 15.8462 21.5399 17.0709 22.2168 18.1213L23.0727 19.4494C24.2077 21.2106 22.9392 23.5 20.9098 23.5H4.09021C2.06084 23.5 0.792282 21.2106 1.9273 19.4494L2.78317 18.1213C3.46012 17.0709 3.81972 15.8462 3.81972 14.5957Z" stroke="currentColor" stroke-width="2.5" fill="transparent"></path>' +
-            '</svg>' +
-            '<span>' + buttonText + '</span>';
-
-        button.addEventListener('hover:enter', function () {
-            var wasAdded = togglePersonSubscription(currentPersonId);
-            var newText = wasAdded ?
-                Lampa.Lang.translate('persons_plugin_unsubscriibbe') :
-                Lampa.Lang.translate('persons_plugin_subscriibbe');
-
-            button.classList.remove('button--subscriibbe', 'button--unsubscriibbe');
-            button.classList.add(wasAdded ? 'button--unsubscriibbe' : 'button--subscriibbe');
-
-            var span = button.querySelector('span');
-            if (span) span.textContent = newText;
-            updatePersonsList();
-        });
-
-        var buttonsContainer = bottomBlock.querySelector('.full-start__buttons');
-        if (buttonsContainer) buttonsContainer.append(button);
-        else bottomBlock.append(button);
-    }
-
-    function addsubscriibbeButton() {
+    function addCustomSubscribeButton() {
         if (!currentPersonId) return;
 
-        var bottomBlock = document.querySelector('.person-start__bottom');
-        if (bottomBlock) addButtonToContainer(bottomBlock);
-        else {
-            let attempts = 0;
-            const maxAttempts = 10;
+        const container = document.querySelector('.person-start__bottom');
+        if (!container) return;
 
-            function tryAgain() {
-                attempts++;
-                var container = document.querySelector('.person-start__bottom');
-                if (container) addButtonToContainer(container);
-                else if (attempts < maxAttempts) setTimeout(tryAgain, 300);
+        const existing = container.querySelector('.button--sub-plugin');
+        if (existing) existing.remove();
+
+        const subscribed = isSubscribed(currentPersonId);
+        const btn = document.createElement('div');
+        btn.className = 'full-start__button selector button--sub-plugin';
+        btn.style.color = subscribed ? '#F44336' : '#4CAF50';
+        btn.setAttribute('data-focusable', 'true');
+        btn.innerHTML = `<span>${subscribed ? 'Відписатися' : 'Підписатися'}</span>`;
+
+        btn.addEventListener('hover:enter', () => {
+            const added = toggleSubscription(currentPersonId);
+            btn.style.color = added ? '#F44336' : '#4CAF50';
+            btn.querySelector('span').textContent = added ? 'Відписатися' : 'Підписатися';
+            if (Lampa.Activity.active()?.source === 'actors_subs') {
+                Lampa.Activity.reload();
             }
+        });
 
-            setTimeout(tryAgain, 300);
-        }
+        const buttons = container.querySelector('.full-start__buttons');
+        if (buttons) buttons.appendChild(btn);
+        else container.appendChild(btn);
     }
 
-    function updatePersonsList() {
-        var activity = Lampa.Activity.active();
-        if (activity && activity.component === 'category_full' && activity.source === PLUGIN_NAME) {
-            Lampa.Activity.reload();
-        }
-    }
-
-    function addButtonStyles() {
-        if (document.getElementById('subscriibbe-button-styles')) return;
-        var css = `
-            .full-start__button.selector.button--subscriibbe-plugin.button--subscriibbe {
-                color: #4CAF50;
-            }
-            .full-start__button.selector.button--subscriibbe-plugin.button--unsubscriibbe {
-                color: #F44336;
-            }`;
-        var style = document.createElement('style');
-        style.id = 'subscriibbe-button-styles';
-        style.textContent = css;
-        document.head.appendChild(style);
-    }
-
-    function PersonsService() {
-        var self = this;
-        var cache = {};
-
-        this.list = function (params, onComplete) {
-            var page = parseInt(params.page, 10) || 1;
-            var startIndex = (page - 1) * PAGE_SIZE;
-            var endIndex = startIndex + PAGE_SIZE;
-            var personIds = getPersonIds();
-            var pageIds = personIds.slice(startIndex, endIndex);
-
-            if (pageIds.length === 0) {
-                onComplete({
-                    results: [],
-                    page: page,
-                    total_pages: Math.ceil(personIds.length / PAGE_SIZE),
-                    total_results: personIds.length
-                });
+    function SubscriptionsSource() {
+        this.list = (params, onComplete) => {
+            const page = params.page || 1;
+            const subs = getSubscribed();
+            const ids = subs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+            if (ids.length === 0) {
+                onComplete({ results: [], page, total_pages: 1, total_results: subs.length });
                 return;
             }
 
-            var loaded = 0;
-            var results = [];
-            var currentLang = getCurrentLanguage();
+            let results = [];
+            let loaded = 0;
+            const lang = localStorage.getItem('language') || 'uk';
 
-            for (var i = 0; i < pageIds.length; i++) {
-                (function (i) {
-                    var personId = pageIds[i];
-                    if (cache[personId]) {
-                        results.push(cache[personId]);
-                        checkComplete();
-                        return;
+            ids.forEach(id => {
+                const url = Lampa.TMDB.api(`person/${id}?api_key=${Lampa.TMDB.key()}&language=${lang}`);
+                new Lampa.Reguest().silent(url, (json) => {
+                    if (json && json.id) {
+                        results.push({
+                            id: json.id,
+                            title: json.name,
+                            name: json.name,
+                            poster_path: json.profile_path,
+                            type: 'actor',
+                            media_type: 'person',
+                            source: 'tmdb'
+                        });
                     }
+                    check();
+                }, () => check());
+            });
 
-                    var url = Lampa.TMDB.api(`person/${personId}?api_key=${Lampa.TMDB.key()}&language=${currentLang}`);
-                    new Lampa.Reguest().silent(url, function (response) {
-                        try {
-                            var json = typeof response === 'string' ? JSON.parse(response) : response;
-                            if (json && json.id) {
-                                var personCard = {
-                                    id: json.id,
-                                    title: json.name,
-                                    name: json.name,
-                                    poster_path: json.profile_path,
-                                    type: "person",
-                                    source: "tmdb",
-                                    media_type: "person"
-                                };
-                                cache[personId] = personCard;
-                                results.push(personCard);
-                            }
-                        } catch (e) { }
-                        checkComplete();
-                    }, function () {
-                        checkComplete();
-                    });
-                })(i);
-            }
-
-            function checkComplete() {
+            function check() {
                 loaded++;
-                if (loaded >= pageIds.length) {
+                if (loaded >= ids.length) {
                     onComplete({
-                        results: results.filter(Boolean),
-                        page: page,
-                        total_pages: Math.ceil(personIds.length / PAGE_SIZE),
-                        total_results: personIds.length
+                        results,
+                        page,
+                        total_pages: Math.ceil(subs.length / PAGE_SIZE),
+                        total_results: subs.length
                     });
                 }
             }
         };
     }
 
-    function startPlugin() {
-        hideSubscribeButton(); // <-- Додаємо приховування кнопки
+    function addMenuItems() {
+        // Кнопка "Актори"
+        const actorsBtn = $(`<li class="menu__item selector" data-action="actors">
+            <div class="menu__ico">${ICON_ACTORS}</div>
+            <div class="menu__text">Актори</div>
+        </li>`);
 
-        Lampa.Lang.add({
-            persons_plugin_title: pluginTranslations.persons_title,
-            persons_plugin_subscriibbe: pluginTranslations.subscriibbe,
-            persons_plugin_unsubscriibbe: pluginTranslations.unsubscriibbe,
-            persons_plugin_not_found: pluginTranslations.persons_not_found,
-        });
-
-        initStorage();
-
-        var personsService = new PersonsService();
-        Lampa.Api.sources[PLUGIN_NAME] = personsService;
-
-        var menuItem = $(
-            '<li class="menu__item selector" data-action="' + PLUGIN_NAME + '">' +
-            '<div class="menu__ico">' + ICON_SVG + '</div>' +
-            '<div class="menu__text">' + Lampa.Lang.translate('persons_plugin_title') + '</div>' +
-            '</li>'
-        );
-
-        menuItem.on("hover:enter", function () {
+        actorsBtn.on('hover:enter', () => {
             Lampa.Activity.push({
+                url: "person/popular",
+                title: "Актори",
+                region: "UA",
+                language: "uk-UA",
                 component: "category_full",
-                source: PLUGIN_NAME,
-                title: Lampa.Lang.translate('persons_plugin_title'),
-                page: 1,
-                url: PLUGIN_NAME + '__main'
+                source: "tmdb",
+                card_type: "true",
+                page: 1
             });
         });
 
-        $(".menu .menu__list").eq(0).append(menuItem);
+        // Кнопка "Підписки на акторів"
+        const subsBtn = $(`<li class="menu__item selector" data-action="actors_subs">
+            <div class="menu__ico">${ICON_SUBS}</div>
+            <div class="menu__text">Підписки на акторів</div>
+        </li>`);
 
-        function waitForContainer(callback) {
-            let attempts = 0;
-            const max = 15;
+        subsBtn.on('hover:enter', () => {
+            Lampa.Activity.push({
+                component: "category_full",
+                source: "actors_subs",
+                title: "Підписки на акторів",
+                page: 1,
+                url: "actors_subs_main"
+            });
+        });
 
-            function check() {
-                attempts++;
-                if (document.querySelector('.person-start__bottom')) callback();
-                else if (attempts < max) setTimeout(check, 200);
-            }
+        $(".menu .menu__list").eq(0).append(actorsBtn).append(subsBtn);
+    }
 
-            setTimeout(check, 200);
-        }
+    function startPlugin() {
+        hideDefaultSubscribeButtons();
+        addMenuItems();
 
-        function checkCurrentActivity() {
-            var activity = Lampa.Activity.active();
-            if (activity && activity.component === 'actor') {
-                currentPersonId = parseInt(activity.id || activity.params?.id || location.pathname.match(/\/actor\/(\d+)/)?.[1], 10);
-                if (currentPersonId) {
-                    waitForContainer(addsubscriibbeButton);
-                }
-            }
-        }
+        Lampa.Api.sources['actors_subs'] = new SubscriptionsSource();
 
-        Lampa.Listener.follow('activity', function (e) {
+        // Слухаємо відкриття акторів
+        Lampa.Listener.follow('activity', (e) => {
             if (e.type === 'start' && e.component === 'actor' && e.object?.id) {
                 currentPersonId = parseInt(e.object.id, 10);
-                waitForContainer(addsubscriibbeButton);
-            } else if (e.type === 'resume' && e.component === 'category_full' && e.object?.source === PLUGIN_NAME) {
-                setTimeout(() => Lampa.Activity.reload(), 100);
+                setTimeout(addCustomSubscribeButton, 500);
+            } else if (e.type === 'resume' && e.component === 'category_full' && e.object?.source === 'actors_subs') {
+                setTimeout(() => Lampa.Activity.reload(), 200);
             }
         });
-
-        setTimeout(checkCurrentActivity, 1500);
-        addButtonStyles();
     }
 
-    if (window.appready) {
-        startPlugin();
-    } else {
-        Lampa.Listener.follow('app', function (e) {
-            if (e.type === 'ready') startPlugin();
-        });
-    }
+    if (window.appready) startPlugin();
+    else Lampa.Listener.follow('app', e => { if (e.type === 'ready') startPlugin(); });
+
 })();
