@@ -117,7 +117,16 @@
                             poster_path: json.profile_path,
                             component: "actor",
                             media_type: "person",
-                            source: "tmdb"
+                            source: "tmdb",
+                            onSelect: function() {
+                                // Відкриття сторінки актора точно як у меню "Актори"
+                                Lampa.Activity.push({
+                                    component: "actor",
+                                    id: json.id,
+                                    title: json.name,
+                                    source: "tmdb"
+                                });
+                            }
                         };
                         cache[id] = card;
                         results.push(card);
@@ -145,7 +154,6 @@
 
         const btnSubs = $(`<li class="menu__item selector" data-action="${PLUGIN_SOURCE}"><div class="menu__ico">${icoSubs}</div><div class="menu__text">Підписки акторів</div></li>`);
         btnSubs.on('hover:enter', () => {
-            // Відкриваємо кастомну активність для підписок
             Lampa.Activity.push({ title: "Підписки акторів", component: "category_full", source: PLUGIN_SOURCE, page: 1 });
         });
 
