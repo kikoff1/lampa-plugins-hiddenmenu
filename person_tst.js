@@ -1,10 +1,9 @@
 (function () {
     'use strict';
 
-    let currentPersonId = null;
     const STORAGE_KEY = 'actors_subscriptions';
     const PLUGIN_SOURCE = 'actors_subs';
-    const PAGE_SIZE = 20;
+    let currentPersonId = null;
 
     // === Підписки ===
     function getSubscriptions() {
@@ -23,7 +22,7 @@
         return isSubscribed(id);
     }
 
-    // === Кнопка Підписатися / Відписатися на сторінці актора ===
+    // === Кнопка Підписатися/Відписатися на сторінці актора ===
     function waitForPersonContainer(callback) {
         let attempts = 0;
         const maxAttempts = 15;
@@ -85,18 +84,18 @@
         document.head.appendChild(style);
     }
 
-    // === Сервіс для підписок ===
+    // === Сервіс для підписок (повертає картки акторів) ===
     function ActorsSubsService() {
         const cache = {};
-        this.list = function (params, onComplete) {
+        this.list = function(params, onComplete) {
             const page = parseInt(params.page, 10) || 1;
             const allSubs = getSubscriptions();
-            const start = (page - 1) * PAGE_SIZE;
-            const end = start + PAGE_SIZE;
+            const start = (page - 1) * 20;
+            const end = start + 20;
             const pageIds = allSubs.slice(start, end);
 
             if (pageIds.length === 0) {
-                onComplete({ results: [], page, total_pages: Math.ceil(allSubs.length / PAGE_SIZE), total_results: allSubs.length });
+                onComplete({ results: [], page, total_pages: Math.ceil(allSubs.length / 20), total_results: allSubs.length });
                 return;
             }
 
@@ -119,7 +118,7 @@
                             media_type: "person",
                             source: "tmdb",
                             onSelect: function() {
-                                // Відкриття сторінки актора точно як у меню "Актори"
+                                // Відкриття сторінки актора без category_full
                                 Lampa.Activity.push({
                                     component: "actor",
                                     id: json.id,
@@ -137,7 +136,7 @@
 
             function checkComplete() {
                 loaded++;
-                if (loaded >= pageIds.length) onComplete({ results: results.filter(Boolean), page, total_pages: Math.ceil(allSubs.length / PAGE_SIZE), total_results: allSubs.length });
+                if (loaded >= pageIds.length) onComplete({ results: results.filter(Boolean), page, total_pages: Math.ceil(allSubs.length / 20), total_results: allSubs.length });
             }
         };
     }
@@ -154,6 +153,7 @@
 
         const btnSubs = $(`<li class="menu__item selector" data-action="${PLUGIN_SOURCE}"><div class="menu__ico">${icoSubs}</div><div class="menu__text">Підписки акторів</div></li>`);
         btnSubs.on('hover:enter', () => {
+            // Власна кастомна активність: підписані актори
             Lampa.Activity.push({ title: "Підписки акторів", component: "category_full", source: PLUGIN_SOURCE, page: 1 });
         });
 
