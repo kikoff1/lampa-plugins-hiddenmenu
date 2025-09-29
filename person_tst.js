@@ -130,9 +130,9 @@
                             title: json.name,
                             name: json.name,
                             poster_path: json.profile_path,
-                            type: "actor",
-                            source: "tmdb",
-                            media_type: "person"
+                            component: "actor",       // ✅ відкриває сторінку актора
+                            media_type: "person",     // ✅ правильний тип
+                            source: "tmdb"
                         };
                         cache[id] = card;
                         results.push(card);
