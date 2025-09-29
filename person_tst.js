@@ -2,7 +2,6 @@
     'use strict';
 
     const STORAGE_KEY = 'actors_subscriptions';
-    const PLUGIN_SOURCE = 'actors_subs';
     let currentPersonId = null;
 
     // === Підписки ===
@@ -53,7 +52,7 @@
                 const nowSub = toggleSubscription(currentPersonId);
                 btn.style.color = nowSub ? '#F44336' : '#4CAF50';
                 btn.querySelector('span').textContent = nowSub ? 'Відписатися' : 'Підписатися';
-                if (Lampa.Activity.active()?.source === PLUGIN_SOURCE) Lampa.Activity.reload();
+                if (Lampa.Activity.active()?.source === 'actors_subs') Lampa.Activity.reload();
             });
 
             const buttons = container.querySelector('.full-start__buttons');
@@ -84,18 +83,20 @@
         document.head.appendChild(style);
     }
 
-    // === Сервіс для підписок (повертає картки акторів) ===
+    // === Сервіс для підписок (кастомний список) ===
     function ActorsSubsService() {
         const cache = {};
-        this.list = function(params, onComplete) {
-            const page = parseInt(params.page, 10) || 1;
-            const allSubs = getSubscriptions();
-            const start = (page - 1) * 20;
-            const end = start + 20;
-            const pageIds = allSubs.slice(start, end);
 
-            if (pageIds.length === 0) {
-                onComplete({ results: [], page, total_pages: Math.ceil(allSubs.length / 20), total_results: allSubs.length });
+        this.list = function(params, onComplete) {
+            const subs = getSubscriptions();
+            const page = parseInt(params.page || 1);
+            const pageSize = 20;
+            const start = (page-1)*pageSize;
+            const end = start+pageSize;
+            const pageIds = subs.slice(start,end);
+
+            if (pageIds.length===0) {
+                onComplete({results:[], page, total_pages: Math.ceil(subs.length/pageSize), total_results: subs.length});
                 return;
             }
 
@@ -103,22 +104,22 @@
             const results = [];
             const lang = localStorage.getItem('language') || 'uk';
 
-            pageIds.forEach(id => {
+            pageIds.forEach(id=>{
                 if (cache[id]) { results.push(cache[id]); checkComplete(); return; }
 
                 const url = Lampa.TMDB.api(`person/${id}?api_key=${Lampa.TMDB.key()}&language=${lang}`);
-                new Lampa.Reguest().silent(url, (json) => {
-                    if (json && json.id) {
+                new Lampa.Reguest().silent(url,(json)=>{
+                    if(json && json.id) {
                         const card = {
                             id: json.id,
                             title: json.name,
                             name: json.name,
                             poster_path: json.profile_path,
-                            component: "actor",
-                            media_type: "person",
-                            source: "tmdb",
-                            onSelect: function() {
-                                // Відкриття сторінки актора без category_full
+                            component:"actor",
+                            media_type:"person",
+                            source:"tmdb",
+                            onSelect: function(){
+                                // Відкриваємо сторінку актора без category_full
                                 Lampa.Activity.push({
                                     component: "actor",
                                     id: json.id,
@@ -127,16 +128,21 @@
                                 });
                             }
                         };
-                        cache[id] = card;
+                        cache[id]=card;
                         results.push(card);
                     }
                     checkComplete();
-                }, () => checkComplete());
+                },()=>checkComplete());
             });
 
-            function checkComplete() {
+            function checkComplete(){
                 loaded++;
-                if (loaded >= pageIds.length) onComplete({ results: results.filter(Boolean), page, total_pages: Math.ceil(allSubs.length / 20), total_results: allSubs.length });
+                if(loaded>=pageIds.length) onComplete({
+                    results: results.filter(Boolean),
+                    page,
+                    total_pages: Math.ceil(subs.length/pageSize),
+                    total_results: subs.length
+                });
             }
         };
     }
@@ -148,16 +154,44 @@
 
         const btnActors = $(`<li class="menu__item selector" data-action="actors"><div class="menu__ico">${icoActors}</div><div class="menu__text">Актори</div></li>`);
         btnActors.on('hover:enter', () => {
-            Lampa.Activity.push({ url: "person/popular", title: "Актори", component: "category_full", source: "tmdb", page: 1 });
+            Lampa.Activity.push({ url:"person/popular", title:"Актори", component:"category_full", source:"tmdb", page:1 });
         });
 
-        const btnSubs = $(`<li class="menu__item selector" data-action="${PLUGIN_SOURCE}"><div class="menu__ico">${icoSubs}</div><div class="menu__text">Підписки акторів</div></li>`);
+        const btnSubs = $(`<li class="menu__item selector" data-action="actors_subs"><div class="menu__ico">${icoSubs}</div><div class="menu__text">Підписки акторів</div></li>`);
         btnSubs.on('hover:enter', () => {
-            // Власна кастомна активність: підписані актори
-            Lampa.Activity.push({ title: "Підписки акторів", component: "category_full", source: PLUGIN_SOURCE, page: 1 });
+            Lampa.Activity.push({ title:"Підписки акторів", component:"custom_actors_subs", source:"actors_subs", page:1 });
         });
 
         $('.menu .menu__list').eq(0).append(btnActors).append(btnSubs);
+    }
+
+    // === Кастомна активність для підписок ===
+    function registerCustomActivity() {
+        Lampa.Activity.register('custom_actors_subs', {
+            onCreate: function(activity){
+                const container = $('<div class="activity__content"></div>');
+                activity.body.append(container);
+
+                Lampa.Api.sources['actors_subs'].list({page:1}, (res)=>{
+                    if(res.results.length===0){
+                        container.append('<div style="padding:20px;text-align:center">Підписок немає</div>');
+                        return;
+                    }
+                    res.results.forEach(card=>{
+                        const item = $(`
+                            <div class="card selector" style="display:flex;align-items:center;margin:5px 0;">
+                                <img src="${card.poster_path?Lampa.TMDB.img(card.poster_path):''}" style="width:50px;height:75px;object-fit:cover;margin-right:10px;">
+                                <div>${card.name}</div>
+                            </div>
+                        `);
+                        item.on('hover:enter', ()=>{
+                            if(card.onSelect) card.onSelect();
+                        });
+                        container.append(item);
+                    });
+                });
+            }
+        });
     }
 
     // === Ініціалізація ===
@@ -165,17 +199,18 @@
         hideDefaultSubscribeButtons();
         addSubButtonStyles();
         addMenuButtons();
-        Lampa.Api.sources[PLUGIN_SOURCE] = new ActorsSubsService();
+        Lampa.Api.sources['actors_subs'] = new ActorsSubsService();
+        registerCustomActivity();
 
-        Lampa.Listener.follow('activity', (e) => {
-            if (e.type === 'start' && (e.component === 'actor' || e.component === 'person') && e.object?.id) {
-                currentPersonId = parseInt(e.object.id, 10);
+        Lampa.Listener.follow('activity',(e)=>{
+            if(e.type==='start' && e.component==='actor' && e.object?.id){
+                currentPersonId = parseInt(e.object.id,10);
                 addCustomSubscribeButton();
             }
         });
     }
 
-    if (window.appready) initPlugin();
-    else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') initPlugin(); });
+    if(window.appready) initPlugin();
+    else Lampa.Listener.follow('app', (e)=>{ if(e.type==='ready') initPlugin(); });
 
 })();
