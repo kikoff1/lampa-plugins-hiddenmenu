@@ -6,6 +6,7 @@
     const PLUGIN_SOURCE = 'actors_subs';
     const PAGE_SIZE = 20;
 
+    // === Робота з підписками ===
     function getSubscriptions() {
         return Lampa.Storage.get(STORAGE_KEY, []);
     }
@@ -25,6 +26,7 @@
         return isSubscribed(id);
     }
 
+    // === Кнопка Підписатися / Відписатися на сторінці актора ===
     function waitForPersonContainer(callback) {
         let attempts = 0;
         const maxAttempts = 15;
@@ -67,6 +69,7 @@
         });
     }
 
+    // === Стилі та приховування стандартної кнопки ===
     function hideDefaultSubscribeButtons() {
         if (document.getElementById('hide-subscribe-style')) return;
         const style = document.createElement('style');
@@ -90,7 +93,7 @@
         document.head.appendChild(style);
     }
 
-    // 🔥 Служба для підписок
+    // === Служба для підписок ===
     function ActorsSubsService() {
         const cache = {};
 
@@ -130,8 +133,8 @@
                             title: json.name,
                             name: json.name,
                             poster_path: json.profile_path,
-                            component: "actor",       // ✅ відкриває сторінку актора
-                            media_type: "person",     // ✅ правильний тип
+                            component: "actor",       // правильний компонент
+                            media_type: "person",     // тип media_type
                             source: "tmdb"
                         };
                         cache[id] = card;
@@ -155,6 +158,7 @@
         };
     }
 
+    // === Меню ===
     function addMenuButtons() {
         const icoActors = '<svg xmlns="http://www.w3.org/2000/svg" width="2.2em" height="2.2em" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="4"><path stroke-linejoin="round" d="M24 44c11.046 0 20-8.954 20-20S35.046 4 24 4S4 12.954 4 24s8.954 20 20 20Z"/><path d="M30 24v-4.977C30 16.226 28.136 14 24 14s-6 2.226-6 5.023V24"/><path stroke-linejoin="round" d="M30 24h-6v-4.977C24 16.226 25.864 14 30 14s6 2.226 6 5.023V24h-6Zm-18 0h6v-4.977C24 16.226 22.136 14 18 14s-6 2.226-6 5.023V24h6Z"/></g></svg>';
         const icoSubs = '<svg xmlns="http://www.w3.org/2000/svg" width="2.2em" height="2.2em" viewBox="0 0 24 24"><path fill="currentColor" d="M12 12q-1.65 0-2.825-1.175T8 8q0-1.65 1.175-2.825T12 4q1.65 0 2.825 1.175T16 8q0 1.65-1.175 2.825T12 12m0 8q-2.75 0-4.825-1.65T4 15q.05-.65.4-1.275t1-1Q6.9 12 8.438 11.5T12 11.25q2.55 0 4.1.525t2.012 1.213q.362.425.625.938T19.95 15q-.35 2.7-2.425 4.35T12 20"/></svg>';
@@ -191,6 +195,7 @@
         $('.menu .menu__list').eq(0).append(btnActors).append(btnSubs);
     }
 
+    // === Ініціалізація плагіна ===
     function initPlugin() {
         hideDefaultSubscribeButtons();
         addSubButtonStyles();
@@ -211,4 +216,5 @@
     else Lampa.Listener.follow('app', (e) => {
         if (e.type === 'ready') initPlugin();
     });
+
 })();
