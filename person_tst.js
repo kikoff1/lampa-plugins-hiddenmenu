@@ -1,3 +1,4 @@
+
 (function() {
     "use strict";
 
@@ -248,10 +249,9 @@
                                     title: json.name,
                                     name: json.name,
                                     poster_path: json.profile_path,
-                                    type: "actor",
+                                    type: "person",
                                     source: "tmdb",
-                                    media_type: "actor",   // <-- Зміна тут
-                                    component: "actor"      // <-- Додано тут
+                                    media_type: "person"
                                 };
                                 cache[personId] = personCard;
                                 results.push(personCard);
@@ -310,69 +310,49 @@
             });
         });
 
-        $(".menu").append(menuItem);
+        $(".menu .menu__list").eq(0).append(menuItem);
 
+        function waitForContainer(callback) {
+            let attempts = 0;
+            const max = 15;
+
+            function check() {
+                attempts++;
+                if (document.querySelector('.person-start__bottom')) callback();
+                else if (attempts < max) setTimeout(check, 200);
+            }
+
+            setTimeout(check, 200);
+        }
+
+        function checkCurrentActivity() {
+            var activity = Lampa.Activity.active();
+            if (activity && activity.component === 'person') {
+                currentPersonId = parseInt(activity.id || activity.params?.id || location.pathname.match(/\/person\/(\d+)/)?.[1], 10);
+                if (currentPersonId) {
+                    waitForContainer(addsubscriibbeButton);
+                }
+            }
+        }
+
+        Lampa.Listener.follow('activity', function (e) {
+            if (e.type === 'start' && e.component === 'person' && e.object?.id) {
+                currentPersonId = parseInt(e.object.id, 10);
+                waitForContainer(addsubscriibbeButton);
+            } else if (e.type === 'resume' && e.component === 'category_full' && e.object?.source === PLUGIN_NAME) {
+                setTimeout(() => Lampa.Activity.reload(), 100);
+            }
+        });
+
+        setTimeout(checkCurrentActivity, 1500);
         addButtonStyles();
-
-        Lampa.Component.add("person_start", {
-            create: function () {
-                var html = $('<div class="person-start"><div class="person-start__top"></div><div class="person-start__bottom"></div></div>');
-                return html;
-            },
-            start: function () {
-                currentPersonId = this.data.id || null;
-                addsubscriibbeButton();
-            }
-        });
-
-        Lampa.Activity.add({
-            name: PLUGIN_NAME,
-            title: Lampa.Lang.translate('persons_plugin_title'),
-            component: "category_full",
-            source: PLUGIN_NAME,
-            search: true,
-            searchDelay: 600,
-            searchMin: 2,
-            searchEmptyText: Lampa.Lang.translate('persons_plugin_not_found'),
-
-            onSearch: function (query, onComplete) {
-                var url = Lampa.TMDB.api(`search/person?api_key=${Lampa.TMDB.key()}&query=${encodeURIComponent(query)}&language=${getCurrentLanguage()}`);
-                new Lampa.Reguest().silent(url, function (response) {
-                    try {
-                        var json = typeof response === 'string' ? JSON.parse(response) : response;
-                        if (json && json.results) {
-                            var results = json.results.map(function (person) {
-                                return {
-                                    id: person.id,
-                                    title: person.name,
-                                    name: person.name,
-                                    poster_path: person.profile_path,
-                                    type: "actor",
-                                    source: "tmdb",
-                                    media_type: "actor",    // <-- Зміна тут теж, щоб пошук працював коректно
-                                    component: "actor"
-                                };
-                            });
-                            onComplete(results);
-                        } else {
-                            onComplete([]);
-                        }
-                    } catch (e) {
-                        onComplete([]);
-                    }
-                }, function () {
-                    onComplete([]);
-                });
-            },
-
-            onCategory: function (params, onComplete) {
-                personsService.list(params, onComplete);
-            }
-        });
     }
 
-    Lampa.ready(function () {
+    if (window.appready) {
         startPlugin();
-    });
-
+    } else {
+        Lampa.Listener.follow('app', function (e) {
+            if (e.type === 'ready') startPlugin();
+        });
+    }
 })();
