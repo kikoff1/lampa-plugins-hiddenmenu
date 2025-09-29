@@ -4,7 +4,7 @@
     const STORAGE_KEY = 'actors_subscriptions';
     let currentPersonId = null;
 
-    // ===== Підписки =====
+    // ===== Функції підписок =====
     function getSubscriptions() {
         return Lampa.Storage.get(STORAGE_KEY, []);
     }
@@ -24,20 +24,20 @@
     // ===== Кнопка Підписатися/Відписатися =====
     function addSubscribeButton(container) {
         if (!currentPersonId) return;
-        const existing = container.querySelector('.button--sub-plugin');
+        const existing = container.querySelector('.button--subscriibbe-plugin');
         if (existing) existing.remove();
 
         const subscribed = isSubscribed(currentPersonId);
         const btn = document.createElement('div');
-        btn.className = 'full-start__button selector button--sub-plugin';
-        btn.style.color = subscribed ? '#F44336' : '#4CAF50';
+        btn.className = 'full-start__button selector button--subscriibbe-plugin';
+        if(subscribed) btn.classList.add('unsubscribed');
         btn.setAttribute('data-focusable', 'true');
         btn.innerHTML = `<span>${subscribed ? 'Відписатися' : 'Підписатися'}</span>`;
 
         btn.addEventListener('hover:enter', () => {
             const nowSub = toggleSubscription(currentPersonId);
-            btn.style.color = nowSub ? '#F44336' : '#4CAF50';
             btn.querySelector('span').textContent = nowSub ? 'Відписатися' : 'Підписатися';
+            btn.classList.toggle('unsubscribed', nowSub);
             if (Lampa.Activity.active()?.source === 'actors_subs') Lampa.Activity.reload();
         });
 
@@ -52,7 +52,7 @@
         const style = document.createElement('style');
         style.id = 'hide-subscribe-style';
         style.textContent = `
-            .button--subscribe:not(.button--sub-plugin) { display: none !important; }
+            .button--subscribe:not(.button--subscriibbe-plugin) { display: none !important; }
         `;
         document.head.appendChild(style);
     }
@@ -62,8 +62,9 @@
         const style = document.createElement('style');
         style.id = 'sub-plugin-styles';
         style.textContent = `
-            .button--sub-plugin { font-weight: bold; }
-            .button--sub-plugin span { padding-left: 6px; }
+            .button--subscriibbe-plugin { font-weight: bold; color: #4CAF50; }
+            .button--subscriibbe-plugin.unsubscribed { color: #F44336; }
+            .button--subscriibbe-plugin span { padding-left: 6px; }
         `;
         document.head.appendChild(style);
     }
@@ -192,16 +193,15 @@
             if(e.type==='start' && e.component==='actor' && e.object?.id){
                 currentPersonId = parseInt(e.object.id,10);
 
-                // Чекаємо контейнер для кнопки
-                let attempts = 0;
-                const maxAttempts = 15;
-                function checkContainer() {
-                    attempts++;
+                // Слухаємо рендер сторінки актора
+                const renderListener = () => {
                     const container = document.querySelector('.person-start__bottom');
-                    if(container) addSubscribeButton(container);
-                    else if(attempts<maxAttempts) setTimeout(checkContainer, 300);
-                }
-                checkContainer();
+                    if(container){
+                        addSubscribeButton(container);
+                        Lampa.Listener.remove('render', renderListener);
+                    }
+                };
+                Lampa.Listener.follow('render', renderListener);
             }
         });
     }
