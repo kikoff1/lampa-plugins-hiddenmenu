@@ -1,4 +1,3 @@
-
 (function() {
     "use strict";
 
@@ -327,8 +326,8 @@
 
         function checkCurrentActivity() {
             var activity = Lampa.Activity.active();
-            if (activity && activity.component === 'person') {
-                currentPersonId = parseInt(activity.id || activity.params?.id || location.pathname.match(/\/person\/(\d+)/)?.[1], 10);
+            if (activity && activity.component === 'actor') {
+                currentPersonId = parseInt(activity.id || activity.params?.id || location.pathname.match(/\/actor\/(\d+)/)?.[1], 10);
                 if (currentPersonId) {
                     waitForContainer(addsubscriibbeButton);
                 }
@@ -336,7 +335,7 @@
         }
 
         Lampa.Listener.follow('activity', function (e) {
-            if (e.type === 'start' && e.component === 'person' && e.object?.id) {
+            if (e.type === 'start' && e.component === 'actor' && e.object?.id) {
                 currentPersonId = parseInt(e.object.id, 10);
                 waitForContainer(addsubscriibbeButton);
             } else if (e.type === 'resume' && e.component === 'category_full' && e.object?.source === PLUGIN_NAME) {
