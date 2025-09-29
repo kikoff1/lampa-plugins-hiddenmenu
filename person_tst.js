@@ -4,7 +4,7 @@
     const STORAGE_KEY = 'actors_subscriptions';
     let currentPersonId = null;
 
-    // === Підписки ===
+    // === Функції для підписок ===
     function getSubscriptions() {
         return Lampa.Storage.get(STORAGE_KEY, []);
     }
@@ -34,10 +34,9 @@
         check();
     }
 
-    function addCustomSubscribeButton() {
+    function addSubscribeButton() {
         if (!currentPersonId) return;
-
-        waitForPersonContainer((container) => {
+        waitForPersonContainer(container => {
             const existing = container.querySelector('.button--sub-plugin');
             if (existing) existing.remove();
 
@@ -119,7 +118,7 @@
                             media_type:"person",
                             source:"tmdb",
                             onSelect: function(){
-                                // Відкриваємо сторінку актора без category_full
+                                // Відкриття сторінки актора
                                 Lampa.Activity.push({
                                     component: "actor",
                                     id: json.id,
@@ -185,7 +184,7 @@
                             </div>
                         `);
                         item.on('hover:enter', ()=>{
-                            if(card.onSelect) card.onSelect();
+                            if(card.onSelect) card.onSelect(); // Тут відкриваємо Actor Activity
                         });
                         container.append(item);
                     });
@@ -205,7 +204,7 @@
         Lampa.Listener.follow('activity',(e)=>{
             if(e.type==='start' && e.component==='actor' && e.object?.id){
                 currentPersonId = parseInt(e.object.id,10);
-                addCustomSubscribeButton();
+                addSubscribeButton();
             }
         });
     }
