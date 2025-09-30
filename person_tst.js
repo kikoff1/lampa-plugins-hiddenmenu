@@ -20,6 +20,8 @@
     // ==== ОСНОВНА ЛОГІКА ПЛАГІНА ====
     var PLUGIN_NAME = "persons_plugin";
     var PERSONS_KEY = "saved_persons";
+    var PAGE_SIZE = 20;
+    var DEFAULT_PERSON_IDS = [];
     var currentPersonId = null;
     var my_logging = true;
 
@@ -86,44 +88,28 @@
 
     function initStorage() {
         var current = Lampa.Storage.get(PERSONS_KEY);
-        if (!current) {
-            Lampa.Storage.set(PERSONS_KEY, []);
+        if (!current || current.length === 0) {
+            Lampa.Storage.set(PERSONS_KEY, DEFAULT_PERSON_IDS);
         }
     }
 
-    function getSavedPersons() {
-        var persons = Lampa.Storage.get(PERSONS_KEY);
-        return Array.isArray(persons) ? persons : [];
+    function getPersonIds() {
+        return Lampa.Storage.get(PERSONS_KEY, []);
     }
 
-    function togglePersonSubscription(personId, personName, personPhoto) {
-        var persons = getSavedPersons();
-        var index = persons.findIndex(function(p) {
-            return p.id == personId;
-        });
+    function togglePersonSubscription(personId) {
+        var personIds = getPersonIds();
+        var index = personIds.indexOf(personId);
 
-        if (index === -1) {
-            persons.push({
-                id: personId,
-                name: personName,
-                photo: personPhoto,
-                timestamp: new Date().getTime()
-            });
-            Lampa.Noty.show('Додано до персон', 'success');
-        } else {
-            persons.splice(index, 1);
-            Lampa.Noty.show('Видалено з персон', 'info');
-        }
+        if (index === -1) personIds.push(personId);
+        else personIds.splice(index, 1);
 
-        Lampa.Storage.set(PERSONS_KEY, persons);
+        Lampa.Storage.set(PERSONS_KEY, personIds);
         return index === -1;
     }
 
     function isPersonsubscriibbed(personId) {
-        var persons = getSavedPersons();
-        return persons.some(function(p) {
-            return p.id == personId;
-        });
+        return getPersonIds().includes(personId);
     }
 
     function addButtonToContainer(bottomBlock) {
@@ -150,10 +136,7 @@
             '<span>' + buttonText + '</span>';
 
         button.addEventListener('hover:enter', function () {
-            var personName = document.querySelector('.person-start__title')?.textContent || 'Actor';
-            var personPhoto = document.querySelector('.person-start__poster img')?.src || '';
-            
-            var wasAdded = togglePersonSubscription(currentPersonId, personName, personPhoto);
+            var wasAdded = togglePersonSubscription(currentPersonId);
             var newText = wasAdded ?
                 Lampa.Lang.translate('persons_plugin_unsubscriibbe') :
                 Lampa.Lang.translate('persons_plugin_subscriibbe');
@@ -163,6 +146,7 @@
 
             var span = button.querySelector('span');
             if (span) span.textContent = newText;
+            updatePersonsList();
         });
 
         var buttonsContainer = bottomBlock.querySelector('.full-start__buttons');
@@ -190,6 +174,13 @@
         }
     }
 
+    function updatePersonsList() {
+        var activity = Lampa.Activity.active();
+        if (activity && activity.component === 'category_full' && activity.source === PLUGIN_NAME) {
+            Lampa.Activity.reload();
+        }
+    }
+
     function addButtonStyles() {
         if (document.getElementById('subscriibbe-button-styles')) return;
         var css = `
@@ -198,63 +189,6 @@
             }
             .full-start__button.selector.button--subscriibbe-plugin.button--unsubscriibbe {
                 color: #F44336;
-            }
-            .persons-custom-page {
-                padding: 20px;
-            }
-            .persons-custom-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-                gap: 20px;
-                margin-top: 20px;
-            }
-            .person-custom-card {
-                border-radius: 10px;
-                overflow: hidden;
-                background: rgba(255,255,255,0.05);
-                transition: all 0.3s ease;
-                cursor: pointer;
-            }
-            .person-custom-card:focus {
-                transform: scale(1.05);
-                background: rgba(255,255,255,0.1);
-                outline: none;
-            }
-            .person-custom-card__poster {
-                width: 100%;
-                height: 300px;
-                position: relative;
-                overflow: hidden;
-            }
-            .person-custom-card__poster img {
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-            }
-            .person-custom-card__info {
-                padding: 15px;
-            }
-            .person-custom-card__name {
-                font-size: 16px;
-                font-weight: bold;
-                margin: 0 0 5px 0;
-                color: white;
-            }
-            .person-custom-card__department {
-                font-size: 14px;
-                color: #aaa;
-            }
-            .persons-custom-empty {
-                text-align: center;
-                padding: 50px 20px;
-                color: #aaa;
-                font-size: 18px;
-            }
-            .persons-custom-loading {
-                text-align: center;
-                padding: 50px 20px;
-                color: #aaa;
-                font-size: 18px;
             }`;
         var style = document.createElement('style');
         style.id = 'subscriibbe-button-styles';
@@ -262,165 +196,88 @@
         document.head.appendChild(style);
     }
 
-    // Власна реалізація сторінки з акторами
-    function createPersonsPage() {
-        var page = Lampa.Activity.active();
-        page.html('');
-        page.title(Lampa.Lang.translate('persons_plugin_title'));
+    function PersonsService() {
+        var self = this;
+        var cache = {};
 
-        var container = document.createElement('div');
-        container.className = 'persons-custom-page';
-        
-        var loading = document.createElement('div');
-        loading.className = 'persons-custom-loading';
-        loading.textContent = 'Завантаження...';
-        container.appendChild(loading);
-        
-        page.html(container);
+        this.list = function (params, onComplete) {
+            var page = parseInt(params.page, 10) || 1;
+            var startIndex = (page - 1) * PAGE_SIZE;
+            var endIndex = startIndex + PAGE_SIZE;
+            var personIds = getPersonIds();
+            var pageIds = personIds.slice(startIndex, endIndex);
 
-        // Завантажуємо дані акторів
-        loadPersonsData(function(persons) {
-            container.removeChild(loading);
-            
-            if (persons.length === 0) {
-                var empty = document.createElement('div');
-                empty.className = 'persons-custom-empty';
-                empty.textContent = Lampa.Lang.translate('persons_plugin_not_found');
-                container.appendChild(empty);
+            if (pageIds.length === 0) {
+                onComplete({
+                    results: [],
+                    page: page,
+                    total_pages: Math.ceil(personIds.length / PAGE_SIZE),
+                    total_results: personIds.length
+                });
                 return;
             }
-            
-            var grid = document.createElement('div');
-            grid.className = 'persons-custom-grid';
-            
-            persons.forEach(function(person) {
-                var card = createPersonCard(person);
-                grid.appendChild(card);
-            });
-            
-            container.appendChild(grid);
-            
-            // Налаштовуємо фокус для керування
-            setupFocusManagement(grid);
-        });
-    }
 
-    function loadPersonsData(callback) {
-        var savedPersons = getSavedPersons();
-        
-        if (savedPersons.length === 0) {
-            callback([]);
-            return;
-        }
-        
-        var currentLang = getCurrentLanguage();
-        var loaded = 0;
-        var personsData = [];
-        
-        savedPersons.forEach(function(savedPerson) {
-            var url = Lampa.TMDB.api('person/' + savedPerson.id + '?api_key=' + Lampa.TMDB.key() + '&language=' + currentLang);
-            
-            new Lampa.Reguest().silent(url, function(response) {
-                try {
-                    var json = typeof response === 'string' ? JSON.parse(response) : response;
-                    if (json && json.id) {
-                        personsData.push({
-                            id: json.id,
-                            name: json.name || savedPerson.name,
-                            profile_path: json.profile_path,
-                            known_for_department: json.known_for_department,
-                            photo: savedPerson.photo
-                        });
+            var loaded = 0;
+            var results = [];
+            var currentLang = getCurrentLanguage();
+
+            for (var i = 0; i < pageIds.length; i++) {
+                (function (i) {
+                    var personId = pageIds[i];
+                    if (cache[personId]) {
+                        results.push(cache[personId]);
+                        checkComplete();
+                        return;
                     }
-                } catch (e) {
-                    // Використовуємо збережені дані
-                    personsData.push({
-                        id: savedPerson.id,
-                        name: savedPerson.name,
-                        profile_path: null,
-                        known_for_department: 'Actor',
-                        photo: savedPerson.photo
+
+                    var url = Lampa.TMDB.api(`person/${personId}?api_key=${Lampa.TMDB.key()}&language=${currentLang}`);
+                    new Lampa.Reguest().silent(url, function (response) {
+                        try {
+                            var json = typeof response === 'string' ? JSON.parse(response) : response;
+                            if (json && json.id) {
+                                var personCard = {
+                                    id: json.id,
+                                    title: json.name,
+                                    name: json.name,
+                                    poster_path: json.profile_path,
+                                    type: "actor",
+                                    source: "tmdb",
+                                    media_type: "person"
+                                };
+                                cache[personId] = personCard;
+                                results.push(personCard);
+                            }
+                        } catch (e) { }
+                        checkComplete();
+                    }, function () {
+                        checkComplete();
+                    });
+                })(i);
+            }
+
+            function checkComplete() {
+                loaded++;
+                if (loaded >= pageIds.length) {
+                    onComplete({
+                        results: results.filter(Boolean),
+                        page: page,
+                        total_pages: Math.ceil(personIds.length / PAGE_SIZE),
+                        total_results: personIds.length
                     });
                 }
-                
-                loaded++;
-                if (loaded >= savedPersons.length) {
-                    callback(personsData);
-                }
-            }, function(error) {
-                // Використовуємо збережені дані
-                personsData.push({
-                    id: savedPerson.id,
-                    name: savedPerson.name,
-                    profile_path: null,
-                    known_for_department: 'Actor',
-                    photo: savedPerson.photo
-                });
-                
-                loaded++;
-                if (loaded >= savedPersons.length) {
-                    callback(personsData);
-                }
-            });
-        });
+            }
+        };
     }
 
-    function createPersonCard(person) {
-        var card = document.createElement('div');
-        card.className = 'person-custom-card selector';
-        card.setAttribute('data-focusable', 'true');
-        card.setAttribute('tabindex', '0');
-        card.setAttribute('data-person-id', person.id);
-        card.setAttribute('data-person-name', person.name);
+    // НОВИЙ ПІДХІД: Використовуємо window.location для відкриття сторінки актора
+    function openActorPageDirect(personId, personName) {
+        log('Opening actor page directly:', personId, personName);
         
-        var poster = document.createElement('div');
-        poster.className = 'person-custom-card__poster';
+        // Спробуємо відкрити через пряму зміну URL
+        var newUrl = '/actor/' + personId;
+        window.history.pushState({}, '', newUrl);
         
-        var img = document.createElement('img');
-        img.src = getPersonImage(person.photo || person.profile_path);
-        img.alt = person.name;
-        img.onerror = function() { this.src = '/img/person_empty.png'; };
-        
-        poster.appendChild(img);
-        
-        var info = document.createElement('div');
-        info.className = 'person-custom-card__info';
-        
-        var name = document.createElement('div');
-        name.className = 'person-custom-card__name';
-        name.textContent = person.name;
-        
-        var department = document.createElement('div');
-        department.className = 'person-custom-card__department';
-        department.textContent = person.known_for_department || 'Actor';
-        
-        info.appendChild(name);
-        info.appendChild(department);
-        
-        card.appendChild(poster);
-        card.appendChild(info);
-        
-        // Обробник кліку
-        card.addEventListener('hover:enter', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            openActorPage(person.id, person.name);
-        });
-        
-        return card;
-    }
-
-    function getPersonImage(profilePath) {
-        if (!profilePath) return '/img/person_empty.png';
-        if (profilePath.includes('http')) return profilePath;
-        if (profilePath.includes('/img/')) return profilePath;
-        return Lampa.TMDB.image('w500' + profilePath);
-    }
-
-    function openActorPage(personId, personName) {
-        log('Opening actor page:', personId, personName);
-        
-        // Використовуємо стандартний спосіб відкриття сторінки актора
+        // Використовуємо стандартний компонент actor
         Lampa.Activity.push({
             component: 'actor',
             id: personId,
@@ -429,56 +286,43 @@
         });
     }
 
-    function setupFocusManagement(container) {
-        var cards = container.querySelectorAll('.person-custom-card');
-        var currentFocus = 0;
-        
-        if (cards.length > 0) {
-            cards[0].focus();
-        }
-        
-        // Обробка клавіш навігації
-        document.addEventListener('keydown', function(e) {
-            if (!container.parentNode) return;
-            
-            switch(e.key) {
-                case 'ArrowUp':
-                case 'ArrowDown':
-                case 'ArrowLeft':
-                case 'ArrowRight':
-                    e.preventDefault();
-                    navigateGrid(e.key, cards, currentFocus);
-                    break;
-                case 'Enter':
-                    var focused = document.activeElement;
-                    if (focused && focused.classList.contains('person-custom-card')) {
-                        var personId = focused.getAttribute('data-person-id');
-                        var personName = focused.getAttribute('data-person-name');
-                        if (personId) {
-                            openActorPage(personId, personName);
+    // Обробник кліків для карток
+    function setupCardClickHandler() {
+        // Чекаємо поки завантажиться список
+        var observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.nodeType === 1 && node.classList && node.classList.contains('category-full')) {
+                        var activity = Lampa.Activity.active();
+                        if (activity && activity.source === PLUGIN_NAME) {
+                            // Додаємо обробники до всіх карток
+                            setTimeout(function() {
+                                var cards = node.querySelectorAll('.card[data-id]');
+                                cards.forEach(function(card) {
+                                    card.removeEventListener('click', card.personClickHandler);
+                                    card.personClickHandler = function(e) {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        
+                                        var personId = card.getAttribute('data-id');
+                                        var personName = card.getAttribute('data-name') || card.querySelector('.card__title')?.textContent || 'Actor';
+                                        
+                                        log('Card clicked, opening actor:', personId, personName);
+                                        openActorPageDirect(personId, personName);
+                                    };
+                                    card.addEventListener('click', card.personClickHandler);
+                                });
+                            }, 100);
                         }
                     }
-                    break;
-            }
+                });
+            });
         });
-    }
 
-    function navigateGrid(direction, cards, currentFocus) {
-        // Проста навігація по сітці
-        var newFocus = currentFocus;
-        
-        switch(direction) {
-            case 'ArrowRight': newFocus++; break;
-            case 'ArrowLeft': newFocus--; break;
-            case 'ArrowDown': newFocus += 4; break; // Припускаємо 4 колонки
-            case 'ArrowUp': newFocus -= 4; break;
-        }
-        
-        if (newFocus < 0) newFocus = 0;
-        if (newFocus >= cards.length) newFocus = cards.length - 1;
-        
-        cards[newFocus].focus();
-        currentFocus = newFocus;
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
     }
 
     function startPlugin() {
@@ -493,6 +337,9 @@
 
         initStorage();
 
+        var personsService = new PersonsService();
+        Lampa.Api.sources[PLUGIN_NAME] = personsService;
+
         var menuItem = $(
             '<li class="menu__item selector" data-action="' + PLUGIN_NAME + '">' +
             '<div class="menu__ico">' + ICON_SVG + '</div>' +
@@ -501,11 +348,12 @@
         );
 
         menuItem.on("hover:enter", function () {
-            // Використовуємо власну реалізацію замість стандартних компонентів
             Lampa.Activity.push({
-                component: 'main',
-                url: PLUGIN_NAME + '_custom',
-                on: createPersonsPage
+                component: "category_full",
+                source: PLUGIN_NAME,
+                title: Lampa.Lang.translate('persons_plugin_title'),
+                page: 1,
+                url: PLUGIN_NAME + '__main'
             });
         });
 
@@ -538,11 +386,16 @@
             if (e.type === 'start' && e.component === 'actor' && e.object?.id) {
                 currentPersonId = parseInt(e.object.id, 10);
                 waitForContainer(addsubscriibbeButton);
+            } else if (e.type === 'resume' && e.component === 'category_full' && e.object?.source === PLUGIN_NAME) {
+                setTimeout(() => Lampa.Activity.reload(), 100);
             }
         });
 
-        addButtonStyles();
+        // Додаємо обробник кліків для карток акторів
+        setupCardClickHandler();
+        
         setTimeout(checkCurrentActivity, 1500);
+        addButtonStyles();
     }
 
     if (window.appready) {
