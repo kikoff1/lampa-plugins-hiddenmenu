@@ -1,233 +1,142 @@
-{
-    name: "Favorite Actors Plugin",
-    version: "1.0.0",
-    description: "Додає функціонал підписки на акторів",
-
-    // Головна функція плагіна
-    run: function() {
-        console.log("Favorite Actors Plugin запущено!");
+// Super Simple Favorite Actors Plugin
+lampa_plugin_favorite_actors = {
+    init: function() {
+        console.log("Simple Favorite Actors Plugin loaded!");
         
-        const STORAGE_KEY = 'favorite_actors_list';
-        let favorites = [];
+        this.favorites = JSON.parse(localStorage.getItem('simple_fav_actors') || '[]');
         
-        // Завантажуємо улюблених акторів
-        try {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) favorites = JSON.parse(saved);
-        } catch(e) {
-            console.error("Помилка завантаження:", e);
-        }
+        // Додаємо кнопку в меню
+        this.addMenu();
         
-        // Функції для роботи з улюбленими
-        const saveFavorites = () => {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(favorites));
-        };
+        // Додаємо кнопки на картки акторів
+        this.addActorButtons();
         
-        const isFavorite = (actorId) => {
-            return favorites.some(actor => actor.id === actorId);
-        };
-        
-        const toggleFavorite = (actorInfo) => {
-            const index = favorites.findIndex(a => a.id === actorInfo.id);
-            
-            if (index > -1) {
-                favorites.splice(index, 1);
-                Lampa.Notify.show(`Видалено ${actorInfo.name} з улюблених`);
-            } else {
-                favorites.push(actorInfo);
-                Lampa.Notify.show(`Додано ${actorInfo.name} до улюблених`);
-            }
-            saveFavorites();
-            updateButtons();
-        };
-        
-        // Оновлення всіх кнопок
-        const updateButtons = () => {
-            document.querySelectorAll('.favorite-actor-btn').forEach(btn => {
-                const actorId = btn.getAttribute('data-actor-id');
-                if (actorId) {
-                    const icon = btn.querySelector('.favorite-icon');
-                    const text = btn.querySelector('.favorite-text');
-                    
-                    if (isFavorite(actorId)) {
-                        if (icon) icon.textContent = '❤️';
-                        if (text) text.textContent = 'Відписатися';
-                    } else {
-                        if (icon) icon.textContent = '🤍';
-                        if (text) text.textContent = 'Підписатися';
-                    }
-                }
-            });
-        };
-        
-        // Додаємо кнопку на картку актора
-        const addButtonToActorCard = () => {
-            const actorSelectors = document.querySelectorAll('.person--selector');
-            
-            actorSelectors.forEach(selector => {
-                // Перевіряємо чи вже додана кнопка
-                if (selector.querySelector('.favorite-actor-btn')) return;
-                
-                const container = selector.querySelector('.selector');
-                if (!container) return;
-                
-                // Знаходимо інформацію про актора
-                const personCard = selector.closest('.person');
-                if (!personCard) return;
-                
-                const nameElem = personCard.querySelector('.person--name');
-                const imageElem = personCard.querySelector('.person--poster img');
-                
-                if (!nameElem) return;
-                
-                const actorInfo = {
-                    id: nameElem.textContent.trim(),
-                    name: nameElem.textContent.trim(),
-                    image: imageElem ? imageElem.src : ''
-                };
-                
-                // Створюємо кнопку
-                const button = document.createElement('div');
-                button.className = 'selector--button favorite-actor-btn';
-                button.setAttribute('data-actor-id', actorInfo.id);
-                button.style.cssText = 'margin-top: 8px;';
-                
-                button.innerHTML = `
-                    <div class="selector--icon favorite-icon">${isFavorite(actorInfo.id) ? '❤️' : '🤍'}</div>
-                    <div class="selector--title favorite-text">${isFavorite(actorInfo.id) ? 'Відписатися' : 'Підписатися'}</div>
+        // Спостерігаємо за змінами
+        this.startWatching();
+    },
+    
+    addMenu: function() {
+        setInterval(() => {
+            const menu = document.querySelector('.main--menu');
+            if (menu && !menu.querySelector('.simple-fav-actors')) {
+                const item = document.createElement('div');
+                item.className = 'main--item simple-fav-actors';
+                item.innerHTML = `
+                    <div class="main--icon">❤️</div>
+                    <div class="main--title">Мої актори (${this.favorites.length})</div>
                 `;
-                
-                button.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    toggleFavorite(actorInfo);
-                });
-                
-                container.appendChild(button);
-            });
-        };
-        
-        // Спостерігач за змінами DOM
-        const observer = new MutationObserver(function(mutations) {
-            let shouldUpdate = false;
-            
-            mutations.forEach(function(mutation) {
-                mutation.addedNodes.forEach(function(node) {
-                    if (node.nodeType === 1) {
-                        if (node.classList && node.classList.contains('person--selector')) {
-                            shouldUpdate = true;
-                        }
-                        if (node.querySelector && node.querySelector('.person--selector')) {
-                            shouldUpdate = true;
-                        }
-                    }
-                });
-            });
-            
-            if (shouldUpdate) {
-                setTimeout(addButtonToActorCard, 100);
+                item.onclick = () => this.showFavorites();
+                menu.appendChild(item);
             }
-        });
-        
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-        
-        // Додаємо пункт в головне меню
-        const addMenuButton = () => {
-            // Чекаємо поки меню завантажиться
-            const checkMenu = setInterval(() => {
-                const mainMenu = document.querySelector('.main--menu');
-                if (mainMenu && !mainMenu.querySelector('.favorite-actors-menu-item')) {
-                    clearInterval(checkMenu);
+        }, 1000);
+    },
+    
+    addActorButtons: function() {
+        setInterval(() => {
+            document.querySelectorAll('.person--selector').forEach(card => {
+                if (card.querySelector('.simple-fav-btn')) return;
+                
+                const container = card.querySelector('.selector');
+                const nameElem = card.closest('.person')?.querySelector('.person--name');
+                
+                if (container && nameElem) {
+                    const name = nameElem.textContent.trim();
+                    const isFav = this.favorites.some(a => a.name === name);
                     
-                    const menuItem = document.createElement('div');
-                    menuItem.className = 'main--item favorite-actors-menu-item';
-                    menuItem.innerHTML = `
-                        <div class="main--icon">⭐</div>
-                        <div class="main--title">Улюблені актори (${favorites.length})</div>
+                    const btn = document.createElement('div');
+                    btn.className = 'selector--button simple-fav-btn';
+                    btn.innerHTML = `
+                        <div class="selector--icon">${isFav ? '❤️' : '🤍'}</div>
+                        <div class="selector--title">${isFav ? 'Відписатися' : 'Підписатися'}</div>
                     `;
                     
-                    menuItem.addEventListener('click', function() {
-                        // Створюємо сторінку з улюбленими акторами
-                        const favoritesPage = `
-                            <div class="fullscreen-page">
-                                <div class="fullscreen-page--head">
-                                    <div class="fullscreen-page--title">Улюблені актори</div>
-                                </div>
-                                <div class="fullscreen-page--content">
-                                    <div style="padding: 20px;">
-                                        ${favorites.length === 0 ? 
-                                            `<div style="text-align: center; padding: 50px 20px; color: #888;">
-                                                <div style="font-size: 48px; margin-bottom: 20px;">⭐</div>
-                                                <div style="font-size: 18px;">У вас ще немає улюблених акторів</div>
-                                            </div>` :
-                                            `<div class="person-view" style="display: flex; flex-wrap: wrap; gap: 15px;">
-                                                ${favorites.map(actor => `
-                                                    <div class="person--card" style="width: 150px;">
-                                                        <div class="person--poster">
-                                                            <div class="person--image">
-                                                                <img src="${actor.image}" alt="${actor.name}" 
-                                                                     style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px;"
-                                                                     onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDE1MCAyMDAiIGZpbGw9IiMzMzMiPjx0ZXh0IHg9Ijc1IiB5PSIxMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM4ODgiPk5vIEltYWdlPC90ZXh0Pjwvc3ZnPg=='">
-                                                            </div>
-                                                        </div>
-                                                        <div class="person--name" style="text-align: center; margin-top: 10px; font-size: 14px;">${actor.name}</div>
-                                                        <div style="text-align: center; margin-top: 10px;">
-                                                            <button onclick="
-                                                                const plugin = window.lampa_plugins.find(p => p.name === 'Favorite Actors Plugin');
-                                                                if (plugin) plugin.toggleFavorite(${JSON.stringify(actor).replace(/"/g, '&quot;')});
-                                                                setTimeout(() => window.location.reload(), 500);
-                                                            " style="padding: 5px 10px; background: #ff4444; color: white; border: none; border-radius: 4px; font-size: 12px;">
-                                                                Видалити
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                `).join('')}
-                                            </div>`
-                                        }
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                        
-                        // Відкриваємо сторінку
-                        Lampa.Page.show({
-                            html: favoritesPage,
-                            onReady: function() {
-                                console.log("Сторінка улюблених акторів завантажена");
-                            }
-                        });
-                    });
+                    btn.onclick = (e) => {
+                        e.stopPropagation();
+                        this.toggleFavorite(name);
+                    };
                     
-                    mainMenu.appendChild(menuItem);
-                    console.log("Пункт меню додано");
+                    container.appendChild(btn);
                 }
-            }, 1000);
-        };
-        
-        // Додаємо метод для виклику з HTML
-        this.toggleFavorite = toggleFavorite;
-        
-        // Початкова ініціалізація
-        setTimeout(() => {
-            addButtonToActorCard();
-            addMenuButton();
+            });
         }, 2000);
+    },
+    
+    toggleFavorite: function(actorName) {
+        const actor = {name: actorName, id: actorName};
+        const index = this.favorites.findIndex(a => a.name === actorName);
         
-        // Періодично оновлюємо кнопки (на випадок динамічного завантаження)
-        setInterval(() => {
-            addButtonToActorCard();
-            
-            // Оновлюємо лічильник в меню
-            const menuItem = document.querySelector('.favorite-actors-menu-item');
-            if (menuItem) {
-                const titleElem = menuItem.querySelector('.main--title');
-                if (titleElem) {
-                    titleElem.textContent = `Улюблені актори (${favorites.length})`;
-                }
+        if (index > -1) {
+            this.favorites.splice(index, 1);
+            this.showMessage(`Видалено ${actorName}`);
+        } else {
+            this.favorites.push(actor);
+            this.showMessage(`Додано ${actorName}`);
+        }
+        
+        localStorage.setItem('simple_fav_actors', JSON.stringify(this.favorites));
+        this.updateAllButtons();
+    },
+    
+    updateAllButtons: function() {
+        document.querySelectorAll('.simple-fav-btn').forEach(btn => {
+            const name = btn.closest('.person')?.querySelector('.person--name')?.textContent?.trim();
+            if (name) {
+                const isFav = this.favorites.some(a => a.name === name);
+                btn.querySelector('.selector--icon').textContent = isFav ? '❤️' : '🤍';
+                btn.querySelector('.selector--title').textContent = isFav ? 'Відписатися' : 'Підписатися';
             }
-        }, 3000);
+        });
+        
+        // Оновлюємо меню
+        const menuItem = document.querySelector('.simple-fav-actors .main--title');
+        if (menuItem) {
+            menuItem.textContent = `Мої актори (${this.favorites.length})`;
+        }
+    },
+    
+    showFavorites: function() {
+        const html = `
+            <div style="padding:20px">
+                <h1 style="color:white; margin-bottom:20px">Мої улюблені актори</h1>
+                ${this.favorites.length ? 
+                    this.favorites.map(actor => `
+                        <div style="background:#333; padding:15px; margin:10px 0; border-radius:8px; display:flex; justify-content:space-between; align-items:center">
+                            <span style="color:white">${actor.name}</span>
+                            <button onclick="lampa_plugin_favorite_actors.removeActor('${actor.name}')" 
+                                    style="background:red; color:white; border:none; padding:5px 10px; border-radius:4px">
+                                Видалити
+                            </button>
+                        </div>
+                    `).join('') :
+                    '<div style="color:#888; text-align:center; padding:40px">Ще немає улюблених акторів</div>'
+                }
+            </div>
+        `;
+        
+        Lampa.Page?.show({html: html}) || alert("Сторінка улюблених акторів:\n" + this.favorites.map(a => a.name).join('\n'));
+    },
+    
+    removeActor: function(name) {
+        this.toggleFavorite(name);
+        this.showFavorites();
+    },
+    
+    showMessage: function(text) {
+        Lampa.Notify?.show(text) || console.log(text);
+    },
+    
+    startWatching: function() {
+        setInterval(() => {
+            this.updateAllButtons();
+        }, 5000);
     }
+};
+
+// Автозапуск
+if (window.Lampa) {
+    lampa_plugin_favorite_actors.init();
+} else {
+    document.addEventListener('lampa-loaded', () => {
+        lampa_plugin_favorite_actors.init();
+    });
 }
