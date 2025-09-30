@@ -2,7 +2,7 @@
 (function() {
     "use strict";
 
-    // ==== ПРИХОВАННЯ СТАНДАРТНОЇ КНОПКИ "ПІДПИСАТИСЯ" ====
+    // v1.1==== ПРИХОВАННЯ СТАНДАРТНОЇ КНОПКИ "ПІДПИСАТИСЯ" ====
     function hideSubscribeButton() {
         if (document.getElementById('hide-subscribe-style')) return;
 
@@ -344,3 +344,30 @@
 
 Wiki pages you might want to explore:
 - [Lampac Overview (immisterio/Lampac)](/wiki/immisterio/Lampac#1)
+
+waitForContainer(addsubscriibbeButton);  
+                }  
+            }  
+        }  
+  
+        Lampa.Listener.follow('activity', function (e) {  
+            if (e.type === 'start' && e.component === 'actor' && e.object?.id) {  
+                currentPersonId = parseInt(e.object.id, 10);  
+                waitForContainer(addsubscriibbeButton);  
+            } else if (e.type === 'resume' && e.component === 'category_full' && e.object?.source === PLUGIN_NAME) {  
+                setTimeout(() => Lampa.Activity.reload(), 100);  
+            }  
+        });  
+  
+        setTimeout(checkCurrentActivity, 1500);  
+        addButtonStyles();  
+    }  
+  
+    if (window.appready) {  
+        startPlugin();  
+    } else {  
+        Lampa.Listener.follow('app', function (e) {  
+            if (e.type === 'ready') startPlugin();  
+        });  
+    }  
+})();
