@@ -28,6 +28,11 @@
     }
 
     function createDebugPanel() {
+        // Перевіряємо чи вже є панель
+        if (document.getElementById('debug-panel')) {
+            return document.getElementById('debug-panel');
+        }
+        
         var panel = document.createElement('div');
         panel.id = 'debug-panel';
         panel.style.cssText = `
@@ -103,7 +108,10 @@
         `;
         
         toggleBtn.addEventListener('click', function() {
-            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            var panel = document.getElementById('debug-panel');
+            if (panel) {
+                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            }
         });
         
         clearBtn.addEventListener('click', function() {
@@ -139,7 +147,7 @@
     }
 
     function debugCardClicks() {
-        var debugPanel = createDebugPanel();
+        createDebugPanel();
         
         // Детальне логування карток
         $(document).on('click', '.card', function(e) {
@@ -152,18 +160,8 @@
                 allAttributes[attr.name] = attr.value;
             }
             
-            // Збираємо всі data-атрибути
-            var dataAttributes = {};
-            for (var key in card.data()) {
-                if (card.data().hasOwnProperty(key)) {
-                    dataAttributes[key] = card.data()[key];
-                }
-            }
-            
             log('🟢 CARD CLICK - DETAILED', {
                 attributes: allAttributes,
-                dataAttributes: dataAttributes,
-                innerHTML: card.html().substring(0, 200) + '...',
                 currentActivity: Lampa.Activity.active()
             });
         });
@@ -171,16 +169,15 @@
         // Детальне логування hover:enter
         $(document).on('hover:enter', '.card', function(e) {
             var card = $(this);
-            var dataAttributes = {};
+            var allAttributes = {};
             
-            for (var key in card.data()) {
-                if (card.data().hasOwnProperty(key)) {
-                    dataAttributes[key] = card.data()[key];
-                }
+            for (var i = 0; i < card[0].attributes.length; i++) {
+                var attr = card[0].attributes[i];
+                allAttributes[attr.name] = attr.value;
             }
             
             log('🎯 HOVER:ENTER - DETAILED', {
-                dataAttributes: dataAttributes,
+                attributes: allAttributes,
                 currentActivity: Lampa.Activity.active()
             });
         });
@@ -192,83 +189,74 @@
                 source: e.object?.source,
                 id: e.object?.id,
                 name: e.object?.name,
-                url: e.object?.url,
-                fullObject: e.object
+                url: e.object?.url
             });
         });
-
-        // Логуємо кліки через стандартну систему Lampa
-        var originalCardClick = Lampa.Card.prototype.click;
-        Lampa.Card.prototype.click = function() {
-            var data = this.data();
-            
-            log('⚡ CARD PROTOTYPE CLICK', {
-                id: data.id,
-                name: data.name,
-                type: data.type,
-                media_type: data.media_type,
-                source: data.source,
-                title: data.title,
-                poster_path: data.poster_path,
-                fullData: data
-            });
-            
-            return originalCardClick.call(this);
-        };
-
-        // Логуємо кліки в категоріях
-        var originalCategoryClick = Lampa.Category.prototype.click;
-        Lampa.Category.prototype.click = function(card) {
-            var cardData = card.data();
-            
-            log('📁 CATEGORY CLICK', {
-                id: cardData.id,
-                name: cardData.name,
-                type: cardData.type,
-                media_type: cardData.media_type,
-                source: cardData.source,
-                fullData: cardData
-            });
-            
-            return originalCategoryClick.call(this, card);
-        };
 
         log('🔧 Debug plugin started successfully');
     }
 
+    function addToMenu() {
+        // Чекаємо поки меню завантажиться
+        function waitForMenu() {
+            var menuList = document.querySelector('.menu .menu__list');
+            if (menuList) {
+                // Перевіряємо чи вже додали наш пункт
+                var existingItem = document.querySelector('[data-action="debug_actors"]');
+                if (!existingItem) {
+                    var menuItem = document.createElement('li');
+                    menuItem.className = 'menu__item selector';
+                    menuItem.setAttribute('data-action', 'debug_actors');
+                    
+                    menuItem.innerHTML = `
+                        <div class="menu__ico">🔍</div>
+                        <div class="menu__text">Debug Actors</div>
+                    `;
+                    
+                    menuItem.addEventListener('click', function() {
+                        Lampa.Activity.push({
+                            url: "person/popular",
+                            title: "Popular Actors (Debug)",
+                            component: "category_full",
+                            source: "tmdb",
+                            page: 1
+                        });
+                        
+                        log('📖 Opened Popular Actors page for testing');
+                    });
+                    
+                    menuList.appendChild(menuItem);
+                    log('✅ Debug menu item added');
+                }
+            } else {
+                setTimeout(waitForMenu, 100);
+            }
+        }
+        
+        waitForMenu();
+    }
+
     function startDebugPlugin() {
         debugCardClicks();
-        
-        // Додаємо кнопку в меню для тестування
-        var menuItem = $(
-            '<li class="menu__item selector" data-action="' + PLUGIN_NAME + '_test">' +
-            '<div class="menu__ico">🔍</div>' +
-            '<div class="menu__text">Debug Actors</div>' +
-            '</li>'
-        );
+        addToMenu();
+        log('✅ Debug plugin fully initialized');
+    }
 
-        menuItem.on("hover:enter", function () {
-            Lampa.Activity.push({
-                url: "person/popular",
-                title: "Popular Actors (Debug)",
-                component: "category_full",
-                source: "tmdb",
-                page: 1
-            });
-            
-            log('📖 Opened Popular Actors page for testing');
-        });
-
-        $(".menu .menu__list").eq(0).append(menuItem);
-        
-        log('✅ Debug plugin initialized');
+    // Чекаємо поки Lampa повністю завантажиться
+    function waitForLampa() {
+        if (window.Lampa && window.Lampa.Activity) {
+            startDebugPlugin();
+        } else {
+            setTimeout(waitForLampa, 100);
+        }
     }
 
     if (window.appready) {
-        startDebugPlugin();
+        waitForLampa();
     } else {
-        Lampa.Listener.follow('app', function (e) {
-            if (e.type === 'ready') startDebugPlugin();
+        document.addEventListener('DOMContentLoaded', waitForLampa);
+        Lampa.Listener.follow('app', function(e) {
+            if (e.type === 'ready') waitForLampa();
         });
     }
 })();
