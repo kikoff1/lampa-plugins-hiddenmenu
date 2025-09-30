@@ -28,7 +28,6 @@
     }
 
     function createDebugPanel() {
-        // Перевіряємо чи вже є панель
         if (document.getElementById('debug-panel')) {
             return document.getElementById('debug-panel');
         }
@@ -149,36 +148,55 @@
     function debugCardClicks() {
         createDebugPanel();
         
-        // Детальне логування карток
+        // Логуємо всі картки при завантаженні сторінки
+        Lampa.Listener.follow('activity', function(e) {
+            if (e.type === 'start' && e.component === 'category_full' && e.object?.source === 'tmdb') {
+                setTimeout(function() {
+                    var cards = document.querySelectorAll('.card');
+                    log('📊 ALL CARDS ON PAGE', {
+                        totalCards: cards.length,
+                        cards: Array.from(cards).map(function(card, index) {
+                            var attributes = {};
+                            for (var i = 0; i < card.attributes.length; i++) {
+                                attributes[card.attributes[i].name] = card.attributes[i].value;
+                            }
+                            
+                            var title = card.querySelector('.card__title');
+                            var poster = card.querySelector('.card__poster img');
+                            
+                            return {
+                                index: index,
+                                attributes: attributes,
+                                titleText: title ? title.textContent : 'No title',
+                                posterSrc: poster ? poster.src : 'No poster',
+                                classes: card.className
+                            };
+                        })
+                    });
+                }, 1000);
+            }
+        });
+
+        // Детальне логування карток при кліку
         $(document).on('click', '.card', function(e) {
             var card = $(this);
             var allAttributes = {};
             
-            // Збираємо всі атрибути картки
             for (var i = 0; i < card[0].attributes.length; i++) {
                 var attr = card[0].attributes[i];
                 allAttributes[attr.name] = attr.value;
             }
             
-            log('🟢 CARD CLICK - DETAILED', {
-                attributes: allAttributes,
-                currentActivity: Lampa.Activity.active()
-            });
-        });
-
-        // Детальне логування hover:enter
-        $(document).on('hover:enter', '.card', function(e) {
-            var card = $(this);
-            var allAttributes = {};
+            // Отримуємо внутрішній вміст картки
+            var title = card.find('.card__title');
+            var poster = card.find('.card__poster img');
             
-            for (var i = 0; i < card[0].attributes.length; i++) {
-                var attr = card[0].attributes[i];
-                allAttributes[attr.name] = attr.value;
-            }
-            
-            log('🎯 HOVER:ENTER - DETAILED', {
+            log('🟢 CARD CLICK - FULL INFO', {
                 attributes: allAttributes,
-                currentActivity: Lampa.Activity.active()
+                titleText: title.length ? title.text() : 'No title',
+                posterSrc: poster.length ? poster.attr('src') : 'No poster',
+                currentActivity: Lampa.Activity.active(),
+                cardHTML: card.html().substring(0, 300) + '...'
             });
         });
 
@@ -197,11 +215,9 @@
     }
 
     function addToMenu() {
-        // Чекаємо поки меню завантажиться
         function waitForMenu() {
             var menuList = document.querySelector('.menu .menu__list');
             if (menuList) {
-                // Перевіряємо чи вже додали наш пункт
                 var existingItem = document.querySelector('[data-action="debug_actors"]');
                 if (!existingItem) {
                     var menuItem = document.createElement('li');
@@ -242,7 +258,6 @@
         log('✅ Debug plugin fully initialized');
     }
 
-    // Чекаємо поки Lampa повністю завантажиться
     function waitForLampa() {
         if (window.Lampa && window.Lampa.Activity) {
             startDebugPlugin();
