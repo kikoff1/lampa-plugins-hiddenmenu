@@ -196,6 +196,7 @@
         document.head.appendChild(style);
     }
 
+    // ВИПРАВЛЕНИЙ PersonsService - тепер правильно створює картки
     function PersonsService() {
         var self = this;
         var cache = {};
@@ -235,19 +236,26 @@
                         try {
                             var json = typeof response === 'string' ? JSON.parse(response) : response;
                             if (json && json.id) {
+                                // ВИПРАВЛЕНА структура картки - додаємо обов'язкові поля
                                 var personCard = {
                                     id: json.id,
                                     title: json.name,
                                     name: json.name,
                                     poster_path: json.profile_path,
-                                    type: "actor",
+                                    // КРИТИЧНО ВАЖЛИВО: правильний тип для актора
+                                    type: "person", // Змінили з "actor" на "person"
                                     source: "tmdb",
-                                    media_type: "person"
+                                    media_type: "person",
+                                    // Додаємо додаткові поля для правильної роботи
+                                    profile_path: json.profile_path,
+                                    known_for_department: json.known_for_department || "Acting"
                                 };
                                 cache[personId] = personCard;
                                 results.push(personCard);
                             }
-                        } catch (e) { }
+                        } catch (e) { 
+                            log('Error loading person:', e);
+                        }
                         checkComplete();
                     }, function () {
                         checkComplete();
@@ -269,56 +277,76 @@
         };
     }
 
-    // ВИПРАВЛЕНА ФУНКЦІЯ - правильне відкриття сторінки актора
+    // РАДИКАЛЬНЕ ВИПРАВЛЕННЯ - повне перевизначення логіки кліків
     function setupCardClickHandler() {
-        // Додаємо обробник для карток акторів в нашому плагіні
-        $(document).on('hover:enter', '.category-full .card', function(e) {
-            var card = $(this);
+        // Повністю перевизначаємо обробку кліків для нашого плагіна
+        var originalCategoryCreate = Lampa.Category.prototype.create;
+        
+        Lampa.Category.prototype.create = function() {
+            var result = originalCategoryCreate.apply(this, arguments);
             
-            // Перевіряємо чи це наша категорія
             var activity = Lampa.Activity.active();
             if (activity && activity.source === PLUGIN_NAME) {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                // Отримуємо дані картки через стандартну систему Lampa
-                var cardData = card.data();
-                if (cardData && cardData.id && cardData.media_type === 'person') {
-                    log('Opening actor from persons plugin:', cardData.id, cardData.name);
-                    
-                    // Відкриваємо сторінку актора
-                    Lampa.Activity.push({
-                        component: 'actor',
-                        id: cardData.id,
-                        name: cardData.name,
-                        source: 'tmdb'
+                // Додаємо власні обробники кліків для всіх карток
+                setTimeout(function() {
+                    var cards = document.querySelectorAll('.category-full .card');
+                    cards.forEach(function(card) {
+                        // Видаляємо всі старі обробники
+                        card.removeEventListener('click', card.personPluginHandler);
+                        card.removeEventListener('hover:enter', card.personPluginHandler);
+                        
+                        // Додаємо новий обробник
+                        card.personPluginHandler = function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            e.stopImmediatePropagation();
+                            
+                            // Отримуємо дані картки
+                            var cardData = $(card).data();
+                            if (cardData && cardData.id) {
+                                log('Opening actor from custom handler:', cardData.id, cardData.name);
+                                
+                                // Відкриваємо сторінку актора
+                                Lampa.Activity.push({
+                                    component: 'actor',
+                                    id: cardData.id,
+                                    name: cardData.name || cardData.title,
+                                    source: 'tmdb'
+                                });
+                            }
+                        };
+                        
+                        // Додаємо обробник для click та hover:enter
+                        card.addEventListener('click', card.personPluginHandler);
+                        card.addEventListener('hover:enter', card.personPluginHandler);
                     });
-                    
-                    return false;
-                }
+                }, 500);
             }
-        });
-        
-        // Перевизначаємо стандартну поведінку для гарантії
+            
+            return result;
+        };
+
+        // Також перевизначаємо стандартну поведінку кліків
         var originalCategoryClick = Lampa.Category.prototype.click;
-        
         Lampa.Category.prototype.click = function(card) {
             var activity = Lampa.Activity.active();
             
             if (activity && activity.source === PLUGIN_NAME) {
                 var cardData = card.data();
-                if (cardData && cardData.media_type === 'person') {
+                if (cardData && cardData.id) {
+                    log('Opening actor from category click:', cardData.id, cardData.name);
+                    
                     Lampa.Activity.push({
                         component: 'actor',
                         id: cardData.id,
-                        name: cardData.name,
+                        name: cardData.name || cardData.title,
                         source: 'tmdb'
                     });
                     return;
                 }
             }
             
-            originalCategoryClick.call(this, card);
+            return originalCategoryClick.call(this, card);
         };
     }
 
