@@ -279,32 +279,78 @@
 
     // ВИПРАВЛЕНА ФУНКЦІЯ - правильне відкриття сторінки актора
     function setupCardClickHandler() {
-        // Додаємо обробник для карток у списку "Персони"
-        $(document).on('hover:enter', '.category-full .card', function(e) {
-            var card = $(this);
-            var personId = card.attr('data-id');
-            
-            // Перевіряємо чи це картка актора з нашого плагіна
-            if (personId && card.closest('.category-full').length) {
-                var activity = Lampa.Activity.active();
-                if (activity && activity.source === PLUGIN_NAME) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    // Отримуємо назву актора для передачі
-                    var personName = card.attr('data-name') || card.find('.card__title').text() || 'Person';
-                    
-                    // ВІДПРАВЛЕННЯ: Правильне відкриття сторінки актора
-                    Lampa.Activity.push({
-                        component: 'actor',
-                        id: personId,
-                        name: personName,
-                        source: 'tmdb'
-                    });
-                    
-                    return false;
-                }
+        // Перевизначаємо стандартну поведінку для карток акторів у нашому плагіні
+        var originalCardClick = Lampa.Card.prototype.click;
+        
+        Lampa.Card.prototype.click = function() {
+            // Перевіряємо чи це картка з нашого плагіна "Персони"
+            var activity = Lampa.Activity.active();
+            if (activity && activity.source === PLUGIN_NAME && this.data().type === 'actor') {
+                var personData = this.data();
+                
+                // Відкриваємо сторінку актора
+                Lampa.Activity.push({
+                    component: 'actor',
+                    id: personData.id,
+                    name: personData.name,
+                    source: 'tmdb'
+                });
+                
+                return;
             }
+            
+            // Інакше використовуємо оригінальну логіку
+            originalCardClick.call(this);
+        };
+    }
+
+    // Альтернативний спосіб через обробник подій
+    function setupAlternativeClickHandler() {
+        // Чекаємо поки завантажиться список акторів
+        var observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.nodeType === 1 && node.classList && 
+                        (node.classList.contains('card') || node.querySelector('.card'))) {
+                        
+                        var activity = Lampa.Activity.active();
+                        if (activity && activity.source === PLUGIN_NAME) {
+                            // Знаходимо всі картки акторів
+                            var cards = node.querySelectorAll ? 
+                                node.querySelectorAll('.card[data-id]') : [];
+                            
+                            cards.forEach(function(card) {
+                                var personId = card.getAttribute('data-id');
+                                if (personId) {
+                                    // Замінюємо обробник кліку
+                                    card.removeEventListener('hover:enter', card._customHandler);
+                                    card._customHandler = function(e) {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        
+                                        var personName = card.getAttribute('data-name') || 
+                                                         card.querySelector('.card__title')?.textContent || 
+                                                         'Person';
+                                        
+                                        Lampa.Activity.push({
+                                            component: 'actor',
+                                            id: personId,
+                                            name: personName,
+                                            source: 'tmdb'
+                                        });
+                                    };
+                                    card.addEventListener('hover:enter', card._customHandler);
+                                }
+                            });
+                        }
+                    }
+                });
+            });
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
         });
     }
 
@@ -376,6 +422,7 @@
 
         // Додаємо обробник кліків для карток акторів
         setupCardClickHandler();
+        setupAlternativeClickHandler(); // Додаємо альтернативний спосіб
         
         setTimeout(checkCurrentActivity, 1500);
         addButtonStyles();
