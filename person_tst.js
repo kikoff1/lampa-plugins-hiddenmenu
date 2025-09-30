@@ -84,32 +84,53 @@
         return localStorage.getItem('language') || 'en';
     }
 
+    // Виправлена функція ініціалізації сховища
     function initStorage() {
         var current = Lampa.Storage.get(PERSONS_KEY);
-        if (!current || current.length === 0) {
+        if (!current) {
             Lampa.Storage.set(PERSONS_KEY, []);
         }
     }
 
+    // Виправлена функція отримання ID акторів
     function getPersonIds() {
-        return Lampa.Storage.get(PERSONS_KEY, []);
+        var persons = Lampa.Storage.get(PERSONS_KEY);
+        return Array.isArray(persons) ? persons : [];
     }
 
-    function togglePersonSubscription(personId) {
+    // Виправлена функція перемикання підписки
+    function togglePersonSubscription(personId, personName, personPhoto) {
         var personIds = getPersonIds();
-        var index = personIds.indexOf(personId);
+        var index = personIds.findIndex(function(p) {
+            return p.id == personId;
+        });
 
-        if (index === -1) personIds.push(personId);
-        else personIds.splice(index, 1);
+        if (index === -1) {
+            // Додаємо актора з усіма даними
+            personIds.push({
+                id: personId,
+                name: personName,
+                photo: personPhoto,
+                timestamp: new Date().getTime()
+            });
+        } else {
+            // Видаляємо актора
+            personIds.splice(index, 1);
+        }
 
         Lampa.Storage.set(PERSONS_KEY, personIds);
         return index === -1;
     }
 
+    // Виправлена функція перевірки підписки
     function isPersonsubscriibbed(personId) {
-        return getPersonIds().includes(personId);
+        var persons = getPersonIds();
+        return persons.some(function(p) {
+            return p.id == personId;
+        });
     }
 
+    // Оновлена функція додавання кнопки
     function addButtonToContainer(bottomBlock) {
         var existingButton = bottomBlock.querySelector('.button--subscriibbe-plugin');
         if (existingButton && existingButton.parentNode) {
@@ -134,7 +155,11 @@
             '<span>' + buttonText + '</span>';
 
         button.addEventListener('hover:enter', function () {
-            var wasAdded = togglePersonSubscription(currentPersonId);
+            // Отримуємо інформацію про поточного актора для збереження
+            var personName = document.querySelector('.person-start__title')?.textContent || 'Actor';
+            var personPhoto = document.querySelector('.person-start__poster img')?.src || '';
+            
+            var wasAdded = togglePersonSubscription(currentPersonId, personName, personPhoto);
             var newText = wasAdded ?
                 Lampa.Lang.translate('persons_plugin_unsubscriibbe') :
                 Lampa.Lang.translate('persons_plugin_subscriibbe');
@@ -144,6 +169,13 @@
 
             var span = button.querySelector('span');
             if (span) span.textContent = newText;
+            
+            // Показуємо сповіщення
+            if (wasAdded) {
+                Lampa.Noty.show('Додано до персон', 'success');
+            } else {
+                Lampa.Noty.show('Видалено з персон', 'info');
+            }
         });
 
         var buttonsContainer = bottomBlock.querySelector('.full-start__buttons');
@@ -193,8 +225,9 @@
                 transition: transform 0.3s ease;
                 cursor: pointer;
             }
-            .person-custom-card:hover {
+            .person-custom-card:focus {
                 transform: scale(1.05);
+                background: rgba(255,255,255,0.1);
             }
             .person-custom-card__poster {
                 width: 100%;
@@ -225,6 +258,12 @@
                 padding: 50px 20px;
                 color: #aaa;
                 font-size: 18px;
+            }
+            .persons-custom-loading {
+                text-align: center;
+                padding: 50px 20px;
+                color: #aaa;
+                font-size: 18px;
             }`;
         var style = document.createElement('style');
         style.id = 'subscriibbe-button-styles';
@@ -232,7 +271,7 @@
         document.head.appendChild(style);
     }
 
-    // Власний компонент для відображення списку акторів
+    // Виправлений компонент для відображення списку акторів
     function setupCustomPersonsComponent() {
         Lampa.Component.add('persons_custom', {
             template: `
@@ -255,11 +294,10 @@
                              v-for="person in persons" 
                              :key="person.id"
                              :data-person-id="person.id"
-                             :data-person-name="person.name"
                              data-focusable="true"
                              @hover:enter="openPerson(person)">
                             <div class="person-custom-card__poster">
-                                <img :src="getPersonImage(person.profile_path)" :alt="person.name" onerror="this.src='/img/person_empty.png'">
+                                <img :src="getPersonImage(person.photo || person.profile_path)" :alt="person.name" onerror="this.src='/img/person_empty.png'">
                             </div>
                             <div class="person-custom-card__info">
                                 <div class="person-custom-card__name">{{person.name}}</div>
@@ -282,6 +320,7 @@
             methods: {
                 getPersonImage: function(profilePath) {
                     if (!profilePath) return '/img/person_empty.png';
+                    if (profilePath.includes('http')) return profilePath; // Якщо це пряме посилання
                     return Lampa.TMDB.image('w500' + profilePath);
                 },
                 openPerson: function(person) {
@@ -298,10 +337,13 @@
                 loadPersons: function() {
                     var self = this;
                     self.loading = true;
-                    self.persons = [];
                     
-                    var personIds = getPersonIds();
-                    if (personIds.length === 0) {
+                    // Отримуємо збережених акторів
+                    var savedPersons = getPersonIds();
+                    log('Saved persons:', savedPersons);
+                    
+                    if (savedPersons.length === 0) {
+                        self.persons = [];
                         self.loading = false;
                         return;
                     }
@@ -310,8 +352,9 @@
                     var loaded = 0;
                     var personsData = [];
                     
-                    personIds.forEach(function(personId) {
-                        var url = Lampa.TMDB.api('person/' + personId + '?api_key=' + Lampa.TMDB.key() + '&language=' + currentLang);
+                    // Завантажуємо повну інформацію про кожного актора з TMDB
+                    savedPersons.forEach(function(savedPerson) {
+                        var url = Lampa.TMDB.api('person/' + savedPerson.id + '?api_key=' + Lampa.TMDB.key() + '&language=' + currentLang);
                         
                         new Lampa.Reguest().silent(url, function(response) {
                             try {
@@ -319,24 +362,47 @@
                                 if (json && json.id) {
                                     personsData.push({
                                         id: json.id,
-                                        name: json.name,
-                                        profile_path: json.profile_path,
+                                        name: json.name || savedPerson.name,
+                                        profile_path: json.profile_path || savedPerson.photo,
                                         known_for_department: json.known_for_department
+                                    });
+                                } else {
+                                    // Якщо не вдалося завантажити з TMDB, використовуємо збережені дані
+                                    personsData.push({
+                                        id: savedPerson.id,
+                                        name: savedPerson.name,
+                                        profile_path: savedPerson.photo,
+                                        known_for_department: 'Actor'
                                     });
                                 }
                             } catch (e) {
                                 log('Error loading person data:', e);
+                                // Використовуємо збережені дані у разі помилки
+                                personsData.push({
+                                    id: savedPerson.id,
+                                    name: savedPerson.name,
+                                    profile_path: savedPerson.photo,
+                                    known_for_department: 'Actor'
+                                });
                             }
                             
                             loaded++;
-                            if (loaded >= personIds.length) {
+                            if (loaded >= savedPersons.length) {
                                 self.persons = personsData;
                                 self.loading = false;
                             }
                         }, function(error) {
-                            log('Error loading person:', error);
+                            log('Error loading person from TMDB:', error);
+                            // Використовуємо збережені дані у разі помилки
+                            personsData.push({
+                                id: savedPerson.id,
+                                name: savedPerson.name,
+                                profile_path: savedPerson.photo,
+                                known_for_department: 'Actor'
+                            });
+                            
                             loaded++;
-                            if (loaded >= personIds.length) {
+                            if (loaded >= savedPersons.length) {
                                 self.persons = personsData;
                                 self.loading = false;
                             }
