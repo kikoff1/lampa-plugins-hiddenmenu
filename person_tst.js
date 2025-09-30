@@ -13,7 +13,6 @@
             } catch (e) {}
         }
         
-        // Додаємо лог в масив для відображення на екрані
         var logEntry = {
             time: new Date().toLocaleTimeString(),
             message: message,
@@ -25,7 +24,6 @@
             debugLogs.pop();
         }
         
-        // Оновлюємо відображення якщо debug panel відкритий
         updateDebugPanel();
     }
 
@@ -34,27 +32,44 @@
         panel.id = 'debug-panel';
         panel.style.cssText = `
             position: fixed;
-            top: 50px;
+            top: 60px;
             right: 10px;
             width: 95%;
             max-width: 500px;
-            height: 80vh;
-            background: rgba(0,0,0,0.95);
+            height: 70vh;
+            background: rgba(0,0,0,0.98);
             color: white;
             font-family: Arial, sans-serif;
             font-size: 14px;
-            padding: 15px;
-            overflow-y: auto;
+            padding: 0;
+            overflow: hidden;
             z-index: 10000;
             border: 2px solid #00ff00;
             border-radius: 10px;
             display: none;
-            user-select: text;
-            -webkit-user-select: text;
-            line-height: 1.4;
-            word-wrap: break-word;
         `;
         
+        // Текстова область для логів
+        var textarea = document.createElement('textarea');
+        textarea.id = 'debug-textarea';
+        textarea.style.cssText = `
+            width: 100%;
+            height: 100%;
+            background: #111;
+            color: #0f0;
+            border: none;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            resize: none;
+            outline: none;
+            box-sizing: border-box;
+        `;
+        textarea.readOnly = true;
+        
+        panel.appendChild(textarea);
+        
+        // Кнопки
         var toggleBtn = document.createElement('button');
         toggleBtn.textContent = 'DEBUG';
         toggleBtn.style.cssText = `
@@ -65,8 +80,8 @@
             background: #ff4444;
             color: white;
             border: none;
-            padding: 12px 15px;
-            border-radius: 8px;
+            padding: 10px 15px;
+            border-radius: 5px;
             cursor: pointer;
             font-size: 14px;
             font-weight: bold;
@@ -77,30 +92,30 @@
         clearBtn.style.cssText = `
             position: fixed;
             top: 10px;
-            right: 80px;
+            right: 90px;
             z-index: 10001;
             background: #4444ff;
             color: white;
             border: none;
-            padding: 12px 15px;
-            border-radius: 8px;
+            padding: 10px 15px;
+            border-radius: 5px;
             cursor: pointer;
             font-size: 14px;
             font-weight: bold;
         `;
         
         var copyBtn = document.createElement('button');
-        copyBtn.textContent = 'COPY ALL';
+        copyBtn.textContent = 'COPY';
         copyBtn.style.cssText = `
             position: fixed;
             top: 10px;
-            right: 160px;
+            right: 170px;
             z-index: 10001;
             background: #44aa44;
             color: white;
             border: none;
-            padding: 12px 15px;
-            border-radius: 8px;
+            padding: 10px 15px;
+            border-radius: 5px;
             cursor: pointer;
             font-size: 14px;
             font-weight: bold;
@@ -116,27 +131,20 @@
         });
         
         copyBtn.addEventListener('click', function() {
-            var logText = debugLogs.map(function(logEntry, index) {
-                var line = `${logEntry.time} - ${logEntry.message}`;
-                if (logEntry.data) {
-                    line += '\n' + JSON.stringify(logEntry.data, null, 2);
-                }
-                return line;
-            }).join('\n\n');
+            var textarea = document.getElementById('debug-textarea');
+            textarea.select();
+            textarea.setSelectionRange(0, 99999);
             
-            // Копіюємо в буфер обміну
-            navigator.clipboard.writeText(logText).then(function() {
-                log('✅ All logs copied to clipboard!');
-            }).catch(function(err) {
-                // Альтернативний спосіб для старих браузерів
-                var textArea = document.createElement('textarea');
-                textArea.value = logText;
-                document.body.appendChild(textArea);
-                textArea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textArea);
-                log('✅ All logs copied to clipboard (fallback method)');
-            });
+            try {
+                var successful = document.execCommand('copy');
+                if (successful) {
+                    log('✅ Text copied to clipboard!');
+                } else {
+                    log('❌ Copy failed, please select and copy manually');
+                }
+            } catch (err) {
+                log('❌ Copy error: ' + err);
+            }
         });
         
         document.body.appendChild(panel);
@@ -148,30 +156,23 @@
     }
 
     function updateDebugPanel() {
-        var panel = document.getElementById('debug-panel');
-        if (!panel) return;
+        var textarea = document.getElementById('debug-textarea');
+        if (!textarea) return;
         
-        var html = '<div style="color: #00ff00; font-size: 16px; font-weight: bold; margin: 0 0 15px 0; border-bottom: 1px solid #00ff00; padding-bottom: 5px;">Debug Logs (' + debugLogs.length + ')</div>';
-        
-        debugLogs.forEach(function(logEntry, index) {
-            html += `<div style="margin-bottom: 12px; border-bottom: 1px solid #333; padding-bottom: 8px; user-select: text; -webkit-user-select: text;">
-                <div style="color: #888; font-size: 11px; margin-bottom: 3px;">${logEntry.time}</div>
-                <div style="color: #fff; font-weight: bold; margin-bottom: 5px; font-size: 14px;">${logEntry.message}</div>`;
-            
+        var logText = debugLogs.map(function(logEntry, index) {
+            var line = `${logEntry.time} - ${logEntry.message}`;
             if (logEntry.data) {
-                var dataStr = JSON.stringify(logEntry.data, null, 2);
-                html += `<div style="color: #aaa; font-size: 12px; background: rgba(255,255,255,0.1); padding: 8px; border-radius: 5px; overflow-x: auto; white-space: pre-wrap; font-family: monospace;">${dataStr}</div>`;
+                try {
+                    line += '\n' + JSON.stringify(logEntry.data, null, 2);
+                } catch (e) {
+                    line += '\n[Data cannot be stringified]';
+                }
             }
-            
-            html += '</div>';
-        });
+            return line;
+        }).join('\n\n' + '='.repeat(50) + '\n\n');
         
-        if (debugLogs.length === 0) {
-            html += '<div style="color: #888; text-align: center; padding: 20px;">No logs yet. Click on actors to see debug information.</div>';
-        }
-        
-        panel.innerHTML = html;
-        panel.scrollTop = 0;
+        textarea.value = logText;
+        textarea.scrollTop = 0;
     }
 
     function debugCardClicks() {
@@ -302,4 +303,4 @@
             if (e.type === 'ready') startDebugPlugin();
         });
     }
-})(); 
+})();
