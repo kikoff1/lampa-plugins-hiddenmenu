@@ -277,33 +277,57 @@
         };
     }
 
-    // ВИПРАВЛЕНА ФУНКЦІЯ - правильне відкриття сторінки актора
-    function setupCardClickHandler() {
-        // Перевизначаємо стандартну поведінку для карток акторів
-        var originalCardClick = Lampa.Card.prototype.click;
+    // ВИПРАВЛЕНА ФУНКЦІЯ - відкриття сторінки актора через TMDB API
+    function openActorPage(personId, personName) {
+        log('Opening actor page:', personId, personName);
         
-        Lampa.Card.prototype.click = function() {
+        // Використовуємо той самий підхід, що і в робочому плагіні з популярними акторами
+        Lampa.Activity.push({
+            component: 'actor',
+            id: personId,
+            name: personName,
+            source: 'tmdb',
+            url: 'person/' + personId
+        });
+    }
+
+    // Обробник кліків для карток акторів
+    function setupCardClickHandler() {
+        // Додаємо обробник кліків для карток у нашому плагіні
+        $(document).on('hover:enter', '.category-full .card', function(e) {
+            var card = $(this);
+            var personId = card.attr('data-id');
+            
+            // Перевіряємо чи це наша категорія
+            var activity = Lampa.Activity.active();
+            if (activity && activity.source === PLUGIN_NAME && personId) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                var personName = card.attr('data-name') || card.find('.card__title').text() || 'Actor';
+                
+                log('Card clicked in persons plugin:', personId, personName);
+                
+                // Відкриваємо сторінку актора через TMDB API
+                openActorPage(personId, personName);
+                
+                return false;
+            }
+        });
+        
+        // Додатково перевизначаємо стандартну поведінку для гарантії
+        var originalCategoryClick = Lampa.Category.prototype.click;
+        
+        Lampa.Category.prototype.click = function(card) {
             var activity = Lampa.Activity.active();
             
-            // Перевіряємо чи це картка з нашого плагіна "Персони" і чи це актор
-            if (activity && activity.source === PLUGIN_NAME && this.data().media_type === 'person') {
-                var personData = this.data();
-                
-                log('Opening actor page from persons plugin:', personData.id, personData.name);
-                
-                // ВІДПРАВЛЕННЯ: Правильне відкриття сторінки актора
-                Lampa.Activity.push({
-                    component: 'actor',
-                    id: personData.id,
-                    name: personData.name,
-                    source: 'tmdb'
-                });
-                
+            if (activity && activity.source === PLUGIN_NAME && card.data && card.data().media_type === 'person') {
+                var personData = card.data();
+                openActorPage(personData.id, personData.name);
                 return;
             }
             
-            // Інакше використовуємо оригінальну логіку
-            originalCardClick.call(this);
+            originalCategoryClick.call(this, card);
         };
     }
 
