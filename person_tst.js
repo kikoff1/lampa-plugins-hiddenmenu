@@ -1,20 +1,192 @@
 (function() {
     "use strict";
 
-    // ==== ПРИХОВАННЯ СТАНДАРТНОЇ КНОПКИ "ПІДПИСАТИСЯ" ====
-    function hideSubscribeButton() {
-        if (document.getElementById('hide-subscribe-style')) return;
+    // ==== ДЕБАГ СИСТЕМА ====
+    var debugLogs = [];
+    var maxDebugLogs = 30;
 
-        const css = `
-            .button--subscribe {
-                display: none !important;
-            }
+    function debugLog(message, data) {
+        var timestamp = new Date().toLocaleTimeString();
+        
+        // Додаємо в консоль
+        if (console && console.log) {
+            try {
+                console.log(timestamp + ' - ' + message, data || '');
+            } catch (e) {}
+        }
+        
+        // Додаємо в масив для відображення
+        debugLogs.unshift({
+            time: timestamp,
+            message: message,
+            data: data
+        });
+        
+        // Обмежуємо кількість логів
+        if (debugLogs.length > maxDebugLogs) {
+            debugLogs.pop();
+        }
+        
+        // Оновлюємо панель якщо вона відкрита
+        updateDebugPanel();
+    }
+
+    function createDebugPanel() {
+        if (document.getElementById('debug-panel')) return;
+        
+        var panel = document.createElement('div');
+        panel.id = 'debug-panel';
+        panel.style.cssText = `
+            position: fixed;
+            top: 60px;
+            right: 10px;
+            width: 95%;
+            max-width: 500px;
+            height: 70vh;
+            background: rgba(0,0,0,0.98);
+            color: white;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            padding: 0;
+            overflow: hidden;
+            z-index: 10000;
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            display: none;
         `;
+        
+        // Текстова область для логів
+        var textarea = document.createElement('textarea');
+        textarea.id = 'debug-textarea';
+        textarea.style.cssText = `
+            width: 100%;
+            height: 100%;
+            background: #111;
+            color: #0f0;
+            border: none;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            resize: none;
+            outline: none;
+            box-sizing: border-box;
+        `;
+        textarea.readOnly = true;
+        
+        panel.appendChild(textarea);
+        
+        // Кнопки управління
+        var toggleBtn = document.createElement('button');
+        toggleBtn.textContent = 'DEBUG';
+        toggleBtn.style.cssText = `
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 10001;
+            background: #ff4444;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        `;
+        
+        var clearBtn = document.createElement('button');
+        clearBtn.textContent = 'CLEAR';
+        clearBtn.style.cssText = `
+            position: fixed;
+            top: 10px;
+            right: 90px;
+            z-index: 10001;
+            background: #4444ff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        `;
+        
+        var copyBtn = document.createElement('button');
+        copyBtn.textContent = 'COPY';
+        copyBtn.style.cssText = `
+            position: fixed;
+            top: 10px;
+            right: 170px;
+            z-index: 10001;
+            background: #44aa44;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        `;
+        
+        // Обробники подій
+        toggleBtn.addEventListener('click', function() {
+            var panel = document.getElementById('debug-panel');
+            if (panel) {
+                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+                updateDebugPanel();
+            }
+        });
+        
+        clearBtn.addEventListener('click', function() {
+            debugLogs = [];
+            updateDebugPanel();
+            debugLog('🧹 Логи очищено');
+        });
+        
+        copyBtn.addEventListener('click', function() {
+            var textarea = document.getElementById('debug-textarea');
+            if (textarea) {
+                textarea.select();
+                textarea.setSelectionRange(0, 99999);
+                
+                try {
+                    var successful = document.execCommand('copy');
+                    if (successful) {
+                        debugLog('✅ Текст скопійовано в буфер обміну');
+                    } else {
+                        debugLog('❌ Не вдалося скопіювати, виділіть текст вручну');
+                    }
+                } catch (err) {
+                    debugLog('❌ Помилка копіювання: ' + err);
+                }
+            }
+        });
+        
+        document.body.appendChild(panel);
+        document.body.appendChild(toggleBtn);
+        document.body.appendChild(clearBtn);
+        document.body.appendChild(copyBtn);
+        
+        debugLog('🔧 Дебаг панель створена');
+    }
 
-        const style = document.createElement('style');
-        style.id = 'hide-subscribe-style';
-        style.textContent = css;
-        document.head.appendChild(style);
+    function updateDebugPanel() {
+        var textarea = document.getElementById('debug-textarea');
+        if (!textarea) return;
+        
+        var logText = debugLogs.map(function(logEntry) {
+            var line = `${logEntry.time} - ${logEntry.message}`;
+            if (logEntry.data) {
+                try {
+                    line += '\n' + JSON.stringify(logEntry.data, null, 2);
+                } catch (e) {
+                    line += '\n[Неможливо відобразити дані]';
+                }
+            }
+            return line;
+        }).join('\n\n' + '='.repeat(50) + '\n\n');
+        
+        textarea.value = logText;
+        textarea.scrollTop = 0;
     }
 
     // ==== ОСНОВНА ЛОГІКА ПЛАГІНА ====
@@ -71,23 +243,17 @@
 
     var ICON_SVG = '<svg height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 11C17.66 11 18.99 9.66 18.99 8C18.99 6.34 17.66 5 16 5C14.34 5 13 6.34 13 8C13 9.66 14.34 11 16 11ZM8 11C9.66 11 10.99 9.66 10.99 8C10.99 6.34 9.66 5 8 5C6.34 5 5 6.34 5 8C5 9.66 6.34 11 8 11ZM8 13C5.67 13 1 14.17 1 16.5V19H15V16.5C15 14.17 10.33 13 8 13ZM16 13C15.71 13 15.38 13.02 15.03 13.05C16.19 13.89 17 15.02 17 16.5V19H23V16.5C23 14.17 18.33 13 16 13Z" fill="currentColor"/></svg>';
 
-    function log() {
-        if (console && console.log) {
-            try {
-                console.log.apply(console, arguments);
-            } catch (e) {}
-        }
-    }
-
     function getCurrentLanguage() {
         return localStorage.getItem('language') || 'en';
     }
 
-    // Виправлена функція зберігання
     function initStorage() {
         var current = Lampa.Storage.get(PERSONS_KEY);
         if (!current) {
             Lampa.Storage.set(PERSONS_KEY, []);
+            debugLog('💾 Сховище ініціалізовано');
+        } else {
+            debugLog('💾 Сховище завантажено', {count: current.length});
         }
     }
 
@@ -107,32 +273,32 @@
         });
 
         if (index === -1) {
-            // Додаємо актора
             persons.push({
                 id: personId,
                 name: personName,
                 photo: personPhoto,
                 timestamp: new Date().getTime()
             });
+            debugLog('✅ Актора додано', {id: personId, name: personName});
             Lampa.Noty.show('Додано до персон', 'success');
-            log('✅ Added person:', personId, personName);
         } else {
-            // Видаляємо актора
             persons.splice(index, 1);
+            debugLog('❌ Актора видалено', {id: personId, name: personName});
             Lampa.Noty.show('Видалено з персон', 'info');
-            log('❌ Removed person:', personId, personName);
         }
 
         Lampa.Storage.set(PERSONS_KEY, persons);
-        log('💾 Saved persons:', persons);
+        debugLog('💾 Оновлено сховище', {total: persons.length});
         return index === -1;
     }
 
     function isPersonsubscriibbed(personId) {
         var persons = getSavedPersons();
-        return persons.some(function(p) {
+        var isSubscribed = persons.some(function(p) {
             return p.id == personId;
         });
+        debugLog('🔍 Перевірка підписки', {id: personId, subscribed: isSubscribed});
+        return isSubscribed;
     }
 
     function addButtonToContainer(bottomBlock) {
@@ -162,7 +328,10 @@
             var personName = document.querySelector('.person-start__title')?.textContent || 'Actor';
             var personPhoto = document.querySelector('.person-start__poster img')?.src || '';
             
-            log('🎯 Toggle subscription for:', currentPersonId, personName);
+            debugLog('🎯 Клік по кнопці підписки', {
+                personId: currentPersonId, 
+                personName: personName
+            });
             
             var wasAdded = togglePersonSubscription(currentPersonId, personName, personPhoto);
             var newText = wasAdded ?
@@ -177,16 +346,27 @@
         });
 
         var buttonsContainer = bottomBlock.querySelector('.full-start__buttons');
-        if (buttonsContainer) buttonsContainer.append(button);
-        else bottomBlock.append(button);
+        if (buttonsContainer) {
+            buttonsContainer.append(button);
+            debugLog('✅ Кнопку додано до контейнера');
+        } else {
+            bottomBlock.append(button);
+            debugLog('✅ Кнопку додано до блоку');
+        }
     }
 
     function addsubscriibbeButton() {
-        if (!currentPersonId) return;
+        if (!currentPersonId) {
+            debugLog('❌ ID актора не встановлено');
+            return;
+        }
+
+        debugLog('🔧 Додаємо кнопку для актора', {id: currentPersonId});
 
         var bottomBlock = document.querySelector('.person-start__bottom');
-        if (bottomBlock) addButtonToContainer(bottomBlock);
-        else {
+        if (bottomBlock) {
+            addButtonToContainer(bottomBlock);
+        } else {
             let attempts = 0;
             const maxAttempts = 10;
 
@@ -195,9 +375,13 @@
                 var container = document.querySelector('.person-start__bottom');
                 if (container) {
                     addButtonToContainer(container);
-                    log('✅ Button added to container');
+                    debugLog('✅ Контейнер знайдено, кнопку додано');
+                } else if (attempts < maxAttempts) {
+                    debugLog('⏳ Очікування контейнера...', {attempt: attempts});
+                    setTimeout(tryAgain, 300);
+                } else {
+                    debugLog('❌ Не вдалося знайти контейнер після спроб', {attempts: attempts});
                 }
-                else if (attempts < maxAttempts) setTimeout(tryAgain, 300);
             }
 
             setTimeout(tryAgain, 300);
@@ -274,6 +458,7 @@
         style.id = 'subscriibbe-button-styles';
         style.textContent = css;
         document.head.appendChild(style);
+        debugLog('🎨 Стилі додано');
     }
 
     // ВЛАСНИЙ КОМПОНЕНТ для відображення акторів
@@ -329,7 +514,10 @@
                     return Lampa.TMDB.image('w500' + profilePath);
                 },
                 openPerson: function(person) {
-                    log('🎯 Opening actor page:', person.id, person.name);
+                    debugLog('🎯 Відкриваємо сторінку актора', {
+                        id: person.id,
+                        name: person.name
+                    });
                     Lampa.Activity.push({
                         component: 'actor',
                         id: person.id,
@@ -343,10 +531,14 @@
                     self.persons = [];
                     
                     var savedPersons = getSavedPersons();
-                    log('📋 Loading saved persons:', savedPersons);
+                    debugLog('📋 Завантаження акторів', {
+                        total: savedPersons.length,
+                        persons: savedPersons
+                    });
                     
                     if (savedPersons.length === 0) {
                         self.loading = false;
+                        debugLog('ℹ️ Акторів не знайдено');
                         return;
                     }
                     
@@ -368,7 +560,10 @@
                                         known_for_department: json.known_for_department,
                                         photo: savedPerson.photo
                                     });
-                                    log('✅ Loaded person:', json.id, json.name);
+                                    debugLog('✅ Актор завантажено', {
+                                        id: json.id,
+                                        name: json.name
+                                    });
                                 }
                             } catch (e) {
                                 personsData.push({
@@ -378,14 +573,19 @@
                                     known_for_department: 'Actor',
                                     photo: savedPerson.photo
                                 });
-                                log('⚠️ Using fallback data for:', savedPerson.id);
+                                debugLog('⚠️ Використовуємо резервні дані', {
+                                    id: savedPerson.id,
+                                    error: e.message
+                                });
                             }
                             
                             loaded++;
                             if (loaded >= savedPersons.length) {
                                 self.persons = personsData;
                                 self.loading = false;
-                                log('🎉 All persons loaded:', personsData.length);
+                                debugLog('🎉 Всі актори завантажені', {
+                                    total: personsData.length
+                                });
                             }
                         }, function(error) {
                             personsData.push({
@@ -400,7 +600,9 @@
                             if (loaded >= savedPersons.length) {
                                 self.persons = personsData;
                                 self.loading = false;
-                                log('⚠️ All persons loaded with fallback:', personsData.length);
+                                debugLog('⚠️ Актори завантажені з помилками', {
+                                    total: personsData.length
+                                });
                             }
                         });
                     });
@@ -409,7 +611,7 @@
             on: {
                 create: function() {
                     this.title = Lampa.Lang.translate('persons_plugin_title');
-                    log('🚀 Creating persons page');
+                    debugLog('🚀 Створення сторінки персон');
                     this.loadPersons();
                 },
                 back: function() {
@@ -420,8 +622,11 @@
     }
 
     function startPlugin() {
-        hideSubscribeButton();
+        // Створюємо дебаг панель
+        createDebugPanel();
+        debugLog('🔧 Запуск плагіна');
 
+        // Додаємо переклади
         Lampa.Lang.add({
             persons_plugin_title: pluginTranslations.persons_title,
             persons_plugin_subscriibbe: pluginTranslations.subscriibbe,
@@ -429,9 +634,11 @@
             persons_plugin_not_found: pluginTranslations.persons_not_found,
         });
 
+        // Ініціалізуємо компоненти
         setupCustomPersonsComponent();
         initStorage();
 
+        // Додаємо пункт меню
         var menuItem = $(
             '<li class="menu__item selector" data-action="' + PLUGIN_NAME + '">' +
             '<div class="menu__ico">' + ICON_SVG + '</div>' +
@@ -440,7 +647,7 @@
         );
 
         menuItem.on("hover:enter", function () {
-            log('📖 Opening persons page');
+            debugLog('📖 Відкриваємо сторінку "Персони"');
             Lampa.Activity.push({
                 component: "persons_custom",
                 title: Lampa.Lang.translate('persons_plugin_title'),
@@ -449,7 +656,9 @@
         });
 
         $(".menu .menu__list").eq(0).append(menuItem);
+        debugLog('✅ Пункт меню додано');
 
+        // Слухачі активності
         function waitForContainer(callback) {
             let attempts = 0;
             const max = 15;
@@ -459,9 +668,12 @@
                 var container = document.querySelector('.person-start__bottom');
                 if (container) {
                     callback();
-                    log('✅ Found person container');
+                    debugLog('✅ Контейнер знайдено');
+                } else if (attempts < max) {
+                    setTimeout(check, 200);
+                } else {
+                    debugLog('❌ Контейнер не знайдено після спроб', {attempts: attempts});
                 }
-                else if (attempts < max) setTimeout(check, 200);
             }
 
             setTimeout(check, 200);
@@ -472,7 +684,7 @@
             if (activity && activity.component === 'actor') {
                 currentPersonId = parseInt(activity.id || activity.params?.id || location.pathname.match(/\/actor\/(\d+)/)?.[1], 10);
                 if (currentPersonId) {
-                    log('🎯 Current actor page:', currentPersonId);
+                    debugLog('🎯 Активна сторінка актора', {id: currentPersonId});
                     waitForContainer(addsubscriibbeButton);
                 }
             }
@@ -481,17 +693,21 @@
         Lampa.Listener.follow('activity', function (e) {
             if (e.type === 'start' && e.component === 'actor' && e.object?.id) {
                 currentPersonId = parseInt(e.object.id, 10);
-                log('🎯 Actor page started:', currentPersonId);
+                debugLog('🔄 Початок сторінки актора', {id: currentPersonId});
                 waitForContainer(addsubscriibbeButton);
             }
         });
 
+        // Додаємо стилі
         addButtonStyles();
+        
+        // Перевіряємо поточну активність
         setTimeout(checkCurrentActivity, 1500);
         
-        log('✅ Plugin started successfully');
+        debugLog('✅ Плагін успішно запущено');
     }
 
+    // Запускаємо плагін
     if (window.appready) {
         startPlugin();
     } else {
