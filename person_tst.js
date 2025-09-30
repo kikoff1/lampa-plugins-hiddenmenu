@@ -28,7 +28,7 @@
     var pluginTranslations = {
         persons_title: {
             ru: "Персоны",
-            en: "Persons",
+            en: "Persons", 
             uk: "Персони",
             be: "Асобы",
             pt: "Pessoas",
@@ -78,14 +78,6 @@
         if (my_logging && console && console.log) {
             try {
                 console.log.apply(console, arguments);
-            } catch (e) {}
-        }
-    }
-
-    function error() {
-        if (my_logging && console && console.error) {
-            try {
-                console.error.apply(console, arguments);
             } catch (e) {}
         }
     }
@@ -204,143 +196,6 @@
         document.head.appendChild(style);
     }
 
-    // Функція для створення власної сторінки актора
-    function createCustomPersonPage(personId, personName) {
-        log('Creating custom person page for:', personId, personName);
-        
-        // Створюємо власну активність для сторінки актора
-        Lampa.Activity.push({
-            component: 'person_custom',
-            id: personId,
-            name: personName,
-            source: 'tmdb',
-            url: 'person_custom_' + personId
-        });
-    }
-
-    // Компонент для власної сторінки актора
-    function setupCustomPersonComponent() {
-        Lampa.Component.add('person_custom', {
-            template: `
-            <div class="person-custom">
-                <div class="person-custom__header">
-                    <div class="person-custom__back selector" data-focusable="true" data-action="back">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                            <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" fill="currentColor"/>
-                        </svg>
-                    </div>
-                    <div class="person-custom__title">{{name}}</div>
-                </div>
-                <div class="person-custom__content">
-                    <div class="person-custom__loading" v-if="loading">Завантаження...</div>
-                    <div class="person-custom__error" v-if="error">Помилка завантаження</div>
-                    <div class="person-custom__info" v-if="personInfo && !loading">
-                        <div class="person-custom__poster">
-                            <img :src="getImageUrl(personInfo.profile_path)" :alt="personInfo.name" onerror="this.src='/img/person_empty.png'">
-                        </div>
-                        <div class="person-custom__details">
-                            <h1 class="person-custom__name">{{personInfo.name}}</h1>
-                            <div class="person-custom__department" v-if="personInfo.known_for_department">
-                                {{personInfo.known_for_department}}
-                            </div>
-                            <div class="person-custom__biography" v-if="personInfo.biography">
-                                <h3>Біографія</h3>
-                                <p>{{personInfo.biography}}</p>
-                            </div>
-                            <div class="person-custom__movies" v-if="movies.length > 0">
-                                <h3>Відомі роботи</h3>
-                                <div class="person-custom__movies-list">
-                                    <div class="person-custom__movie" v-for="movie in movies" :key="movie.id">
-                                        <div class="person-custom__movie-poster">
-                                            <img :src="getImageUrl(movie.poster_path, 'w185')" :alt="movie.title" onerror="this.src='/img/poster_empty.png'">
-                                        </div>
-                                        <div class="person-custom__movie-info">
-                                            <div class="person-custom__movie-title">{{movie.title || movie.name}}</div>
-                                            <div class="person-custom__movie-character" v-if="movie.character">
-                                                як {{movie.character}}
-                                            </div>
-                                            <div class="person-custom__movie-job" v-if="movie.job">
-                                                {{movie.job}}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            `,
-            data: function() {
-                return {
-                    loading: true,
-                    error: false,
-                    personInfo: null,
-                    movies: []
-                };
-            },
-            methods: {
-                getImageUrl: function(path, size) {
-                    if (!path) return '/img/person_empty.png';
-                    size = size || 'w500';
-                    return Lampa.TMDB.image(size + path);
-                },
-                loadPersonData: function() {
-                    var self = this;
-                    var personId = this.$activity.object.id;
-                    var currentLang = getCurrentLanguage();
-                    
-                    self.loading = true;
-                    self.error = false;
-                    
-                    // Завантажуємо основну інформацію про актора
-                    var personUrl = Lampa.TMDB.api('person/' + personId + '?api_key=' + Lampa.TMDB.key() + '&language=' + currentLang);
-                    var moviesUrl = Lampa.TMDB.api('person/' + personId + '/combined_credits?api_key=' + Lampa.TMDB.key() + '&language=' + currentLang);
-                    
-                    Promise.all([
-                        new Promise(function(resolve, reject) {
-                            new Lampa.Reguest().silent(personUrl, resolve, reject);
-                        }),
-                        new Promise(function(resolve, reject) {
-                            new Lampa.Reguest().silent(moviesUrl, resolve, reject);
-                        })
-                    ]).then(function(responses) {
-                        try {
-                            var personData = typeof responses[0] === 'string' ? JSON.parse(responses[0]) : responses[0];
-                            var moviesData = typeof responses[1] === 'string' ? JSON.parse(responses[1]) : responses[1];
-                            
-                            self.personInfo = personData;
-                            
-                            // Беремо топ 10 найпопулярніших робіт
-                            var allWorks = (moviesData.cast || []).concat(moviesData.crew || []);
-                            allWorks.sort(function(a, b) {
-                                return (b.popularity || 0) - (a.popularity || 0);
-                            });
-                            self.movies = allWorks.slice(0, 10);
-                            
-                        } catch (e) {
-                            self.error = true;
-                            log('Error parsing person data:', e);
-                        }
-                        self.loading = false;
-                    }).catch(function(error) {
-                        self.error = true;
-                        self.loading = false;
-                        log('Error loading person data:', error);
-                    });
-                }
-            },
-            on: {
-                create: function() {
-                    this.loadPersonData();
-                },
-                back: function() {
-                    Lampa.Activity.back();
-                }
-            }
-        });
-    }
-
     function PersonsService() {
         var self = this;
         var cache = {};
@@ -380,13 +235,13 @@
                         try {
                             var json = typeof response === 'string' ? JSON.parse(response) : response;
                             if (json && json.id) {
+                                // ВИПРАВЛЕННЯ: Використовуємо правильну структуру для картки актора
                                 var personCard = {
                                     id: json.id,
                                     title: json.name,
                                     name: json.name,
                                     poster_path: json.profile_path,
-                                    type: "person",
-                                    source: "tmdb",
+                                    // ВАЖЛИВО: Використовуємо media_type: "person" для правильного відкриття
                                     media_type: "person",
                                     profile_path: json.profile_path,
                                     known_for_department: json.known_for_department
@@ -418,35 +273,11 @@
         };
     }
 
-    // Обробник кліків для карток акторів
-    function setupCardClickHandler() {
-        // Додаємо обробник для всіх карток у нашому плагіні
-        $(document).on('hover:enter', '.category-full .card', function(e) {
-            var card = $(this);
-            var personId = card.attr('data-id');
-            
-            // Перевіряємо чи це наша категорія
-            var activity = Lampa.Activity.active();
-            if (activity && activity.source === PLUGIN_NAME && personId) {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                var personName = card.attr('data-name') || card.find('.card__title').text() || 'Actor';
-                
-                log('Opening custom person page:', personId, personName);
-                
-                // Відкриваємо власну сторінку актора
-                createCustomPersonPage(personId, personName);
-                
-                return false;
-            }
-        });
-    }
-
+    // Головна функція для запуску плагіна
     function startPlugin() {
         hideSubscribeButton();
 
-        // Реєструємо переклади
+        // Додаємо переклади
         Lampa.Lang.add({
             persons_plugin_title: pluginTranslations.persons_title,
             persons_plugin_subscriibbe: pluginTranslations.subscriibbe,
@@ -454,14 +285,13 @@
             persons_plugin_not_found: pluginTranslations.persons_not_found,
         });
 
-        // Реєструємо власний компонент для сторінки актора
-        setupCustomPersonComponent();
-
         initStorage();
 
+        // Реєструємо джерело даних
         var personsService = new PersonsService();
         Lampa.Api.sources[PLUGIN_NAME] = personsService;
 
+        // Додаємо пункт меню (як у робочому плагіні)
         var menuItem = $(
             '<li class="menu__item selector" data-action="' + PLUGIN_NAME + '">' +
             '<div class="menu__ico">' + ICON_SVG + '</div>' +
@@ -470,6 +300,7 @@
         );
 
         menuItem.on("hover:enter", function () {
+            // Використовуємо ту саму структуру, що і в робочому плагіні
             Lampa.Activity.push({
                 component: "category_full",
                 source: PLUGIN_NAME,
@@ -481,6 +312,7 @@
 
         $(".menu .menu__list").eq(0).append(menuItem);
 
+        // Функція очікування контейнера для кнопки
         function waitForContainer(callback) {
             let attempts = 0;
             const max = 15;
@@ -494,6 +326,7 @@
             setTimeout(check, 200);
         }
 
+        // Перевірка поточної активності
         function checkCurrentActivity() {
             var activity = Lampa.Activity.active();
             if (activity && activity.component === 'actor') {
@@ -504,6 +337,7 @@
             }
         }
 
+        // Слухач змін активності
         Lampa.Listener.follow('activity', function (e) {
             if (e.type === 'start' && e.component === 'actor' && e.object?.id) {
                 currentPersonId = parseInt(e.object.id, 10);
@@ -513,13 +347,14 @@
             }
         });
 
-        // Додаємо обробник кліків для карток акторів
-        setupCardClickHandler();
-        
-        setTimeout(checkCurrentActivity, 1500);
+        // Додаємо стилі для кнопки
         addButtonStyles();
+        
+        // Перевіряємо поточну активність
+        setTimeout(checkCurrentActivity, 1500);
     }
 
+    // Запуск плагіна
     if (window.appready) {
         startPlugin();
     } else {
