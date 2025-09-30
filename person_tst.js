@@ -49,7 +49,6 @@
             display: none;
         `;
         
-        // Текстова область для логів
         var textarea = document.createElement('textarea');
         textarea.id = 'debug-textarea';
         textarea.style.cssText = `
@@ -69,7 +68,6 @@
         
         panel.appendChild(textarea);
         
-        // Кнопки
         var toggleBtn = document.createElement('button');
         toggleBtn.textContent = 'DEBUG';
         toggleBtn.style.cssText = `
@@ -104,23 +102,6 @@
             font-weight: bold;
         `;
         
-        var copyBtn = document.createElement('button');
-        copyBtn.textContent = 'COPY';
-        copyBtn.style.cssText = `
-            position: fixed;
-            top: 10px;
-            right: 170px;
-            z-index: 10001;
-            background: #44aa44;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-        `;
-        
         toggleBtn.addEventListener('click', function() {
             panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
         });
@@ -130,27 +111,9 @@
             updateDebugPanel();
         });
         
-        copyBtn.addEventListener('click', function() {
-            var textarea = document.getElementById('debug-textarea');
-            textarea.select();
-            textarea.setSelectionRange(0, 99999);
-            
-            try {
-                var successful = document.execCommand('copy');
-                if (successful) {
-                    log('✅ Text copied to clipboard!');
-                } else {
-                    log('❌ Copy failed, please select and copy manually');
-                }
-            } catch (err) {
-                log('❌ Copy error: ' + err);
-            }
-        });
-        
         document.body.appendChild(panel);
         document.body.appendChild(toggleBtn);
         document.body.appendChild(clearBtn);
-        document.body.appendChild(copyBtn);
         
         return panel;
     }
@@ -178,31 +141,48 @@
     function debugCardClicks() {
         var debugPanel = createDebugPanel();
         
-        // Логуємо всі кліки на картках
+        // Детальне логування карток
         $(document).on('click', '.card', function(e) {
             var card = $(this);
-            var data = {
-                id: card.attr('data-id'),
-                name: card.attr('data-name'),
-                type: card.attr('data-type'),
-                media_type: card.attr('data-media-type'),
-                classes: card.attr('class')
-            };
+            var allAttributes = {};
             
-            log('🟢 CARD CLICK', data);
+            // Збираємо всі атрибути картки
+            for (var i = 0; i < card[0].attributes.length; i++) {
+                var attr = card[0].attributes[i];
+                allAttributes[attr.name] = attr.value;
+            }
+            
+            // Збираємо всі data-атрибути
+            var dataAttributes = {};
+            for (var key in card.data()) {
+                if (card.data().hasOwnProperty(key)) {
+                    dataAttributes[key] = card.data()[key];
+                }
+            }
+            
+            log('🟢 CARD CLICK - DETAILED', {
+                attributes: allAttributes,
+                dataAttributes: dataAttributes,
+                innerHTML: card.html().substring(0, 200) + '...',
+                currentActivity: Lampa.Activity.active()
+            });
         });
 
-        // Логуємо hover:enter події
+        // Детальне логування hover:enter
         $(document).on('hover:enter', '.card', function(e) {
             var card = $(this);
-            var data = {
-                id: card.attr('data-id'),
-                name: card.attr('data-name'),
-                type: card.attr('data-type'),
-                media_type: card.attr('data-media-type')
-            };
+            var dataAttributes = {};
             
-            log('🎯 HOVER:ENTER', data);
+            for (var key in card.data()) {
+                if (card.data().hasOwnProperty(key)) {
+                    dataAttributes[key] = card.data()[key];
+                }
+            }
+            
+            log('🎯 HOVER:ENTER - DETAILED', {
+                dataAttributes: dataAttributes,
+                currentActivity: Lampa.Activity.active()
+            });
         });
 
         // Логуємо зміни активності
@@ -212,24 +192,10 @@
                 source: e.object?.source,
                 id: e.object?.id,
                 name: e.object?.name,
-                url: e.object?.url
+                url: e.object?.url,
+                fullObject: e.object
             });
         });
-
-        // Перехоплюємо відкриття сторінки актора
-        var originalPush = Lampa.Activity.push;
-        Lampa.Activity.push = function(activity) {
-            log('🚀 ACTIVITY PUSH', {
-                component: activity.component,
-                id: activity.id,
-                name: activity.name,
-                source: activity.source,
-                url: activity.url,
-                object: activity.object
-            });
-            
-            return originalPush.call(this, activity);
-        };
 
         // Логуємо кліки через стандартну систему Lampa
         var originalCardClick = Lampa.Card.prototype.click;
@@ -243,7 +209,8 @@
                 media_type: data.media_type,
                 source: data.source,
                 title: data.title,
-                poster_path: data.poster_path
+                poster_path: data.poster_path,
+                fullData: data
             });
             
             return originalCardClick.call(this);
@@ -259,7 +226,8 @@
                 name: cardData.name,
                 type: cardData.type,
                 media_type: cardData.media_type,
-                source: cardData.source
+                source: cardData.source,
+                fullData: cardData
             });
             
             return originalCategoryClick.call(this, card);
