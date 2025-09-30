@@ -92,39 +92,47 @@
         }
     }
 
-    // Виправлена функція отримання ID акторів
-    function getPersonIds() {
+    // Виправлена функція отримання акторів
+    function getSavedPersons() {
         var persons = Lampa.Storage.get(PERSONS_KEY);
         return Array.isArray(persons) ? persons : [];
     }
 
     // Виправлена функція перемикання підписки
     function togglePersonSubscription(personId, personName, personPhoto) {
-        var personIds = getPersonIds();
-        var index = personIds.findIndex(function(p) {
+        var persons = getSavedPersons();
+        var index = persons.findIndex(function(p) {
             return p.id == personId;
         });
 
         if (index === -1) {
             // Додаємо актора з усіма даними
-            personIds.push({
+            persons.push({
                 id: personId,
                 name: personName,
                 photo: personPhoto,
                 timestamp: new Date().getTime()
             });
+            log('Added person:', personId, personName);
         } else {
             // Видаляємо актора
-            personIds.splice(index, 1);
+            persons.splice(index, 1);
+            log('Removed person:', personId, personName);
         }
 
-        Lampa.Storage.set(PERSONS_KEY, personIds);
+        Lampa.Storage.set(PERSONS_KEY, persons);
+        
+        // Сповіщаємо про зміни
+        if (window.personsPluginUpdate) {
+            window.personsPluginUpdate();
+        }
+        
         return index === -1;
     }
 
     // Виправлена функція перевірки підписки
     function isPersonsubscriibbed(personId) {
-        var persons = getPersonIds();
+        var persons = getSavedPersons();
         return persons.some(function(p) {
             return p.id == personId;
         });
@@ -271,6 +279,15 @@
         document.head.appendChild(style);
     }
 
+    // Глобальна функція для оновлення списку
+    window.personsPluginUpdate = function() {
+        // Оновлюємо активний компонент, якщо це наш плагін
+        var activity = Lampa.Activity.active();
+        if (activity && activity.component === 'persons_custom') {
+            Lampa.Activity.reload();
+        }
+    };
+
     // Виправлений компонент для відображення списку акторів
     function setupCustomPersonsComponent() {
         Lampa.Component.add('persons_custom', {
@@ -320,13 +337,13 @@
             methods: {
                 getPersonImage: function(profilePath) {
                     if (!profilePath) return '/img/person_empty.png';
-                    if (profilePath.includes('http')) return profilePath; // Якщо це пряме посилання
+                    if (profilePath.includes('http')) return profilePath;
+                    if (profilePath.includes('/img/')) return profilePath;
                     return Lampa.TMDB.image('w500' + profilePath);
                 },
                 openPerson: function(person) {
                     log('Opening person:', person.id, person.name);
                     
-                    // Відкриваємо сторінку актора через стандартний компонент Lampa
                     Lampa.Activity.push({
                         component: 'actor',
                         id: person.id,
@@ -339,8 +356,8 @@
                     self.loading = true;
                     
                     // Отримуємо збережених акторів
-                    var savedPersons = getPersonIds();
-                    log('Saved persons:', savedPersons);
+                    var savedPersons = getSavedPersons();
+                    log('Loading saved persons:', savedPersons);
                     
                     if (savedPersons.length === 0) {
                         self.persons = [];
@@ -352,7 +369,7 @@
                     var loaded = 0;
                     var personsData = [];
                     
-                    // Завантажуємо повну інформацію про кожного актора з TMDB
+                    // Для кожного збереженого актора завантажуємо повну інформацію
                     savedPersons.forEach(function(savedPerson) {
                         var url = Lampa.TMDB.api('person/' + savedPerson.id + '?api_key=' + Lampa.TMDB.key() + '&language=' + currentLang);
                         
@@ -363,26 +380,20 @@
                                     personsData.push({
                                         id: json.id,
                                         name: json.name || savedPerson.name,
-                                        profile_path: json.profile_path || savedPerson.photo,
-                                        known_for_department: json.known_for_department
-                                    });
-                                } else {
-                                    // Якщо не вдалося завантажити з TMDB, використовуємо збережені дані
-                                    personsData.push({
-                                        id: savedPerson.id,
-                                        name: savedPerson.name,
-                                        profile_path: savedPerson.photo,
-                                        known_for_department: 'Actor'
+                                        profile_path: json.profile_path,
+                                        known_for_department: json.known_for_department,
+                                        photo: savedPerson.photo
                                     });
                                 }
                             } catch (e) {
-                                log('Error loading person data:', e);
-                                // Використовуємо збережені дані у разі помилки
+                                log('Error parsing person data:', e);
+                                // Використовуємо збережені дані
                                 personsData.push({
                                     id: savedPerson.id,
                                     name: savedPerson.name,
-                                    profile_path: savedPerson.photo,
-                                    known_for_department: 'Actor'
+                                    profile_path: null,
+                                    known_for_department: 'Actor',
+                                    photo: savedPerson.photo
                                 });
                             }
                             
@@ -390,21 +401,24 @@
                             if (loaded >= savedPersons.length) {
                                 self.persons = personsData;
                                 self.loading = false;
+                                log('Loaded persons:', personsData);
                             }
                         }, function(error) {
                             log('Error loading person from TMDB:', error);
-                            // Використовуємо збережені дані у разі помилки
+                            // Використовуємо збережені дані
                             personsData.push({
                                 id: savedPerson.id,
                                 name: savedPerson.name,
-                                profile_path: savedPerson.photo,
-                                known_for_department: 'Actor'
+                                profile_path: null,
+                                known_for_department: 'Actor',
+                                photo: savedPerson.photo
                             });
                             
                             loaded++;
                             if (loaded >= savedPersons.length) {
                                 self.persons = personsData;
                                 self.loading = false;
+                                log('Loaded persons (fallback):', personsData);
                             }
                         });
                     });
@@ -447,7 +461,6 @@
         );
 
         menuItem.on("hover:enter", function () {
-            // Використовуємо власний компонент замість category_full
             Lampa.Activity.push({
                 component: "persons_custom",
                 title: Lampa.Lang.translate('persons_plugin_title'),
