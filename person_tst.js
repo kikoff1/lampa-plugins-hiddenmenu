@@ -8,26 +8,22 @@
     function debugLog(message, data) {
         var timestamp = new Date().toLocaleTimeString();
         
-        // Додаємо в консоль
         if (console && console.log) {
             try {
                 console.log(timestamp + ' - ' + message, data || '');
             } catch (e) {}
         }
         
-        // Додаємо в масив для відображення
         debugLogs.unshift({
             time: timestamp,
             message: message,
             data: data
         });
         
-        // Обмежуємо кількість логів
         if (debugLogs.length > maxDebugLogs) {
             debugLogs.pop();
         }
         
-        // Оновлюємо панель якщо вона відкрита
         updateDebugPanel();
     }
 
@@ -55,7 +51,6 @@
             display: none;
         `;
         
-        // Текстова область для логів
         var textarea = document.createElement('textarea');
         textarea.id = 'debug-textarea';
         textarea.style.cssText = `
@@ -75,7 +70,6 @@
         
         panel.appendChild(textarea);
         
-        // Кнопки управління
         var toggleBtn = document.createElement('button');
         toggleBtn.textContent = 'DEBUG';
         toggleBtn.style.cssText = `
@@ -127,7 +121,6 @@
             font-weight: bold;
         `;
         
-        // Обробники подій
         toggleBtn.addEventListener('click', function() {
             var panel = document.getElementById('debug-panel');
             if (panel) {
@@ -461,7 +454,7 @@
         debugLog('🎨 Стилі додано');
     }
 
-    // ВЛАСНИЙ КОМПОНЕНТ для відображення акторів
+    // ВИПРАВЛЕНИЙ КОМПОНЕНТ - тепер правильно завантажує дані
     function setupCustomPersonsComponent() {
         Lampa.Component.add('persons_custom', {
             template: `
@@ -530,15 +523,17 @@
                     self.loading = true;
                     self.persons = [];
                     
-                    var savedPersons = getSavedPersons();
-                    debugLog('📋 Завантаження акторів', {
+                    // ВИПРАВЛЕННЯ: Використовуємо глобальну функцію getSavedPersons
+                    var savedPersons = window.getSavedPersons ? window.getSavedPersons() : [];
+                    
+                    debugLog('📋 Завантаження акторів зі сховища', {
                         total: savedPersons.length,
                         persons: savedPersons
                     });
                     
                     if (savedPersons.length === 0) {
                         self.loading = false;
-                        debugLog('ℹ️ Акторів не знайдено');
+                        debugLog('ℹ️ Акторів не знайдено в сховищі');
                         return;
                     }
                     
@@ -560,12 +555,13 @@
                                         known_for_department: json.known_for_department,
                                         photo: savedPerson.photo
                                     });
-                                    debugLog('✅ Актор завантажено', {
+                                    debugLog('✅ Актор завантажено з TMDB', {
                                         id: json.id,
                                         name: json.name
                                     });
                                 }
                             } catch (e) {
+                                // Якщо не вдалося завантажити з TMDB, використовуємо збережені дані
                                 personsData.push({
                                     id: savedPerson.id,
                                     name: savedPerson.name,
@@ -584,10 +580,12 @@
                                 self.persons = personsData;
                                 self.loading = false;
                                 debugLog('🎉 Всі актори завантажені', {
-                                    total: personsData.length
+                                    total: personsData.length,
+                                    persons: personsData
                                 });
                             }
                         }, function(error) {
+                            // У разі помилки запиту використовуємо збережені дані
                             personsData.push({
                                 id: savedPerson.id,
                                 name: savedPerson.name,
@@ -622,11 +620,9 @@
     }
 
     function startPlugin() {
-        // Створюємо дебаг панель
         createDebugPanel();
         debugLog('🔧 Запуск плагіна');
 
-        // Додаємо переклади
         Lampa.Lang.add({
             persons_plugin_title: pluginTranslations.persons_title,
             persons_plugin_subscriibbe: pluginTranslations.subscriibbe,
@@ -634,11 +630,13 @@
             persons_plugin_not_found: pluginTranslations.persons_not_found,
         });
 
-        // Ініціалізуємо компоненти
+        // Робимо функції глобальними для доступу з компонента
+        window.getSavedPersons = getSavedPersons;
+        window.getCurrentLanguage = getCurrentLanguage;
+
         setupCustomPersonsComponent();
         initStorage();
 
-        // Додаємо пункт меню
         var menuItem = $(
             '<li class="menu__item selector" data-action="' + PLUGIN_NAME + '">' +
             '<div class="menu__ico">' + ICON_SVG + '</div>' +
@@ -658,7 +656,6 @@
         $(".menu .menu__list").eq(0).append(menuItem);
         debugLog('✅ Пункт меню додано');
 
-        // Слухачі активності
         function waitForContainer(callback) {
             let attempts = 0;
             const max = 15;
@@ -698,16 +695,12 @@
             }
         });
 
-        // Додаємо стилі
         addButtonStyles();
-        
-        // Перевіряємо поточну активність
         setTimeout(checkCurrentActivity, 1500);
         
         debugLog('✅ Плагін успішно запущено');
     }
 
-    // Запускаємо плагін
     if (window.appready) {
         startPlugin();
     } else {
