@@ -1,7 +1,7 @@
 (function() {
     "use strict";
 
-    // v 1.0 ==== ПРИХОВАННЯ СТАНДАРТНОЇ КНОПКИ "ПІДПИСАТИСЯ" ====
+    // ==== ПРИХОВАННЯ СТАНДАРТНОЇ КНОПКИ "ПІДПИСАТИСЯ" ====
     function hideSubscribeButton() {
         if (document.getElementById('hide-subscribe-style')) return;
 
@@ -39,7 +39,7 @@
         },
         subscriibbe: {
             ru: "Подписаться",
-            en: "Subscribe",
+            en: "subscriibbe",
             uk: "Підписатися",
             be: "Падпісацца",
             pt: "Inscrever",
@@ -50,7 +50,7 @@
         },
         unsubscriibbe: {
             ru: "Отписаться",
-            en: "Unsubscribe",
+            en: "Unsubscriibbe",
             uk: "Відписатися",
             be: "Адпісацца",
             pt: "Cancelar inscrição",
@@ -248,9 +248,9 @@
                                     title: json.name,
                                     name: json.name,
                                     poster_path: json.profile_path,
-                                    type: "person", // ЗМІНА: "person" замість "actor"
+                                    type: "person", // ВАЖЛИВО: "person" замість "actor"
                                     source: "tmdb",
-                                    media_type: "person" // ЗМІНА: додано media_type
+                                    media_type: "person" // ВАЖЛИВО: додано media_type
                                 };
                                 cache[personId] = personCard;
                                 results.push(personCard);
@@ -329,8 +329,8 @@
 
         function checkCurrentActivity() {
             var activity = Lampa.Activity.active();
-            if (activity && activity.component === 'person') { // ЗМІНА: 'person' замість 'actor'
-                currentPersonId = parseInt(activity.id || activity.params?.id || location.pathname.match(/\/person\/(\d+)/)?.[1], 10); // ЗМІНА: /person/ замість /actor/
+            if (activity && activity.component === 'person') { // ВАЖЛИВО: 'person' замість 'actor'
+                currentPersonId = parseInt(activity.id || activity.params?.id || location.pathname.match(/\/person\/(\d+)/)?.[1], 10); // ВАЖЛИВО: /person/ замість /actor/
                 if (currentPersonId) {
                     waitForContainer(addsubscriibbeButton);
                 }
@@ -338,7 +338,7 @@
         }
 
         Lampa.Listener.follow('activity', function (e) {
-            if (e.type === 'start' && e.component === 'person' && e.object?.id) { // ЗМІНА: 'person' замість 'actor'
+            if (e.type === 'start' && e.component === 'person' && e.object?.id) { // ВАЖЛИВО: 'person' замість 'actor'
                 currentPersonId = parseInt(e.object.id, 10);
                 waitForContainer(addsubscriibbeButton);
             } else if (e.type === 'resume' && e.component === 'category_full' && e.object?.source === PLUGIN_NAME) {
