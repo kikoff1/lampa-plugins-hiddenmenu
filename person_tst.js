@@ -21,7 +21,7 @@
     var PLUGIN_NAME = "persons_plugin";
     var PERSONS_KEY = "saved_persons";
     var PAGE_SIZE = 20;
-    var DEFAULT_PERSON_IDS = [];
+    var DEFAULT_PERSONS_DATA = { cards: {}, ids: [] };
     var currentPersonId = null;
     var my_logging = true;
 
@@ -55,7 +55,7 @@
             be: "Адпісацца",
             pt: "Cancelar inscrição",
             zh: "退订",
-            he: "בטל מנוי",
+            he: "בטל מנוي",
             cs: "Odhlásit se",
             bg: "Отписване"
         },
@@ -96,28 +96,85 @@
 
     function initStorage() {
         var current = Lampa.Storage.get(PERSONS_KEY);
-        if (!current || current.length === 0) {
-            Lampa.Storage.set(PERSONS_KEY, DEFAULT_PERSON_IDS);
+        if (!current || !current.cards) {
+            Lampa.Storage.set(PERSONS_KEY, DEFAULT_PERSONS_DATA);
         }
     }
 
-    function getPersonIds() {
-        return Lampa.Storage.get(PERSONS_KEY, []);
+    function getPersonsData() {
+        return Lampa.Storage.get(PERSONS_KEY, DEFAULT_PERSONS_DATA);
+    }
+
+    function savePersonCard(personId, personData) {
+        var savedPersons = getPersonsData();
+        
+        // Зберігаємо повну картку
+        savedPersons.cards[personId] = {
+            id: personData.id,
+            title: personData.name,
+            name: personData.name,
+            poster_path: personData.profile_path,
+            type: "actor",
+            source: "tmdb",
+            media_type: "person",
+            component: "actor" // Ключове поле!
+        };
+        
+        // Додаємо ID до списку
+        if (!savedPersons.ids.includes(personId)) {
+            savedPersons.ids.push(personId);
+        }
+        
+        Lampa.Storage.set(PERSONS_KEY, savedPersons);
+    }
+
+    function removePersonCard(personId) {
+        var savedPersons = getPersonsData();
+        
+        // Видаляємо картку
+        delete savedPersons.cards[personId];
+        
+        // Видаляємо ID зі списку
+        var index = savedPersons.ids.indexOf(personId);
+        if (index !== -1) {
+            savedPersons.ids.splice(index, 1);
+        }
+        
+        Lampa.Storage.set(PERSONS_KEY, savedPersons);
     }
 
     function togglePersonSubscription(personId) {
-        var personIds = getPersonIds();
-        var index = personIds.indexOf(personId);
+        var savedPersons = getPersonsData();
+        var index = savedPersons.ids.indexOf(personId);
 
-        if (index === -1) personIds.push(personId);
-        else personIds.splice(index, 1);
-
-        Lampa.Storage.set(PERSONS_KEY, personIds);
-        return index === -1;
+        if (index === -1) {
+            // Підписуємося - завантажуємо дані та зберігаємо картку
+            var currentLang = getCurrentLanguage();
+            var url = Lampa.TMDB.api(`person/${personId}?api_key=${Lampa.TMDB.key()}&language=${currentLang}`);
+            
+            new Lampa.Reguest().silent(url, function (response) {
+                try {
+                    var json = typeof response === 'string' ? JSON.parse(response) : response;
+                    if (json && json.id) {
+                        savePersonCard(personId, json);
+                        updatePersonsList();
+                    }
+                } catch (e) {
+                    error('Error saving person data:', e);
+                }
+            });
+            return true;
+        } else {
+            // Відписуємося
+            removePersonCard(personId);
+            updatePersonsList();
+            return false;
+        }
     }
 
     function isPersonsubscriibbed(personId) {
-        return getPersonIds().includes(personId);
+        var savedPersons = getPersonsData();
+        return savedPersons.ids.includes(personId);
     }
 
     function addButtonToContainer(bottomBlock) {
@@ -154,7 +211,6 @@
 
             var span = button.querySelector('span');
             if (span) span.textContent = newText;
-            updatePersonsList();
         });
 
         var buttonsContainer = bottomBlock.querySelector('.full-start__buttons');
@@ -206,79 +262,33 @@
 
     function PersonsService() {
         var self = this;
-        var cache = {};
 
         this.list = function (params, onComplete) {
-            var page = parseInt(params.page, 10) || 1;
-            var startIndex = (page - 1) * PAGE_SIZE;
-            var endIndex = startIndex + PAGE_SIZE;
-            var personIds = getPersonIds();
-            var pageIds = personIds.slice(startIndex, endIndex);
-
-            if (pageIds.length === 0) {
-                onComplete({
-                    results: [],
-                    page: page,
-                    total_pages: Math.ceil(personIds.length / PAGE_SIZE),
-                    total_results: personIds.length
-                });
-                return;
-            }
-
-            var loaded = 0;
+            var savedPersons = getPersonsData();
             var results = [];
-            var currentLang = getCurrentLanguage();
-
-            for (var i = 0; i < pageIds.length; i++) {
-                (function (i) {
-                    var personId = pageIds[i];
-                    if (cache[personId]) {
-                        results.push(cache[personId]);
-                        checkComplete();
-                        return;
-                    }
-
-                    var url = Lampa.TMDB.api(`person/${personId}?api_key=${Lampa.TMDB.key()}&language=${currentLang}`);
-                    new Lampa.Reguest().silent(url, function (response) {
-                        try {
-                            var json = typeof response === 'string' ? JSON.parse(response) : response;
-                            if (json && json.id) {
-                                var personCard = {
-                                    id: json.id,
-                                    title: json.name,
-                                    name: json.name,
-                                    poster_path: json.profile_path,
-                                    type: "person", // ВИПРАВЛЕННЯ: змінити "actor" на "person"
-                                    source: "tmdb",
-                                    media_type: "person" // ВИПРАВЛЕННЯ: додати media_type
-                                };
-                                cache[personId] = personCard;
-                                results.push(personCard);
-                            }
-                        } catch (e) { }
-                        checkComplete();
-                    }, function () {
-                        checkComplete();
-                    });
-                })(i);
-            }
-
-            function checkComplete() {
-                loaded++;
-                if (loaded >= pageIds.length) {
-                    onComplete({
-                        results: results.filter(Boolean),
-                        page: page,
-                        total_pages: Math.ceil(personIds.length / PAGE_SIZE),
-                        total_results: personIds.length
-                    });
+            
+            savedPersons.ids.forEach(function(personId) {
+                var card = savedPersons.cards[personId];
+                if (card) {
+                    // Переконуємося, що картка має правильний component та action
+                    card.component = "actor";
+                    card.action = "actor";
+                    card.type = "actor";
+                    results.push(card);
                 }
-            }
+            });
+            
+            onComplete({
+                results: results,
+                page: 1,
+                total_pages: 1,
+                total_results: results.length
+            });
         };
     }
 
     function startPlugin() {
-        hideSubscribeButton(); // <-- Додаємо приховування кнопки
+        hideSubscribeButton();
 
         Lampa.Lang.add({
             persons_plugin_title: pluginTranslations.persons_title,
