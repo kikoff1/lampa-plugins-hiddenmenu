@@ -1,7 +1,7 @@
 (function() {
     "use strict";
 
-    // ==== ПРИХОВАННЯ СТАНДАРТНОЇ КНОПКИ "ПІДПИСАТИСЯ" ====
+    //v1.1.1 ==== ПРИХОВАННЯ СТАНДАРТНОЇ КНОПКИ "ПІДПИСАТИСЯ" ====
     function hideSubscribeButton() {
         if (document.getElementById('hide-subscribe-style')) return;
 
@@ -108,17 +108,13 @@
     function savePersonCard(personId, personData) {
         var savedPersons = getPersonsData();
         
-        // Зберігаємо повну картку
+        // Зберігаємо оригінальні дані з TMDB API без додаткових полів
         savedPersons.cards[personId] = {
             id: personData.id,
             title: personData.name,
             name: personData.name,
-            poster_path: personData.profile_path,
-            type: "person", // Залишаємо "person" для карток
-            source: "tmdb",
-            media_type: "person",
-            component: "person", // Залишаємо "person" для карток
-            action: "person" // Залишаємо "person" для карток
+            poster_path: personData.profile_path
+            // Видаляємо всі штучні поля типізації
         };
         
         // Додаємо ID до списку
@@ -271,10 +267,7 @@
             savedPersons.ids.forEach(function(personId) {
                 var card = savedPersons.cards[personId];
                 if (card) {
-                    // Переконуємося, що картка має правильний component та action
-                    card.component = "person"; // Залишаємо "person" для карток
-                    card.action = "person"; // Залишаємо "person" для карток
-                    card.type = "person"; // Залишаємо "person" для карток
+                    // Просто додаємо оригінальну картку без модифікацій
                     results.push(card);
                 }
             });
@@ -337,8 +330,8 @@
 
         function checkCurrentActivity() {
             var activity = Lampa.Activity.active();
-            if (activity && activity.component === 'actor') { // Повертаємо 'actor' для перевірки активності
-                currentPersonId = parseInt(activity.id || activity.params?.id || location.pathname.match(/\/actor\/(\d+)/)?.[1], 10); // Повертаємо /actor/
+            if (activity && activity.component === 'actor') {
+                currentPersonId = parseInt(activity.id || activity.params?.id || location.pathname.match(/\/actor\/(\d+)/)?.[1], 10);
                 if (currentPersonId) {
                     waitForContainer(addsubscriibbeButton);
                 }
@@ -346,7 +339,7 @@
         }
 
         Lampa.Listener.follow('activity', function (e) {
-            if (e.type === 'start' && e.component === 'actor' && e.object?.id) { // Повертаємо 'actor' для перевірки активності
+            if (e.type === 'start' && e.component === 'actor' && e.object?.id) {
                 currentPersonId = parseInt(e.object.id, 10);
                 waitForContainer(addsubscriibbeButton);
             } else if (e.type === 'resume' && e.component === 'category_full' && e.object?.source === PLUGIN_NAME) {
