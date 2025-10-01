@@ -120,8 +120,8 @@
         return getPersonIds().includes(personId);
     }
 
-    function addButtonToContainer(bottomBlock) {
-        var existingButton = bottomBlock.querySelector('.button--subscriibbe-plugin');
+    function addButtonToContainer(container) {
+        var existingButton = container.querySelector('.button--subscriibbe-plugin');
         if (existingButton && existingButton.parentNode) {
             existingButton.parentNode.removeChild(existingButton);
         }
@@ -157,28 +157,76 @@
             updatePersonsList();
         });
 
-        var buttonsContainer = bottomBlock.querySelector('.full-start__buttons');
-        if (buttonsContainer) buttonsContainer.append(button);
-        else bottomBlock.append(button);
+        // Спробуємо знайти контейнер для кнопок
+        var buttonsContainer = container.querySelector('.full-start__buttons');
+        if (buttonsContainer) {
+            buttonsContainer.append(button);
+        } else {
+            // Якщо контейнера немає, створимо його або додамо безпосередньо
+            container.append(button);
+        }
+    }
+
+    function findButtonContainer() {
+        // Спробуємо різні можливі контейнери
+        var containers = [
+            '.person-start__bottom',
+            '.full-start__bottom', 
+            '.person-start__buttons',
+            '.full-start__buttons',
+            '.person-view__bottom',
+            '.full-view__bottom'
+        ];
+
+        for (var i = 0; i < containers.length; i++) {
+            var container = document.querySelector(containers[i]);
+            if (container) {
+                log('Found container:', containers[i]);
+                return container;
+            }
+        }
+
+        // Якщо не знайшли стандартний контейнер, спробуємо знайти будь-який контейнер з кнопками
+        var anyButtonsContainer = document.querySelector('.full-start__buttons');
+        if (anyButtonsContainer) return anyButtonsContainer;
+
+        var anyBottomContainer = document.querySelector('.full-start__bottom');
+        if (anyBottomContainer) return anyBottomContainer;
+
+        return null;
     }
 
     function addsubscriibbeButton() {
-        if (!currentPersonId) return;
+        if (!currentPersonId) {
+            log('No currentPersonId');
+            return;
+        }
 
-        var bottomBlock = document.querySelector('.person-start__bottom');
-        if (bottomBlock) addButtonToContainer(bottomBlock);
-        else {
+        log('Adding button for person:', currentPersonId);
+        
+        var container = findButtonContainer();
+        if (container) {
+            log('Container found, adding button');
+            addButtonToContainer(container);
+        } else {
+            log('Container not found, waiting...');
             let attempts = 0;
-            const maxAttempts = 10;
+            const maxAttempts = 15;
 
             function tryAgain() {
                 attempts++;
-                var container = document.querySelector('.person-start__bottom');
-                if (container) addButtonToContainer(container);
-                else if (attempts < maxAttempts) setTimeout(tryAgain, 300);
+                var container = findButtonContainer();
+                if (container) {
+                    log('Container found on attempt', attempts);
+                    addButtonToContainer(container);
+                } else if (attempts < maxAttempts) {
+                    setTimeout(tryAgain, 500);
+                } else {
+                    log('Failed to find container after', maxAttempts, 'attempts');
+                }
             }
 
-            setTimeout(tryAgain, 300);
+            setTimeout(tryAgain, 500);
         }
     }
 
@@ -192,6 +240,11 @@
     function addButtonStyles() {
         if (document.getElementById('subscriibbe-button-styles')) return;
         var css = `
+            .full-start__button.selector.button--subscriibbe-plugin {
+                display: flex !important;
+                align-items: center;
+                gap: 8px;
+            }
             .full-start__button.selector.button--subscriibbe-plugin.button--subscriibbe {
                 color: #4CAF50;
             }
@@ -248,9 +301,9 @@
                                     title: json.name,
                                     name: json.name,
                                     poster_path: json.profile_path,
-                                    type: "person", // ВАЖЛИВО: "person" замість "actor"
+                                    type: "person",
                                     source: "tmdb",
-                                    media_type: "person" // ВАЖЛИВО: додано media_type
+                                    media_type: "person"
                                 };
                                 cache[personId] = personCard;
                                 results.push(personCard);
@@ -314,39 +367,32 @@
 
         $(".menu .menu__list").eq(0).append(menuItem);
 
-        function waitForContainer(callback) {
-            let attempts = 0;
-            const max = 15;
-
-            function check() {
-                attempts++;
-                if (document.querySelector('.person-start__bottom')) callback();
-                else if (attempts < max) setTimeout(check, 200);
-            }
-
-            setTimeout(check, 200);
-        }
-
         function checkCurrentActivity() {
             var activity = Lampa.Activity.active();
-            if (activity && activity.component === 'person') { // ВАЖЛИВО: 'person' замість 'actor'
-                currentPersonId = parseInt(activity.id || activity.params?.id || location.pathname.match(/\/person\/(\d+)/)?.[1], 10); // ВАЖЛИВО: /person/ замість /actor/
+            log('Current activity:', activity);
+            
+            if (activity && activity.component === 'person') {
+                currentPersonId = parseInt(activity.id || activity.params?.id || location.pathname.match(/\/person\/(\d+)/)?.[1], 10);
                 if (currentPersonId) {
-                    waitForContainer(addsubscriibbeButton);
+                    log('Person page detected, ID:', currentPersonId);
+                    setTimeout(addsubscriibbeButton, 1000);
                 }
             }
         }
 
         Lampa.Listener.follow('activity', function (e) {
-            if (e.type === 'start' && e.component === 'person' && e.object?.id) { // ВАЖЛИВО: 'person' замість 'actor'
+            log('Activity event:', e);
+            
+            if (e.type === 'start' && e.component === 'person' && e.object?.id) {
                 currentPersonId = parseInt(e.object.id, 10);
-                waitForContainer(addsubscriibbeButton);
+                log('Person activity started, ID:', currentPersonId);
+                setTimeout(addsubscriibbeButton, 1000);
             } else if (e.type === 'resume' && e.component === 'category_full' && e.object?.source === PLUGIN_NAME) {
                 setTimeout(() => Lampa.Activity.reload(), 100);
             }
         });
 
-        setTimeout(checkCurrentActivity, 1500);
+        setTimeout(checkCurrentActivity, 2000);
         addButtonStyles();
     }
 
