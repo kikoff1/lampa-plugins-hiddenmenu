@@ -1,8 +1,7 @@
-
 (function() {
     "use strict";
 
-    // v1.1==== ПРИХОВАННЯ СТАНДАРТНОЇ КНОПКИ "ПІДПИСАТИСЯ" ====
+    // v 1.0 ==== ПРИХОВАННЯ СТАНДАРТНОЇ КНОПКИ "ПІДПИСАТИСЯ" ====
     function hideSubscribeButton() {
         if (document.getElementById('hide-subscribe-style')) return;
 
@@ -40,7 +39,7 @@
         },
         subscriibbe: {
             ru: "Подписаться",
-            en: "subscriibbe",
+            en: "Subscribe",
             uk: "Підписатися",
             be: "Падпісацца",
             pt: "Inscrever",
@@ -51,7 +50,7 @@
         },
         unsubscriibbe: {
             ru: "Отписаться",
-            en: "Unsubscriibbe",
+            en: "Unsubscribe",
             uk: "Відписатися",
             be: "Адпісацца",
             pt: "Cancelar inscrição",
@@ -244,21 +243,14 @@
                         try {
                             var json = typeof response === 'string' ? JSON.parse(response) : response;
                             if (json && json.id) {
-                                // ВИПРАВЛЕННЯ: правильна структура картки актора
                                 var personCard = {
                                     id: json.id,
                                     title: json.name,
                                     name: json.name,
                                     poster_path: json.profile_path,
-                                    // Змінені поля для правильного розпізнавання
-                                    card_type: "person",
-                                    source: "person", 
-                                    media_type: "person",
-                                    // Додано для правильної навігації
-                                    url: `actor/${json.id}`,
-                                    // Додаткові поля для кращої сумісності
-                                    original_name: json.name,
-                                    known_for_department: json.known_for_department || "Acting"
+                                    type: "person", // ЗМІНА: "person" замість "actor"
+                                    source: "tmdb",
+                                    media_type: "person" // ЗМІНА: додано media_type
                                 };
                                 cache[personId] = personCard;
                                 results.push(personCard);
@@ -267,8 +259,8 @@
                             error('Error parsing person data:', e);
                         }
                         checkComplete();
-                    }, function () {
-                        error('Failed to load person:', personId);
+                    }, function (err) {
+                        error('Error loading person data:', err);
                         checkComplete();
                     });
                 })(i);
@@ -337,37 +329,32 @@
 
         function checkCurrentActivity() {
             var activity = Lampa.Activity.active();
-            if (activity && activity.component === 'actor') {
-                currentPersonId = parseInt(activity.id || activity.params?.id || location.pathname.match(/\/actor\/(\d+)/)?.[1], 10);
+            if (activity && activity.component === 'person') { // ЗМІНА: 'person' замість 'actor'
+                currentPersonId = parseInt(activity.id || activity.params?.id || location.pathname.match(/\/person\/(\d+)/)?.[1], 10); // ЗМІНА: /person/ замість /actor/
                 if (currentPersonId) {
-                    waitForContainer(
+                    waitForContainer(addsubscriibbeButton);
+                }
+            }
+        }
 
-Wiki pages you might want to explore:
-- [Lampac Overview (immisterio/Lampac)](/wiki/immisterio/Lampac#1)
+        Lampa.Listener.follow('activity', function (e) {
+            if (e.type === 'start' && e.component === 'person' && e.object?.id) { // ЗМІНА: 'person' замість 'actor'
+                currentPersonId = parseInt(e.object.id, 10);
+                waitForContainer(addsubscriibbeButton);
+            } else if (e.type === 'resume' && e.component === 'category_full' && e.object?.source === PLUGIN_NAME) {
+                setTimeout(() => Lampa.Activity.reload(), 100);
+            }
+        });
 
-waitForContainer(addsubscriibbeButton);  
-                }  
-            }  
-        }  
-  
-        Lampa.Listener.follow('activity', function (e) {  
-            if (e.type === 'start' && e.component === 'actor' && e.object?.id) {  
-                currentPersonId = parseInt(e.object.id, 10);  
-                waitForContainer(addsubscriibbeButton);  
-            } else if (e.type === 'resume' && e.component === 'category_full' && e.object?.source === PLUGIN_NAME) {  
-                setTimeout(() => Lampa.Activity.reload(), 100);  
-            }  
-        });  
-  
-        setTimeout(checkCurrentActivity, 1500);  
-        addButtonStyles();  
-    }  
-  
-    if (window.appready) {  
-        startPlugin();  
-    } else {  
-        Lampa.Listener.follow('app', function (e) {  
-            if (e.type === 'ready') startPlugin();  
-        });  
-    }  
+        setTimeout(checkCurrentActivity, 1500);
+        addButtonStyles();
+    }
+
+    if (window.appready) {
+        startPlugin();
+    } else {
+        Lampa.Listener.follow('app', function (e) {
+            if (e.type === 'ready') startPlugin();
+        });
+    }
 })();
