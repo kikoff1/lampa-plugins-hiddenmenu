@@ -1,7 +1,7 @@
 (function() {
     "use strict";
 
-    //v1.1.1 ==== ПРИХОВАННЯ СТАНДАРТНОЇ КНОПКИ "ПІДПИСАТИСЯ" ====
+    // v.7.7.7==== ПРИХОВАННЯ СТАНДАРТНОЇ КНОПКИ "ПІДПИСАТИСЯ" ====
     function hideSubscribeButton() {
         if (document.getElementById('hide-subscribe-style')) return;
 
@@ -108,13 +108,12 @@
     function savePersonCard(personId, personData) {
         var savedPersons = getPersonsData();
         
-        // Зберігаємо оригінальні дані з TMDB API без додаткових полів
+        // Зберігаємо ТІЛЬКИ оригінальні дані з TMDB API для персон
         savedPersons.cards[personId] = {
             id: personData.id,
-            title: personData.name,
             name: personData.name,
-            poster_path: personData.profile_path
-            // Видаляємо всі штучні поля типізації
+            profile_path: personData.profile_path // Використовуємо profile_path замість poster_path
+            // НЕ додаємо жодних інших полів!
         };
         
         // Додаємо ID до списку
