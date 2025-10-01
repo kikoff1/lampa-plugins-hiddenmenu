@@ -1,7 +1,7 @@
 (function() {
     "use strict";
 
-    // ==== ПРИХОВАННЯ СТАНДАРТНОЇ КНОПКИ "ПІДПИСАТИСЯ" ====
+    // v123==== ПРИХОВАННЯ СТАНДАРТНОЇ КНОПКИ "ПІДПИСАТИСЯ" ====
     function hideSubscribeButton() {
         if (document.getElementById('hide-subscribe-style')) return;
 
