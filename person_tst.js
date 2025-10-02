@@ -1,7 +1,7 @@
 (function() {
     "use strict";
 
-    // tst==== ПРИХОВАННЯ СТАНДАРТНОЇ КНОПКИ "ПІДПИСАТИСЯ" ====
+    // ==== v.tst ПРИХОВАННЯ СТАНДАРТНОЇ КНОПКИ "ПІДПИСАТИСЯ" ====
     function hideSubscribeButton() {
         if (document.getElementById('hide-subscribe-style')) return;
 
@@ -275,38 +275,52 @@
         };
     }
 
-    function setupCardClickHandler() {
-        // Перехоплюємо кліки на картки в меню "Персони"
-        $(document).on('click', '.card', function(e) {
-            var activity = Lampa.Activity.active();
-            
-            // Перевіряємо, чи ми в меню вашого плагіна
-            if (activity && activity.component === 'category_full' && activity.source === PLUGIN_NAME) {
-                var cardElement = $(this);
-                var cardData = cardElement.data();
-                
-                // Отримуємо ID персони з картки
-                var personId = cardData.id || cardElement.find('[data-id]').attr('data-id');
-                var personName = cardData.name || cardData.title;
-                
-                if (personId) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    log('Відкриваємо картку актора:', personId, personName);
-                    
-                    // Примусово відкриваємо сторінку актора
-                    Lampa.Activity.push({
-                        component: 'actor',
-                        id: parseInt(personId, 10),
-                        title: personName || 'Actor',
-                        source: 'tmdb'
-                    });
-                    
-                    return false;
-                }
-            }
-        });
+    function setupCardClickHandler() {  
+        // Перехоплюємо кліки на картки в меню "Персони"  
+        $(document).on('click', '.card', function(e) {  
+            var activity = Lampa.Activity.active();  
+              
+            // Перевіряємо, чи ми в меню вашого плагіна  
+            if (activity && activity.component === 'category_full' && activity.source === PLUGIN_NAME) {  
+                var cardElement = $(this);  
+                  
+                // Спробуйте різні способи отримання ID  
+                var personId = cardElement.data('id') ||   
+                              cardElement.attr('data-id') ||   
+                              cardElement.find('[data-id]').attr('data-id') ||  
+                              cardElement.find('.card__view').data('id');  
+                                
+                var personName = cardElement.data('name') ||   
+                               cardElement.data('title') ||   
+                               cardElement.find('.card__title').text() ||  
+                               cardElement.find('.card__view').data('name');  
+                  
+                // Додайте логування для діагностики  
+                log('Card element:', cardElement);  
+                log('Card data:', cardElement.data());  
+                log('Person ID found:', personId);  
+                log('Person name found:', personName);  
+                  
+                if (personId) {  
+                    e.preventDefault();  
+                    e.stopPropagation();  
+                      
+                    log('Відкриваємо картку актора з tmdb source:', personId, personName);  
+                      
+                    // Примусово відкриваємо сторінку актора з правильним source  
+                    Lampa.Activity.push({  
+                        component: 'actor',  
+                        id: parseInt(personId, 10),  
+                        title: personName || 'Actor',  
+                        source: 'tmdb'  // Ключове - використовуємо tmdb  
+                    });  
+                      
+                    return false;  
+                } else {  
+                    log('Person ID not found in card data');  
+                }  
+            }  
+        });  
     }
 
     function startPlugin() {
