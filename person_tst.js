@@ -1,7 +1,7 @@
 (function() {
     "use strict";
 
-    // ==== v.tst ПРИХОВАННЯ СТАНДАРТНОЇ КНОПКИ "ПІДПИСАТИСЯ" ====
+    // ==== ПРИХОВАННЯ СТАНДАРТНОЇ КНОПКИ "ПІДПИСАТИСЯ" ====
     function hideSubscribeButton() {
         if (document.getElementById('hide-subscribe-style')) return;
 
@@ -254,73 +254,42 @@
     function PersonsService() {
         var self = this;
 
-        this.list = function (params, onComplete) {
-            var savedPersons = getPersonsData();
-            var results = [];
-            
-            savedPersons.ids.forEach(function(personId) {
-                var card = savedPersons.cards[personId];
-                if (card) {
-                    // Просто додаємо оригінальну картку без модифікацій
-                    results.push(card);
-                }
-            });
-            
-            onComplete({
-                results: results,
-                page: 1,
-                total_pages: 1,
-                total_results: results.length
-            });
-        };
-    }
-
-    function setupCardClickHandler() {  
-        // Перехоплюємо кліки на картки в меню "Персони"  
-        $(document).on('click', '.card', function(e) {  
-            var activity = Lampa.Activity.active();  
+        this.list = function (params, onComplete) {  
+            var savedPersons = getPersonsData();  
+            var results = [];  
               
-            // Перевіряємо, чи ми в меню вашого плагіна  
-            if (activity && activity.component === 'category_full' && activity.source === PLUGIN_NAME) {  
-                var cardElement = $(this);  
-                  
-                // Спробуйте різні способи отримання ID  
-                var personId = cardElement.data('id') ||   
-                              cardElement.attr('data-id') ||   
-                              cardElement.find('[data-id]').attr('data-id') ||  
-                              cardElement.find('.card__view').data('id');  
-                                
-                var personName = cardElement.data('name') ||   
-                               cardElement.data('title') ||   
-                               cardElement.find('.card__title').text() ||  
-                               cardElement.find('.card__view').data('name');  
-                  
-                // Додайте логування для діагностики  
-                log('Card element:', cardElement);  
-                log('Card data:', cardElement.data());  
-                log('Person ID found:', personId);  
-                log('Person name found:', personName);  
-                  
-                if (personId) {  
-                    e.preventDefault();  
-                    e.stopPropagation();  
-                      
-                    log('Відкриваємо картку актора з tmdb source:', personId, personName);  
-                      
-                    // Примусово відкриваємо сторінку актора з правильним source  
-                    Lampa.Activity.push({  
-                        component: 'actor',  
-                        id: parseInt(personId, 10),  
-                        title: personName || 'Actor',  
-                        source: 'tmdb'  // Ключове - використовуємо tmdb  
-                    });  
-                      
-                    return false;  
-                } else {  
-                    log('Person ID not found in card data');  
+            savedPersons.ids.forEach(function(personId) {  
+                var card = savedPersons.cards[personId];  
+                if (card) {  
+                    // Клонуємо картку та додаємо поля для правильного відкриття  
+                    var modifiedCard = Object.assign({}, card);  
+                    
+                    // Додаємо обробник кліку
+                    modifiedCard.click = function() {  
+                        Lampa.Activity.push({  
+                            component: 'actor',  
+                            id: parseInt(personId, 10),  
+                            title: card.name || 'Actor',  
+                            source: 'tmdb'  
+                        });  
+                    };  
+                    
+                    // Також додаємо поля для сумісності з системою навігації
+                    modifiedCard.component = 'actor';
+                    modifiedCard.source = 'tmdb';
+                    modifiedCard.type = 'person';
+                    
+                    results.push(modifiedCard);  
                 }  
-            }  
-        });  
+            });  
+              
+            onComplete({  
+                results: results,  
+                page: 1,  
+                total_pages: 1,  
+                total_results: results.length  
+            });  
+        };
     }
 
     function startPlugin() {
@@ -388,9 +357,6 @@
                 setTimeout(() => Lampa.Activity.reload(), 100);
             }
         });
-
-        // Додаємо обробник кліків на картки
-        setupCardClickHandler();
 
         setTimeout(checkCurrentActivity, 1500);
         addButtonStyles();
