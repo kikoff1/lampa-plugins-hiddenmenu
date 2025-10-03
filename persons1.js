@@ -1,7 +1,7 @@
 (function () {
     "use strict";
 
-    // ==== Приховати стандартну кнопку "Subscribe" ====
+    //v1.0 ==== Приховати стандартну кнопку "Subscribe" ====
     function hideSubscribeButton() {
         if (document.getElementById('hide-subscribe-style')) return;
         const css = `.button--subscribe { display: none !important; }`;
@@ -51,15 +51,11 @@
     function log() { if (my_logging) console.log('[PersonsPlugin]', ...arguments); }
     function error() { if (my_logging) console.error('[PersonsPlugin]', ...arguments); }
 
-    function getCurrentLanguage() {
-        return localStorage.getItem('language') || 'en';
-    }
+    function getCurrentLanguage() { return localStorage.getItem('language') || 'en'; }
 
     function initStorage() {
         const current = Lampa.Storage.get(PERSONS_KEY);
-        if (!current || !current.cards) {
-            Lampa.Storage.set(PERSONS_KEY, DEFAULT_PERSONS_DATA);
-        }
+        if (!current || !current.cards) Lampa.Storage.set(PERSONS_KEY, DEFAULT_PERSONS_DATA);
     }
 
     function getPersonsData() {
@@ -74,19 +70,19 @@
 
     function savePersonCard(personId, personData) {
         log('Saving person card:', personId, personData.name);
-        const savedPersons = getPersonsData();
-        savedPersons.cards[personId] = personData;
-        if (!savedPersons.ids.includes(personId)) savedPersons.ids.push(personId);
-        Lampa.Storage.set(PERSONS_KEY, savedPersons);
+        const saved = getPersonsData();
+        saved.cards[personId] = personData;
+        if (!saved.ids.includes(personId)) saved.ids.push(personId);
+        Lampa.Storage.set(PERSONS_KEY, saved);
     }
 
     function removePersonCard(personId) {
         log('Removing person card:', personId);
-        const savedPersons = getPersonsData();
-        delete savedPersons.cards[personId];
-        const index = savedPersons.ids.indexOf(personId);
-        if (index !== -1) savedPersons.ids.splice(index, 1);
-        Lampa.Storage.set(PERSONS_KEY, savedPersons);
+        const saved = getPersonsData();
+        delete saved.cards[personId];
+        const idx = saved.ids.indexOf(personId);
+        if (idx !== -1) saved.ids.splice(idx, 1);
+        Lampa.Storage.set(PERSONS_KEY, saved);
     }
 
     function isPersonSubscribed(personId) {
@@ -95,9 +91,7 @@
 
     function updateButtonUI(button, subscribed) {
         if (!button) return;
-        const newText = subscribed ?
-            Lampa.Lang.translate('persons_plugin_unsubscribe') :
-            Lampa.Lang.translate('persons_plugin_subscribe');
+        const newText = subscribed ? Lampa.Lang.translate('persons_plugin_unsubscribe') : Lampa.Lang.translate('persons_plugin_subscribe');
         button.classList.remove(CSS_CLASSES.SUBSCRIBED, CSS_CLASSES.UNSUBSCRIBED);
         button.classList.add(subscribed ? CSS_CLASSES.SUBSCRIBED : CSS_CLASSES.UNSUBSCRIBED);
         const span = button.querySelector('span');
@@ -154,3 +148,78 @@
         if (defaultBtn) defaultBtn.style.display = 'none';
         container.appendChild(button);
     }
+
+    function waitForContainer(callback) {
+        let timeoutId;
+        const observer = new MutationObserver(() => {
+            const container = document.querySelector('.person-start__bottom');
+            if (container) {
+                observer.disconnect();
+                clearTimeout(timeoutId);
+                callback(container);
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+        timeoutId = setTimeout(() => { observer.disconnect(); log('Container not found'); }, 10000);
+    }
+
+    // ==== Сервіс ====
+    function PersonsService() {
+        this.list = function(params, onComplete) {
+            const saved = getPersonsData();
+            const results = [];
+
+            saved.ids.forEach((id) => {
+                const card = saved.cards[id];
+                if (card) {
+                    const modified = Object.assign({}, card);
+                    modified.click = function() {
+                        Lampa.Activity.push({
+                            component: 'actor',          // Явно актора
+                            id: parseInt(id, 10),
+                            source: 'tmdb',              // джерело
+                            page: 1                      // перша сторінка
+                        });
+                    };
+                    modified.component = 'actor';
+                    modified.source = 'tmdb';
+                    modified.type = 'person';
+                    results.push(modified);
+                }
+            });
+
+            if (!results.length) {
+                Lampa.Noty.show(Lampa.Lang.translate('persons_not_found'));
+            }
+
+            onComplete({ results, page:1, total_pages:1, total_results: results.length });
+        };
+    }
+
+    // ==== Старт плагіна ====
+    function startPlugin() {
+        hideSubscribeButton();
+        initStorage();
+        addButtonStyles();
+
+        const personsService = new PersonsService();
+        Lampa.Api.sources[PLUGIN_NAME] = personsService;
+
+        const menuItem = $(`
+            <li class="menu__item selector" data-action="${PLUGIN_NAME}">
+                <div class="menu__ico">${ICON_SVG}</div>
+                <div class="menu__text">${Lampa.Lang.translate('persons_plugin_title')}</div>
+            </li>
+        `);
+        menuItem.on('hover:enter', () => {
+            Lampa.Activity.push({
+                component: "category_full",
+                source: PLUGIN_NAME,
+                title: Lampa.Lang.translate('persons_plugin_title'),
+                page: 1,
+                url: PLUGIN_NAME + '__main'
+            });
+        });
+        $(".menu .menu__list").eq(0).append(menuItem);
+
+        function
