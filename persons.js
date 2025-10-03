@@ -31,8 +31,15 @@
     // ==== Локалізація ====
     Lampa.Lang.add({
         persons_plugin_subscribe: {
-            ru: "Подписаться", en: "Subscribe", uk: "Підписатися", be: "Падпісацца",
-            pt: "Subscrever", zh: "订阅", he: "הירשם", cs: "Odebírat", bg: "Абонирай се"
+            ru: "Подписаться", 
+en: "Subscribe", 
+uk: "Підписатися", 
+be: "Падпісацца",
+            pt: "Subscrever", 
+zh: "订阅", 
+he: "הירשם", 
+cs: "Odebírat", 
+bg: "Абонирай се"
         },
         persons_plugin_unsubscribe: {
             ru: "Отписаться", en: "Unsubscribe", uk: "Відписатися", be: "Адпісацца",
