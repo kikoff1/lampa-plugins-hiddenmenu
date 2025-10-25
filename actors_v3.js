@@ -1,6 +1,9 @@
 (function () {  
     'use strict';  
   
+//v123
+
+
     function startPlugin() {  
         if (window.plugin_online_cinemas_ready) return;  
         window.plugin_online_cinemas_ready = true;  
@@ -51,10 +54,9 @@
   
             patchCategoryForActors: function() {  
                 var self = this;  
-                var isPatched = false;  
                   
                 Lampa.Listener.follow('activity', function(e) {  
-                    if (e.type === 'create' && e.component === 'category_full' && !isPatched) {  
+                    if (e.type === 'create' && e.component === 'category_full') {  
                         var activity = Lampa.Activity.active();  
                           
                         if (activity.url === 'person/popular') {  
@@ -65,21 +67,28 @@
                                     var originalAppend = component.append;  
                                       
                                     component.append = function(data, append_flag) {  
-                                        // Модифікуємо дані перед обробкою  
-                                        if (data.results) {  
-                                            data.results.forEach(function(element) {  
-                                                // Додаємо gender для всіх елементів з profile_path  
-                                                if (element.profile_path) {  
-                                                    element.gender = 1;  
-                                                }  
-                                            });  
-                                        }  
-                                          
                                         // Викликаємо оригінальний append  
                                         originalAppend.call(this, data, append_flag);  
+                                          
+                                        // Перевизначаємо onEnter для всіх карток після їх створення  
+                                        setTimeout(function() {  
+                                            var cards = component.items || [];  
+                                            cards.forEach(function(card) {  
+                                                if (card && card.card_data && typeof card.card_data.gender !== 'undefined') {  
+                                                    // Перевизначаємо onEnter  
+                                                    card.onEnter = function(target, card_data) {  
+                                                        Lampa.Activity.push({  
+                                                            url: card_data.url || '',  
+                                                            title: Lampa.Lang.translate('title_person'),  
+                                                            component: 'actor',  
+                                                            id: card_data.id,  
+                                                            source: card_data.source || 'tmdb'  
+                                                        });  
+                                                    };  
+                                                }  
+                                            });  
+                                        }, 100);  
                                     };  
-                                      
-                                    isPatched = true;  
                                 }  
                             }, 50);  
                         }  
