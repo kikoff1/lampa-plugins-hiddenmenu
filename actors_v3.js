@@ -70,11 +70,9 @@
                 Lampa.Activity.push({  
                     url: "person/popular",  
                     title: "Актори",  
-                    region: "UA",  
-                    language: "uk-UA",  
                     component: "category_full",  
                     source: "tmdb",  
-                    card_type: "true",  
+                    card_type: true,  
                     page: 1  
                 });  
             }  
