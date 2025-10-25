@@ -1,8 +1,5 @@
 (function () {  
     'use strict';  
-
-
-//v1.1 
   
     function startPlugin() {  
         if (window.plugin_online_cinemas_ready) return;  
@@ -12,12 +9,13 @@
             settings: {  
                 showActors: true  
             },  
+            originalAppend: null,  
   
             init: function() {  
                 this.loadSettings();  
                 this.createSettings();  
                 this.initStorageListener();  
-                this.setupActorCardHandler();  
+                this.patchCategoryAppend();  
             },  
   
             loadSettings: function() {  
@@ -52,35 +50,51 @@
                 });  
             },  
   
-            setupActorCardHandler: function() {  
+            patchCategoryAppend: function() {  
                 var self = this;  
-                var isActorsPage = false;  
-  
-                // Відстежуємо, коли відкривається сторінка акторів  
-                Lampa.Activity.listener.follow('activity', function(e) {  
-                    if (e.type === 'start') {  
+                  
+                Lampa.Listener.follow('activity', function(e) {  
+                    if (e.type === 'create' && e.component === 'category_full') {  
                         var activity = Lampa.Activity.active();  
-                        isActorsPage = activity.component === 'category_full' && activity.url === 'person/popular';  
+                          
+                        if (activity.url === 'person/popular') {  
+                            // Перехоплюємо append метод для цієї активності  
+                            setTimeout(function() {  
+                                var component = activity.activity.component;  
+                                  
+                                if (component && component.append) {  
+                                    var originalAppend = component.append;  
+                                      
+                                    component.append = function(data, append) {  
+                                        // Викликаємо оригінальний append  
+                                        originalAppend.call(this, data, append);  
+                                          
+                                        // Перевизначаємо onEnter для всіх карток акторів  
+                                        data.results.forEach(function(element) {  
+                                            if (element.profile_path) {  
+                                                // Знаходимо картку в items  
+                                                var items = component.items || [];  
+                                                var card = items[items.length - 1];  
+                                                  
+                                                if (card && card.onEnter) {  
+                                                    card.onEnter = function(target, card_data) {  
+                                                        Lampa.Activity.push({  
+                                                            url: card_data.url || '',  
+                                                            title: Lampa.Lang.translate('title_person'),  
+                                                            component: 'actor',  
+                                                            id: card_data.id,  
+                                                            source: 'tmdb'  
+                                                        });  
+                                                    };  
+                                                }  
+                                            }  
+                                        });  
+                                    };  
+                                }  
+                            }, 100);  
+                        }  
                     }  
                 });  
-  
-                // Перехоплюємо встановлення onEnter через Object.defineProperty  
-                var originalDefineProperty = Object.defineProperty;  
-                Object.defineProperty = function(obj, prop, descriptor) {  
-                    if (isActorsPage && prop === 'onEnter' && obj.card_data && typeof obj.card_data.profile_path !== 'undefined') {  
-                        // Це картка актора, перевизначаємо onEnter  
-                        descriptor.value = function(target, card_data) {  
-                            Lampa.Activity.push({  
-                                url: card_data.url || '',  
-                                title: Lampa.Lang.translate('title_person'),  
-                                component: 'actor',  
-                                id: card_data.id,  
-                                source: 'tmdb'  
-                            });  
-                        };  
-                    }  
-                    return originalDefineProperty.call(this, obj, prop, descriptor);  
-                };  
             },  
   
             toggleActorsButton: function() {  
