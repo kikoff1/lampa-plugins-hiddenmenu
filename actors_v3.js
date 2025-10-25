@@ -1,6 +1,11 @@
 (function () {  
     'use strict';  
   
+
+
+///v3
+
+
     function startPlugin() {  
         if (window.plugin_online_cinemas_ready) return;  
         window.plugin_online_cinemas_ready = true;  
@@ -51,53 +56,54 @@
   
             patchCategoryForActors: function() {  
                 var self = this;  
-                var originalAppend = null;  
                   
                 // Перехоплюємо створення активності category_full  
                 Lampa.Listener.follow('activity', function(e) {  
                     if (e.type === 'create' && e.component === 'category_full') {  
                         var activity = Lampa.Activity.active();  
                           
-                        if (activity.url === 'person/popular') {  
+                        if (activity && activity.url === 'person/popular') {  
                             var component = activity.activity.component;  
                               
-                            // Зберігаємо оригінальний append  
-                            if (!originalAppend) {  
-                                originalAppend = component.append;  
-                            }  
+                            // Зберігаємо оригінальний метод append  
+                            var originalAppend = component.append;  
                               
-                            // Перевизначаємо append для додавання gender  
                             component.append = function(data, append_flag) {  
-                                // Додаємо gender до всіх елементів з profile_path  
-                                if (data.results) {  
-                                    data.results.forEach(function(element) {  
-                                        if (element.profile_path && typeof element.gender === 'undefined') {  
-                                            element.gender = 1; // Встановлюємо gender  
-                                        }  
-                                    });  
-                                }  
-                                  
                                 // Викликаємо оригінальний append  
                                 originalAppend.call(this, data, append_flag);  
                                   
-                                // Після створення карток, перевизначаємо їх onEnter  
+                                // Після створення карток, перевизначаємо onEnter  
                                 setTimeout(function() {  
-                                    var items = component.items || [];  
-                                    items.forEach(function(card) {  
-                                        if (card.data && card.data.gender && card.data.profile_path) {  
-                                            // Зберігаємо оригінальний onEnter  
-                                            var originalOnEnter = card.onEnter;  
+                                    var cards = component.body.querySelectorAll('.card');  
+                                      
+                                    cards.forEach(function(cardElement) {  
+                                        // Знаходимо об'єкт картки  
+                                        var cardData = null;  
+                                          
+                                        if (data.results) {  
+                                            data.results.forEach(function(result) {  
+                                                if (result.id && cardElement.getAttribute('data-id') == result.id) {  
+                                                    cardData = result;  
+                                                }  
+                                            });  
+                                        }  
+                                          
+                                        if (cardData && cardData.gender !== undefined && cardData.profile_path) {  
+                                            // Видаляємо старий обробник і додаємо новий  
+                                            var newCard = cardElement.cloneNode(true);  
                                               
-                                            // Перевизначаємо onEnter  
-                                            card.onEnter = function(target, card_data) {  
+                                            newCard.addEventListener('hover:enter', function() {  
+                                                // Напряму відкриваємо компонент actor з ID  
                                                 Lampa.Activity.push({  
-                                                    url: card_data.url || '',  
+                                                    url: '',  
                                                     title: Lampa.Lang.translate('title_person'),  
                                                     component: 'actor',  
-                                                    id: card_data.id,  
-                                                    source: card_data.source || 'tmdb'  
+                                                    id: cardData.id,  
+                                                    source: 'tmdb'  
                                                 });  
-                                            };  
+                                            });  
+                                              
+                                            cardElement.parentNode.replaceChild(newCard, cardElement);  
                                         }  
                                     });  
                                 }, 100);  
