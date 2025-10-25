@@ -1,8 +1,7 @@
 (function () {  
     'use strict';  
 
-
-//v1
+//v2
   
     function startPlugin() {  
         if (window.plugin_online_cinemas_ready) return;  
@@ -18,7 +17,7 @@
                 this.loadSettings();  
                 this.createSettings();  
                 this.initStorageListener();  
-                this.initLineListener();  
+                this.initActivityListener();  
             },  
   
             loadSettings: function() {  
@@ -53,29 +52,16 @@
                 });  
             },  
   
-            initLineListener: function() {  
-                Lampa.Listener.follow('activity', (e) => {  
-                    if (e.type === 'start' && e.component === 'category_full') {  
-                        this.actorsPageActive = e.object && e.object.url === 'person/popular';  
-                    } else if (e.type === 'destroy') {  
-                        this.actorsPageActive = false;  
-                    }  
-                });  
-  
-                Lampa.Listener.follow('line', (e) => {  
-                    if (this.actorsPageActive && e.type === 'append') {  
-                        const card = e.items[e.items.length - 1];  
-                        if (card && card.onEnter) {  
-                            const originalOnEnter = card.onEnter;  
-                            card.onEnter = (target, card_data) => {  
-                                Lampa.Activity.push({  
-                                    url: card_data.url || '',  
-                                    title: Lampa.Lang.translate('title_person'),  
-                                    component: 'actor',  
-                                    id: card_data.id,  
-                                    source: 'tmdb'  
-                                });  
-                            };  
+            initActivityListener: function() {  
+                var self = this;  
+                  
+                Lampa.Activity.listener.follow('activity', function(e) {  
+                    if (e.type === 'start') {  
+                        var activity = Lampa.Activity.active();  
+                        if (activity.component === 'category_full' && activity.url === 'person/popular') {  
+                            self.actorsPageActive = true;  
+                        } else {  
+                            self.actorsPageActive = false;  
                         }  
                     }  
                 });  
@@ -98,13 +84,35 @@
             },  
   
             showActors: function() {  
-                Lampa.Activity.push({  
+                var self = this;  
+                  
+                // Створюємо власний компонент на базі category_full  
+                var Component = Lampa.Component.get('category_full');  
+                var instance = new Component({  
                     url: 'person/popular',  
                     title: 'Актори',  
-                    component: 'category_full',  
                     source: 'tmdb',  
                     page: 1  
                 });  
+  
+                // Перевизначаємо метод cardRender для зміни поведінки карток  
+                var originalCardRender = instance.cardRender;  
+                instance.cardRender = function(object, element, card) {  
+                    // Перевизначаємо onEnter для карток акторів  
+                    card.onEnter = function(target, card_data) {  
+                        Lampa.Activity.push({  
+                            url: card_data.url || '',  
+                            title: Lampa.Lang.translate('title_person'),  
+                            component: 'actor',  
+                            id: card_data.id,  
+                            source: 'tmdb'  
+                        });  
+                    };  
+                      
+                    if (originalCardRender) originalCardRender.call(this, object, element, card);  
+                };  
+  
+                Lampa.Activity.push(instance);  
             }  
         };  
   
