@@ -1,6 +1,10 @@
 (function () {  
     'use strict';  
   
+
+//v3.0
+
+
     function startPlugin() {  
         if (window.plugin_online_cinemas_ready) return;  
         window.plugin_online_cinemas_ready = true;  
@@ -9,13 +13,12 @@
             settings: {  
                 showActors: true  
             },  
-            originalAppend: null,  
   
             init: function() {  
                 this.loadSettings();  
                 this.createSettings();  
                 this.initStorageListener();  
-                this.patchCategoryAppend();  
+                this.patchCategoryComponent();  
             },  
   
             loadSettings: function() {  
@@ -50,48 +53,36 @@
                 });  
             },  
   
-            patchCategoryAppend: function() {  
+            patchCategoryComponent: function() {  
                 var self = this;  
                   
+                // Перехоплюємо створення компонента category_full  
                 Lampa.Listener.follow('activity', function(e) {  
                     if (e.type === 'create' && e.component === 'category_full') {  
                         var activity = Lampa.Activity.active();  
                           
                         if (activity.url === 'person/popular') {  
-                            // Перехоплюємо append метод для цієї активності  
                             setTimeout(function() {  
                                 var component = activity.activity.component;  
                                   
                                 if (component && component.append) {  
                                     var originalAppend = component.append;  
                                       
-                                    component.append = function(data, append) {  
-                                        // Викликаємо оригінальний append  
-                                        originalAppend.call(this, data, append);  
-                                          
-                                        // Перевизначаємо onEnter для всіх карток акторів  
-                                        data.results.forEach(function(element) {  
-                                            if (element.profile_path) {  
-                                                // Знаходимо картку в items  
-                                                var items = component.items || [];  
-                                                var card = items[items.length - 1];  
-                                                  
-                                                if (card && card.onEnter) {  
-                                                    card.onEnter = function(target, card_data) {  
-                                                        Lampa.Activity.push({  
-                                                            url: card_data.url || '',  
-                                                            title: Lampa.Lang.translate('title_person'),  
-                                                            component: 'actor',  
-                                                            id: card_data.id,  
-                                                            source: 'tmdb'  
-                                                        });  
-                                                    };  
+                                    component.append = function(data, append_flag) {  
+                                        // Додаємо gender до всіх елементів, щоб система розпізнала їх як акторів  
+                                        if (data.results) {  
+                                            data.results.forEach(function(element) {  
+                                                if (element.profile_path && typeof element.gender === 'undefined') {  
+                                                    element.gender = 1; // Встановлюємо gender  
                                                 }  
-                                            }  
-                                        });  
+                                            });  
+                                        }  
+                                          
+                                        // Викликаємо оригінальний append  
+                                        originalAppend.call(this, data, append_flag);  
                                     };  
                                 }  
-                            }, 100);  
+                            }, 10);  
                         }  
                     }  
                 });  
