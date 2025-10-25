@@ -1,7 +1,5 @@
 (function () {  
     'use strict';  
-
-//v2
   
     function startPlugin() {  
         if (window.plugin_online_cinemas_ready) return;  
@@ -11,13 +9,12 @@
             settings: {  
                 showActors: true  
             },  
-            actorsPageActive: false,  
   
             init: function() {  
                 this.loadSettings();  
                 this.createSettings();  
                 this.initStorageListener();  
-                this.initActivityListener();  
+                this.setupActorCardHandler();  
             },  
   
             loadSettings: function() {  
@@ -52,19 +49,37 @@
                 });  
             },  
   
-            initActivityListener: function() {  
+            setupActorCardHandler: function() {  
                 var self = this;  
-                  
+                var isActorsPage = false;  
+  
+                // Відстежуємо, коли відкривається сторінка акторів  
                 Lampa.Activity.listener.follow('activity', function(e) {  
                     if (e.type === 'start') {  
                         var activity = Lampa.Activity.active();  
-                        if (activity.component === 'category_full' && activity.url === 'person/popular') {  
-                            self.actorsPageActive = true;  
-                        } else {  
-                            self.actorsPageActive = false;  
-                        }  
+                        isActorsPage = activity.component === 'category_full' && activity.url === 'person/popular';  
                     }  
                 });  
+  
+                // Перехоплюємо створення карток на сторінці акторів  
+                var originalCardCreate = Lampa.Card.prototype.create;  
+                Lampa.Card.prototype.create = function() {  
+                    originalCardCreate.call(this);  
+                      
+                    if (isActorsPage && this.card_data && typeof this.card_data.profile_path !== 'undefined') {  
+                        // Це картка актора, перевизначаємо onEnter  
+                        var originalOnEnter = this.onEnter;  
+                        this.onEnter = function(target, card_data) {  
+                            Lampa.Activity.push({  
+                                url: card_data.url || '',  
+                                title: Lampa.Lang.translate('title_person'),  
+                                component: 'actor',  
+                                id: card_data.id,  
+                                source: 'tmdb'  
+                            });  
+                        };  
+                    }  
+                };  
             },  
   
             toggleActorsButton: function() {  
@@ -84,35 +99,13 @@
             },  
   
             showActors: function() {  
-                var self = this;  
-                  
-                // Створюємо власний компонент на базі category_full  
-                var Component = Lampa.Component.get('category_full');  
-                var instance = new Component({  
+                Lampa.Activity.push({  
                     url: 'person/popular',  
                     title: 'Актори',  
+                    component: 'category_full',  
                     source: 'tmdb',  
                     page: 1  
                 });  
-  
-                // Перевизначаємо метод cardRender для зміни поведінки карток  
-                var originalCardRender = instance.cardRender;  
-                instance.cardRender = function(object, element, card) {  
-                    // Перевизначаємо onEnter для карток акторів  
-                    card.onEnter = function(target, card_data) {  
-                        Lampa.Activity.push({  
-                            url: card_data.url || '',  
-                            title: Lampa.Lang.translate('title_person'),  
-                            component: 'actor',  
-                            id: card_data.id,  
-                            source: 'tmdb'  
-                        });  
-                    };  
-                      
-                    if (originalCardRender) originalCardRender.call(this, object, element, card);  
-                };  
-  
-                Lampa.Activity.push(instance);  
             }  
         };  
   
