@@ -49,52 +49,49 @@
                 });  
             },  
   
-            toggleActorsButton: function() {  
-                $('.online-cinemas-actors').toggle(this.settings.showActors);  
-            },  
-  
             patchActorsPage: function() {  
-                var self = this;  
-                  
-                Lampa.Listener.follow('activity', function(e) {  
+                Lampa.Listener.follow('activity', (e) => {  
                     if (e.type === 'create' && e.component === 'category_full') {  
                         var activity = Lampa.Activity.active();  
-                          
                         if (activity.url === 'person/popular') {  
-                            setTimeout(function() {  
-                                $('.card').each(function() {  
-                                    var card = $(this);  
-                                      
-                                    card.off('hover:enter').on('hover:enter', function() {  
-                                        var cardData = card.data('card_data');  
-                                          
-                                        if (!cardData) {  
-                                            var cards = $('.card');  
-                                            var index = cards.index(card);  
-                                              
-                                            if (activity.activity && activity.activity.component && activity.activity.component.items) {  
-                                                var item = activity.activity.component.items[index];  
-                                                if (item && item.card && item.card.card_data) {  
-                                                    cardData = item.card.card_data;  
-                                                }  
-                                            }  
-                                        }  
-                                          
-                                        if (cardData && cardData.gender !== undefined) {  
+                            // Встановлюємо прапорець, що ми на сторінці акторів  
+                            this.isActorsPage = true;  
+  
+                            // Чекаємо, поки картки будуть відрендерені  
+                            setTimeout(() => {  
+                                // Отримуємо всі картки на сторінці  
+                                var cards = activity.activity.component.scroll.render().querySelectorAll('.card');  
+  
+                                cards.forEach(cardElement => {  
+                                    // Знаходимо об'єкт картки  
+                                    var card = Lampa.Controller.collection.find(c => c.render().is(cardElement));  
+  
+                                    if (card && card.data && card.data.gender && card.data.profile_path) {  
+                                        // Видаляємо старий обробник onEnter  
+                                        $(cardElement).off('hover:enter');  
+  
+                                        // Додаємо новий обробник onEnter  
+                                        $(cardElement).on('hover:enter', () => {  
                                             Lampa.Activity.push({  
-                                                url: '',  
+                                                url: '', // URL може бути порожнім, якщо є ID  
                                                 title: Lampa.Lang.translate('title_person'),  
                                                 component: 'actor',  
-                                                id: cardData.id,  
-                                                source: 'tmdb'  
+                                                id: card.data.id,  
+                                                source: card.data.source || 'tmdb'  
                                             });  
-                                        }  
-                                    });  
+                                        });  
+                                    }  
                                 });  
-                            }, 500);  
+                            }, 500); // Затримка, щоб картки встигли відрендеритися  
+                        } else {  
+                            this.isActorsPage = false;  
                         }  
                     }  
                 });  
+            },  
+  
+            toggleActorsButton: function() {  
+                $('.online-cinemas-actors').toggle(this.settings.showActors);  
             },  
   
             addActorsButton: function() {  
