@@ -1,6 +1,8 @@
 (function () {  
     'use strict';  
   
+//v2
+
     function startPlugin() {  
         if (window.plugin_online_cinemas_ready) return;  
         window.plugin_online_cinemas_ready = true;  
@@ -70,7 +72,18 @@
                     title: 'Актори',  
                     component: 'category_full',  
                     source: 'tmdb',  
-                    page: 1  
+                    page: 1,  
+                    card_events: {  
+                        onEnter: function(target, card_data) {  
+                            Lampa.Activity.push({  
+                                url: card_data.url || '',  
+                                title: Lampa.Lang.translate('title_person'),  
+                                component: 'actor',  
+                                id: card_data.id,  
+                                source: 'tmdb'  
+                            });  
+                        }  
+                    }  
                 });  
             }  
         };  
