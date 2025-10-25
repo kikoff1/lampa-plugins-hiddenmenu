@@ -1,10 +1,5 @@
 (function () {  
     'use strict';  
-
-
-
-///v123
-
   
     function startPlugin() {  
         if (window.plugin_online_cinemas_ready) return;  
@@ -19,7 +14,7 @@
                 this.loadSettings();  
                 this.createSettings();  
                 this.initStorageListener();  
-                this.patchCategoryComponent();  
+                this.patchCategoryForActors();  
             },  
   
             loadSettings: function() {  
@@ -54,36 +49,62 @@
                 });  
             },  
   
-            patchCategoryComponent: function() {  
+            patchCategoryForActors: function() {  
                 var self = this;  
+                var originalAppend = null;  
                   
-                // Патчимо Card.prototype.create для перехоплення створення карток  
-                var originalCardCreate = Lampa.Card.prototype.create;  
-                  
-                Lampa.Card.prototype.create = function() {  
-                    var card = this;  
-                    var card_data = this.data;  
-                      
-                    // Викликаємо оригінальний create  
-                    originalCardCreate.call(this);  
-                      
-                    // Перевіряємо чи це картка актора  
-                    if (card_data && typeof card_data.gender !== 'undefined' && card_data.profile_path) {  
-                        // Перевизначаємо onEnter безпосередньо на об'єкті картки  
-                        var originalOnEnter = card.onEnter;  
+                // Перехоплюємо створення активності category_full  
+                Lampa.Listener.follow('activity', function(e) {  
+                    if (e.type === 'create' && e.component === 'category_full') {  
+                        var activity = Lampa.Activity.active();  
                           
-                        card.onEnter = function(target, data) {  
-                            // Завжди відкриваємо компонент actor для карток з gender  
-                            Lampa.Activity.push({  
-                                url: data.url || '',  
-                                title: Lampa.Lang.translate('title_person'),  
-                                component: 'actor',  
-                                id: data.id,  
-                                source: data.source || 'tmdb'  
-                            });  
-                        };  
+                        if (activity.url === 'person/popular') {  
+                            var component = activity.activity.component;  
+                              
+                            // Зберігаємо оригінальний append  
+                            if (!originalAppend) {  
+                                originalAppend = component.append;  
+                            }  
+                              
+                            // Перевизначаємо append для додавання gender  
+                            component.append = function(data, append_flag) {  
+                                // Додаємо gender до всіх елементів з profile_path  
+                                if (data.results) {  
+                                    data.results.forEach(function(element) {  
+                                        if (element.profile_path && typeof element.gender === 'undefined') {  
+                                            element.gender = 1; // Встановлюємо gender  
+                                        }  
+                                    });  
+                                }  
+                                  
+                                // Викликаємо оригінальний append  
+                                originalAppend.call(this, data, append_flag);  
+                                  
+                                // Після створення карток, перевизначаємо їх onEnter  
+                                setTimeout(function() {  
+                                    var items = component.items || [];  
+                                    items.forEach(function(card) {  
+                                        if (card.data && card.data.gender && card.data.profile_path) {  
+                                            // Зберігаємо оригінальний onEnter  
+                                            var originalOnEnter = card.onEnter;  
+                                              
+                                            // Перевизначаємо onEnter  
+                                            card.onEnter = function(target, card_data) {  
+                                                Lampa.Activity.push({  
+                                                    url: card_data.url || '',  
+                                                    title: Lampa.Lang.translate('title_person'),  
+                                                    component: 'actor',  
+                                                    id: card_data.id,  
+                                                    source: card_data.source || 'tmdb'  
+                                                });  
+                                            };  
+                                        }  
+                                    });  
+                                }, 100);  
+                            };  
+                        }  
                     }  
-                };  
+                });  
             },  
   
             toggleActorsButton: function() {  
