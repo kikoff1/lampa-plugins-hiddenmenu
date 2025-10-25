@@ -1,13 +1,38 @@
 (function () {  
     'use strict';  
   
-
-//v3.0
-
-
     function startPlugin() {  
         if (window.plugin_online_cinemas_ready) return;  
         window.plugin_online_cinemas_ready = true;  
+  
+        // Створюємо власний компонент для акторів  
+        function ActorsComponent(object) {  
+            let Items = Lampa.Component.get('category_full');  
+            let comp = new Items(object);  
+              
+            // Зберігаємо оригінальний метод append  
+            let originalAppend = comp.append;  
+              
+            // Перевизначаємо append для додавання gender до всіх акторів  
+            comp.append = function(data, append_flag) {  
+                if (data.results) {  
+                    data.results.forEach(function(element) {  
+                        // Додаємо gender для всіх елементів з profile_path (актори)  
+                        if (element.profile_path && typeof element.gender === 'undefined') {  
+                            element.gender = 1;  
+                        }  
+                    });  
+                }  
+                  
+                // Викликаємо оригінальний append  
+                originalAppend.call(this, data, append_flag);  
+            };  
+              
+            return comp;  
+        }  
+  
+        // Реєструємо власний компонент  
+        Lampa.Component.add('actors_list', ActorsComponent);  
   
         var OnlineCinemas = {  
             settings: {  
@@ -18,7 +43,6 @@
                 this.loadSettings();  
                 this.createSettings();  
                 this.initStorageListener();  
-                this.patchCategoryComponent();  
             },  
   
             loadSettings: function() {  
@@ -53,41 +77,6 @@
                 });  
             },  
   
-            patchCategoryComponent: function() {  
-                var self = this;  
-                  
-                // Перехоплюємо створення компонента category_full  
-                Lampa.Listener.follow('activity', function(e) {  
-                    if (e.type === 'create' && e.component === 'category_full') {  
-                        var activity = Lampa.Activity.active();  
-                          
-                        if (activity.url === 'person/popular') {  
-                            setTimeout(function() {  
-                                var component = activity.activity.component;  
-                                  
-                                if (component && component.append) {  
-                                    var originalAppend = component.append;  
-                                      
-                                    component.append = function(data, append_flag) {  
-                                        // Додаємо gender до всіх елементів, щоб система розпізнала їх як акторів  
-                                        if (data.results) {  
-                                            data.results.forEach(function(element) {  
-                                                if (element.profile_path && typeof element.gender === 'undefined') {  
-                                                    element.gender = 1; // Встановлюємо gender  
-                                                }  
-                                            });  
-                                        }  
-                                          
-                                        // Викликаємо оригінальний append  
-                                        originalAppend.call(this, data, append_flag);  
-                                    };  
-                                }  
-                            }, 10);  
-                        }  
-                    }  
-                });  
-            },  
-  
             toggleActorsButton: function() {  
                 $('.online-cinemas-actors').toggle(this.settings.showActors);  
             },  
@@ -108,7 +97,7 @@
                 Lampa.Activity.push({  
                     url: 'person/popular',  
                     title: 'Актори',  
-                    component: 'category_full',  
+                    component: 'actors_list',  // Використовуємо власний компонент  
                     source: 'tmdb',  
                     page: 1  
                 });  
