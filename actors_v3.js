@@ -1,5 +1,8 @@
 (function () {  
     'use strict';  
+
+
+//v1.1 
   
     function startPlugin() {  
         if (window.plugin_online_cinemas_ready) return;  
@@ -61,15 +64,12 @@
                     }  
                 });  
   
-                // Перехоплюємо створення карток на сторінці акторів  
-                var originalCardCreate = Lampa.Card.prototype.create;  
-                Lampa.Card.prototype.create = function() {  
-                    originalCardCreate.call(this);  
-                      
-                    if (isActorsPage && this.card_data && typeof this.card_data.profile_path !== 'undefined') {  
+                // Перехоплюємо встановлення onEnter через Object.defineProperty  
+                var originalDefineProperty = Object.defineProperty;  
+                Object.defineProperty = function(obj, prop, descriptor) {  
+                    if (isActorsPage && prop === 'onEnter' && obj.card_data && typeof obj.card_data.profile_path !== 'undefined') {  
                         // Це картка актора, перевизначаємо onEnter  
-                        var originalOnEnter = this.onEnter;  
-                        this.onEnter = function(target, card_data) {  
+                        descriptor.value = function(target, card_data) {  
                             Lampa.Activity.push({  
                                 url: card_data.url || '',  
                                 title: Lampa.Lang.translate('title_person'),  
@@ -79,6 +79,7 @@
                             });  
                         };  
                     }  
+                    return originalDefineProperty.call(this, obj, prop, descriptor);  
                 };  
             },  
   
