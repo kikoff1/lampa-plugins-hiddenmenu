@@ -1,6 +1,8 @@
 (function () {  
-    'use strict';  
-  
+    'use strict'; 
+ 
+  ///v.1
+
     function startPlugin() {  
         if (window.plugin_online_cinemas_ready) return;  
         window.plugin_online_cinemas_ready = true;  
@@ -21,13 +23,11 @@
             },  
   
             createSettings: function() {  
-                // Додаємо компонент налаштувань  
                 Lampa.SettingsApi.addComponent({  
                     component: 'online_cinemas',  
                     name: 'Актори'  
                 });  
   
-                // Додаємо параметр перемикача  
                 Lampa.SettingsApi.addParam({  
                     component: 'online_cinemas',  
                     param: {  
@@ -67,13 +67,31 @@
             },  
   
             showActors: function() {  
-                Lampa.Activity.push({  
-                    url: "person/popular",  
-                    title: "Актори",  
-                    component: "category_full",  
-                    source: "tmdb",  
-                    card_type: true,  
+                // Використовуємо прямий виклик API для отримання акторів  
+                Lampa.Api.list({  
+                    url: 'person/popular',  
+                    source: 'tmdb',  
                     page: 1  
+                }, (data) => {  
+                    // Додаємо поле gender до кожного актора, щоб система правильно їх розпізнала  
+                    if (data.results) {  
+                        data.results.forEach(person => {  
+                            if (typeof person.gender === 'undefined') {  
+                                person.gender = 1; // Встановлюємо gender, щоб система розпізнала як актора  
+                            }  
+                        });  
+                    }  
+                      
+                    Lampa.Activity.push({  
+                        url: 'person/popular',  
+                        title: 'Актори',  
+                        component: 'category_full',  
+                        source: 'tmdb',  
+                        card_type: true,  
+                        page: 1  
+                    });  
+                }, () => {  
+                    Lampa.Noty.show('Помилка завантаження акторів');  
                 });  
             }  
         };  
