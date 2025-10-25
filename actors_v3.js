@@ -1,11 +1,6 @@
 (function () {  
     'use strict';  
   
-
-
-///v3
-
-
     function startPlugin() {  
         if (window.plugin_online_cinemas_ready) return;  
         window.plugin_online_cinemas_ready = true;  
@@ -19,7 +14,7 @@
                 this.loadSettings();  
                 this.createSettings();  
                 this.initStorageListener();  
-                this.patchCategoryForActors();  
+                this.patchActorsPage();  
             },  
   
             loadSettings: function() {  
@@ -54,67 +49,52 @@
                 });  
             },  
   
-            patchCategoryForActors: function() {  
+            toggleActorsButton: function() {  
+                $('.online-cinemas-actors').toggle(this.settings.showActors);  
+            },  
+  
+            patchActorsPage: function() {  
                 var self = this;  
                   
-                // Перехоплюємо створення активності category_full  
                 Lampa.Listener.follow('activity', function(e) {  
                     if (e.type === 'create' && e.component === 'category_full') {  
                         var activity = Lampa.Activity.active();  
                           
-                        if (activity && activity.url === 'person/popular') {  
-                            var component = activity.activity.component;  
-                              
-                            // Зберігаємо оригінальний метод append  
-                            var originalAppend = component.append;  
-                              
-                            component.append = function(data, append_flag) {  
-                                // Викликаємо оригінальний append  
-                                originalAppend.call(this, data, append_flag);  
-                                  
-                                // Після створення карток, перевизначаємо onEnter  
-                                setTimeout(function() {  
-                                    var cards = component.body.querySelectorAll('.card');  
+                        if (activity.url === 'person/popular') {  
+                            setTimeout(function() {  
+                                $('.card').each(function() {  
+                                    var card = $(this);  
                                       
-                                    cards.forEach(function(cardElement) {  
-                                        // Знаходимо об'єкт картки  
-                                        var cardData = null;  
+                                    card.off('hover:enter').on('hover:enter', function() {  
+                                        var cardData = card.data('card_data');  
                                           
-                                        if (data.results) {  
-                                            data.results.forEach(function(result) {  
-                                                if (result.id && cardElement.getAttribute('data-id') == result.id) {  
-                                                    cardData = result;  
+                                        if (!cardData) {  
+                                            var cards = $('.card');  
+                                            var index = cards.index(card);  
+                                              
+                                            if (activity.activity && activity.activity.component && activity.activity.component.items) {  
+                                                var item = activity.activity.component.items[index];  
+                                                if (item && item.card && item.card.card_data) {  
+                                                    cardData = item.card.card_data;  
                                                 }  
-                                            });  
+                                            }  
                                         }  
                                           
-                                        if (cardData && cardData.gender !== undefined && cardData.profile_path) {  
-                                            // Видаляємо старий обробник і додаємо новий  
-                                            var newCard = cardElement.cloneNode(true);  
-                                              
-                                            newCard.addEventListener('hover:enter', function() {  
-                                                // Напряму відкриваємо компонент actor з ID  
-                                                Lampa.Activity.push({  
-                                                    url: '',  
-                                                    title: Lampa.Lang.translate('title_person'),  
-                                                    component: 'actor',  
-                                                    id: cardData.id,  
-                                                    source: 'tmdb'  
-                                                });  
+                                        if (cardData && cardData.gender !== undefined) {  
+                                            Lampa.Activity.push({  
+                                                url: '',  
+                                                title: Lampa.Lang.translate('title_person'),  
+                                                component: 'actor',  
+                                                id: cardData.id,  
+                                                source: 'tmdb'  
                                             });  
-                                              
-                                            cardElement.parentNode.replaceChild(newCard, cardElement);  
                                         }  
                                     });  
-                                }, 100);  
-                            };  
+                                });  
+                            }, 500);  
                         }  
                     }  
                 });  
-            },  
-  
-            toggleActorsButton: function() {  
-                $('.online-cinemas-actors').toggle(this.settings.showActors);  
             },  
   
             addActorsButton: function() {  
