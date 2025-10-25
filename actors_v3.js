@@ -1,9 +1,6 @@
 (function () {  
     'use strict';  
   
-//v123
-
-
     function startPlugin() {  
         if (window.plugin_online_cinemas_ready) return;  
         window.plugin_online_cinemas_ready = true;  
@@ -17,7 +14,7 @@
                 this.loadSettings();  
                 this.createSettings();  
                 this.initStorageListener();  
-                this.patchCategoryForActors();  
+                this.patchCategoryOnEnter();  
             },  
   
             loadSettings: function() {  
@@ -52,48 +49,46 @@
                 });  
             },  
   
-            patchCategoryForActors: function() {  
+            patchCategoryOnEnter: function() {  
                 var self = this;  
                   
-                Lampa.Listener.follow('activity', function(e) {  
-                    if (e.type === 'create' && e.component === 'category_full') {  
+                // Патчимо Card.prototype.create для перехоплення встановлення onEnter  
+                var originalCardCreate = Lampa.Card.prototype.create;  
+                  
+                Lampa.Card.prototype.create = function() {  
+                    originalCardCreate.call(this);  
+                      
+                    var card = this;  
+                    var card_data = this.card_data || this.data;  
+                      
+                    // Перевіряємо чи це картка актора на сторінці person/popular  
+                    if (card_data && typeof card_data.gender !== 'undefined') {  
                         var activity = Lampa.Activity.active();  
                           
-                        if (activity.url === 'person/popular') {  
-                            setTimeout(function() {  
-                                var component = activity.activity.component;  
-                                  
-                                if (component && component.append) {  
-                                    var originalAppend = component.append;  
-                                      
-                                    component.append = function(data, append_flag) {  
-                                        // Викликаємо оригінальний append  
-                                        originalAppend.call(this, data, append_flag);  
-                                          
-                                        // Перевизначаємо onEnter для всіх карток після їх створення  
-                                        setTimeout(function() {  
-                                            var cards = component.items || [];  
-                                            cards.forEach(function(card) {  
-                                                if (card && card.card_data && typeof card.card_data.gender !== 'undefined') {  
-                                                    // Перевизначаємо onEnter  
-                                                    card.onEnter = function(target, card_data) {  
-                                                        Lampa.Activity.push({  
-                                                            url: card_data.url || '',  
-                                                            title: Lampa.Lang.translate('title_person'),  
-                                                            component: 'actor',  
-                                                            id: card_data.id,  
-                                                            source: card_data.source || 'tmdb'  
-                                                        });  
-                                                    };  
-                                                }  
-                                            });  
-                                        }, 100);  
+                        if (activity && activity.url === 'person/popular') {  
+                            // Зберігаємо оригінальний addEventListener  
+                            var originalAddEventListener = this.card.addEventListener;  
+                              
+                            this.card.addEventListener = function(event, handler) {  
+                                if (event === 'hover:enter') {  
+                                    // Замінюємо обробник на наш  
+                                    var newHandler = function() {  
+                                        Lampa.Activity.push({  
+                                            url: card_data.url || '',  
+                                            title: Lampa.Lang.translate('title_person'),  
+                                            component: 'actor',  
+                                            id: card_data.id,  
+                                            source: card_data.source || 'tmdb'  
+                                        });  
                                     };  
+                                    originalAddEventListener.call(this, event, newHandler);  
+                                } else {  
+                                    originalAddEventListener.call(this, event, handler);  
                                 }  
-                            }, 50);  
+                            };  
                         }  
                     }  
-                });  
+                };  
             },  
   
             toggleActorsButton: function() {  
