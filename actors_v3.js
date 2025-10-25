@@ -1,5 +1,8 @@
 (function () {  
     'use strict';  
+
+
+//v1
   
     function startPlugin() {  
         if (window.plugin_online_cinemas_ready) return;  
@@ -9,11 +12,13 @@
             settings: {  
                 showActors: true  
             },  
+            actorsPageActive: false,  
   
             init: function() {  
                 this.loadSettings();  
                 this.createSettings();  
                 this.initStorageListener();  
+                this.initLineListener();  
             },  
   
             loadSettings: function() {  
@@ -48,6 +53,34 @@
                 });  
             },  
   
+            initLineListener: function() {  
+                Lampa.Listener.follow('activity', (e) => {  
+                    if (e.type === 'start' && e.component === 'category_full') {  
+                        this.actorsPageActive = e.object && e.object.url === 'person/popular';  
+                    } else if (e.type === 'destroy') {  
+                        this.actorsPageActive = false;  
+                    }  
+                });  
+  
+                Lampa.Listener.follow('line', (e) => {  
+                    if (this.actorsPageActive && e.type === 'append') {  
+                        const card = e.items[e.items.length - 1];  
+                        if (card && card.onEnter) {  
+                            const originalOnEnter = card.onEnter;  
+                            card.onEnter = (target, card_data) => {  
+                                Lampa.Activity.push({  
+                                    url: card_data.url || '',  
+                                    title: Lampa.Lang.translate('title_person'),  
+                                    component: 'actor',  
+                                    id: card_data.id,  
+                                    source: 'tmdb'  
+                                });  
+                            };  
+                        }  
+                    }  
+                });  
+            },  
+  
             toggleActorsButton: function() {  
                 $('.online-cinemas-actors').toggle(this.settings.showActors);  
             },  
@@ -70,18 +103,7 @@
                     title: 'Актори',  
                     component: 'category_full',  
                     source: 'tmdb',  
-                    page: 1,  
-                    card_events: {  
-                        onEnter: function(target, card_data) {  
-                            Lampa.Activity.push({  
-                                url: card_data.url || '',  
-                                title: Lampa.Lang.translate('title_person'),  
-                                component: 'actor',  
-                                id: card_data.id,  
-                                source: 'tmdb'  
-                            });  
-                        }  
-                    }  
+                    page: 1  
                 });  
             }  
         };  
