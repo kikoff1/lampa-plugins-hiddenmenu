@@ -5,35 +5,6 @@
         if (window.plugin_online_cinemas_ready) return;  
         window.plugin_online_cinemas_ready = true;  
   
-        // Створюємо власний компонент для акторів  
-        function ActorsComponent(object) {  
-            let Items = Lampa.Component.get('category_full');  
-            let comp = new Items(object);  
-              
-            // Зберігаємо оригінальний метод append  
-            let originalAppend = comp.append;  
-              
-            // Перевизначаємо append для додавання gender до всіх акторів  
-            comp.append = function(data, append_flag) {  
-                if (data.results) {  
-                    data.results.forEach(function(element) {  
-                        // Додаємо gender для всіх елементів з profile_path (актори)  
-                        if (element.profile_path && typeof element.gender === 'undefined') {  
-                            element.gender = 1;  
-                        }  
-                    });  
-                }  
-                  
-                // Викликаємо оригінальний append  
-                originalAppend.call(this, data, append_flag);  
-            };  
-              
-            return comp;  
-        }  
-  
-        // Реєструємо власний компонент  
-        Lampa.Component.add('actors_list', ActorsComponent);  
-  
         var OnlineCinemas = {  
             settings: {  
                 showActors: true  
@@ -43,6 +14,7 @@
                 this.loadSettings();  
                 this.createSettings();  
                 this.initStorageListener();  
+                this.patchCategoryForActors();  
             },  
   
             loadSettings: function() {  
@@ -77,6 +49,44 @@
                 });  
             },  
   
+            patchCategoryForActors: function() {  
+                var self = this;  
+                var isPatched = false;  
+                  
+                Lampa.Listener.follow('activity', function(e) {  
+                    if (e.type === 'create' && e.component === 'category_full' && !isPatched) {  
+                        var activity = Lampa.Activity.active();  
+                          
+                        if (activity.url === 'person/popular') {  
+                            setTimeout(function() {  
+                                var component = activity.activity.component;  
+                                  
+                                if (component && component.append) {  
+                                    var originalAppend = component.append;  
+                                      
+                                    component.append = function(data, append_flag) {  
+                                        // Модифікуємо дані перед обробкою  
+                                        if (data.results) {  
+                                            data.results.forEach(function(element) {  
+                                                // Додаємо gender для всіх елементів з profile_path  
+                                                if (element.profile_path) {  
+                                                    element.gender = 1;  
+                                                }  
+                                            });  
+                                        }  
+                                          
+                                        // Викликаємо оригінальний append  
+                                        originalAppend.call(this, data, append_flag);  
+                                    };  
+                                      
+                                    isPatched = true;  
+                                }  
+                            }, 50);  
+                        }  
+                    }  
+                });  
+            },  
+  
             toggleActorsButton: function() {  
                 $('.online-cinemas-actors').toggle(this.settings.showActors);  
             },  
@@ -97,7 +107,7 @@
                 Lampa.Activity.push({  
                     url: 'person/popular',  
                     title: 'Актори',  
-                    component: 'actors_list',  // Використовуємо власний компонент  
+                    component: 'category_full',  
                     source: 'tmdb',  
                     page: 1  
                 });  
