@@ -1,8 +1,6 @@
 (function () {  
-    'use strict'; 
- 
-  ///v.1
-
+    'use strict';  
+  
     function startPlugin() {  
         if (window.plugin_online_cinemas_ready) return;  
         window.plugin_online_cinemas_ready = true;  
@@ -67,31 +65,12 @@
             },  
   
             showActors: function() {  
-                // Використовуємо прямий виклик API для отримання акторів  
-                Lampa.Api.list({  
+                Lampa.Activity.push({  
                     url: 'person/popular',  
+                    title: 'Актори',  
+                    component: 'category_full',  
                     source: 'tmdb',  
                     page: 1  
-                }, (data) => {  
-                    // Додаємо поле gender до кожного актора, щоб система правильно їх розпізнала  
-                    if (data.results) {  
-                        data.results.forEach(person => {  
-                            if (typeof person.gender === 'undefined') {  
-                                person.gender = 1; // Встановлюємо gender, щоб система розпізнала як актора  
-                            }  
-                        });  
-                    }  
-                      
-                    Lampa.Activity.push({  
-                        url: 'person/popular',  
-                        title: 'Актори',  
-                        component: 'category_full',  
-                        source: 'tmdb',  
-                        card_type: true,  
-                        page: 1  
-                    });  
-                }, () => {  
-                    Lampa.Noty.show('Помилка завантаження акторів');  
                 });  
             }  
         };  
