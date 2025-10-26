@@ -49,44 +49,50 @@
                 });  
             },  
   
+            // Патчимо сторінку акторів, щоб використовувати логіку з full_persons  
             patchActorsPage: function() {  
-                Lampa.Listener.follow('activity', (e) => {  
+                var self = this;  
+                  
+                // Перехоплюємо створення активності category_full  
+                Lampa.Listener.follow('activity', function(e) {  
                     if (e.type === 'create' && e.component === 'category_full') {  
                         var activity = Lampa.Activity.active();  
+                          
+                        // Перевіряємо, чи це сторінка person/popular  
                         if (activity.url === 'person/popular') {  
-                            // Встановлюємо прапорець, що ми на сторінці акторів  
-                            this.isActorsPage = true;  
-  
-                            // Чекаємо, поки картки будуть відрендерені  
-                            setTimeout(() => {  
-                                // Отримуємо всі картки на сторінці  
-                                var cards = activity.activity.component.scroll.render().querySelectorAll('.card');  
-  
-                                cards.forEach(cardElement => {  
-                                    // Знаходимо об'єкт картки  
-                                    var card = Lampa.Controller.collection.find(c => c.render().is(cardElement));  
-  
-                                    if (card && card.data && card.data.gender && card.data.profile_path) {  
-                                        // Видаляємо старий обробник onEnter  
-                                        $(cardElement).off('hover:enter');  
-  
-                                        // Додаємо новий обробник onEnter  
-                                        $(cardElement).on('hover:enter', () => {  
-                                            Lampa.Activity.push({  
-                                                url: '', // URL може бути порожнім, якщо є ID  
-                                                title: Lampa.Lang.translate('title_person'),  
-                                                component: 'actor',  
-                                                id: card.data.id,  
-                                                source: card.data.source || 'tmdb'  
-                                            });  
-                                        });  
-                                    }  
-                                });  
-                            }, 500); // Затримка, щоб картки встигли відрендеритися  
-                        } else {  
-                            this.isActorsPage = false;  
+                            // Чекаємо, поки компонент створить картки  
+                            setTimeout(function() {  
+                                self.applyActorLogic(activity);  
+                            }, 300);  
                         }  
                     }  
+                });  
+            },  
+  
+            // Застосовуємо логіку з full_persons.js:72-79  
+            applyActorLogic: function(activity) {  
+                var component = activity.activity.component;  
+                  
+                if (!component || !component.items) return;  
+                  
+                // Для кожної картки застосовуємо логіку з full_persons  
+                component.items.forEach(function(card) {  
+                    var element = card.render(true);  
+                    var card_data = card.data;  
+                      
+                    // Видаляємо старий обробник  
+                    $(element).off('hover:enter');  
+                      
+                    // Додаємо новий обробник, який копіює логіку з full_persons.js:72-79  
+                    $(element).on('hover:enter', function() {  
+                        Lampa.Activity.push({  
+                            url: card_data.url || '',  
+                            title: Lampa.Lang.translate('title_persons'),  
+                            component: 'actor',  
+                            id: card_data.id,  
+                            source: activity.source || 'tmdb'  
+                        });  
+                    });  
                 });  
             },  
   
