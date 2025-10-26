@@ -1,6 +1,10 @@
 (function () {  
     'use strict';  
   
+
+//v1
+
+
     function startPlugin() {  
         if (window.plugin_actors_logger_ready) return;  
         window.plugin_actors_logger_ready = true;  
@@ -31,7 +35,7 @@
                     self.addLog('Component: ' + (params.component || 'немає'));  
                     self.addLog('ID: ' + (params.id || 'немає'));  
                     self.addLog('Source: ' + (params.source || 'немає'));  
-                    self.addLog('Card ID: ' + (params.card && params.card.id ? params.card.id : 'немає'));  
+                    self.addLog('Card ID: ' + (params.card ? params.card.id : 'немає'));  
                     self.addLog('Method: ' + (params.method || 'немає'));  
                     self.addLog('Всі параметри: ' + JSON.stringify(params, null, 2));  
                     self.addLog('---');  
@@ -39,112 +43,59 @@
                     return originalActivityPush.call(this, params);  
                 };  
   
-                // Логуємо створення карток  
-                Lampa.Listener.follow('line', function(e) {  
-                    if (e.type === 'append' && e.items && e.items.length > 0) {  
-                        var lastCard = e.items[e.items.length - 1];  
-                          
-                        if (lastCard && lastCard.card_data) {  
-                            var card_data = lastCard.card_data;  
-                              
-                            self.addLog('=== Картка створена ===');  
-                            self.addLog('ID: ' + (card_data.id || 'немає'));  
-                            self.addLog('Name: ' + (card_data.name || card_data.title || 'немає'));  
-                            self.addLog('Gender: ' + (typeof card_data.gender !== 'undefined' ? card_data.gender : 'ВІДСУТНЄ'));  
-                            self.addLog('Profile path: ' + (card_data.profile_path ? 'Є' : 'Немає'));  
-                            self.addLog('Poster path: ' + (card_data.poster_path ? 'Є' : 'Немає'));  
-                            self.addLog('Media type: ' + (card_data.media_type || 'немає'));  
-                            self.addLog('Known for department: ' + (card_data.known_for_department || 'немає'));  
-                              
-                            var keys = Object.keys(card_data);  
-                            self.addLog('Всі ключі: ' + keys.join(', '));  
-                            self.addLog('---');  
-                        }  
-                    }  
-                });  
-  
-                // Логуємо події карток  
-                var originalCardCreate = Lampa.Card.prototype.create;  
-                Lampa.Card.prototype.create = function() {  
-                    var card = this;  
-                      
-                    // Зберігаємо оригінальний onEnter  
-                    var originalOnEnter = this.onEnter;  
-                      
-                    this.onEnter = function(target, card_data) {  
-                        self.addLog('=== onEnter викликано на картці ===');  
-                        self.addLog('Card ID: ' + (card_data.id || 'немає'));  
-                        self.addLog('Card Name: ' + (card_data.name || card_data.title || 'немає'));  
-                        self.addLog('Gender: ' + (typeof card_data.gender !== 'undefined' ? card_data.gender : 'ВІДСУТНЄ'));  
-                        self.addLog('Profile path: ' + (card_data.profile_path ? 'Є' : 'Немає'));  
-                        self.addLog('Source: ' + (card_data.source || 'немає'));  
-                        self.addLog('URL: ' + (card_data.url || 'немає'));  
-                        self.addLog('---');  
-                          
-                        if (originalOnEnter) {  
-                            return originalOnEnter.call(card, target, card_data);  
-                        }  
-                    };  
-                      
-                    return originalCardCreate.call(this);  
-                };  
-  
                 // Логуємо створення активностей  
                 Lampa.Listener.follow('activity', function(e) {  
                     if (e.type === 'start') {  
-                        var activity = Lampa.Activity.active();  
-                          
                         self.addLog('=== Активність запущена ===');  
-                        self.addLog('Component: ' + (activity.component || 'немає'));  
-                        self.addLog('URL: ' + (activity.url || 'немає'));  
-                        self.addLog('ID: ' + (activity.id || 'немає'));  
-                        self.addLog('Source: ' + (activity.source || 'немає'));  
+                        self.addLog('Component: ' + e.component);  
+                        self.addLog('URL: ' + (e.object.url || 'немає'));  
+                        self.addLog('ID: ' + (e.object.id || 'немає'));  
+                        self.addLog('Source: ' + (e.object.source || 'немає'));  
                         self.addLog('---');  
                     }  
                 });  
-            },  
   
-            createSettingsButton: function() {  
-                var self = this;  
-  
-                Lampa.SettingsApi.addComponent({  
-                    component: 'actors_logger',  
-                    name: 'Логи акторів'  
-                });  
-  
-                Lampa.SettingsApi.addParam({  
-                    component: 'actors_logger',  
-                    param: {  
-                        name: 'view_logs',  
-                        type: 'button'  
-                    },  
-                    field: {  
-                        name: 'Переглянути логи'  
-                    },  
-                    onChange: this.showLogs.bind(this)  
-                });  
-  
-                Lampa.SettingsApi.addParam({  
-                    component: 'actors_logger',  
-                    param: {  
-                        name: 'clear_logs',  
-                        type: 'button'  
-                    },  
-                    field: {  
-                        name: 'Очистити логи'  
-                    },  
-                    onChange: function() {  
-                        self.logs = [];  
-                        Lampa.Noty.show('Логи очищено');  
+                // НОВИЙ КОД: Логуємо події карток через патчинг Card.prototype.create  
+                var originalCardCreate = Lampa.Card.prototype.create;  
+                Lampa.Card.prototype.create = function() {  
+                    var result = originalCardCreate.call(this);  
+                      
+                    var card = this;  
+                    var card_data = card.card;  
+                      
+                    // Логуємо створення картки актора  
+                    if (card_data && card_data.profile_path) {  
+                        self.addLog('=== Картка актора створена ===');  
+                        self.addLog('ID: ' + (card_data.id || 'немає'));  
+                        self.addLog('Name: ' + (card_data.name || 'немає'));  
+                        self.addLog('Gender: ' + (card_data.gender || 'немає'));  
+                        self.addLog('Profile path: ' + (card_data.profile_path || 'немає'));  
+                        self.addLog('---');  
+                          
+                        // Патчимо onEnter для логування  
+                        var originalOnEnter = card.onEnter;  
+                        card.onEnter = function(target, data) {  
+                            self.addLog('=== onEnter викликано на картці актора ===');  
+                            self.addLog('ID: ' + (data.id || 'немає'));  
+                            self.addLog('Name: ' + (data.name || 'немає'));  
+                            self.addLog('Gender: ' + (data.gender || 'немає'));  
+                            self.addLog('---');  
+                              
+                            if (originalOnEnter) {  
+                                return originalOnEnter.call(card, target, data);  
+                            }  
+                        };  
                     }  
-                });  
+                      
+                    return result;  
+                };  
             },  
   
             showLogs: function() {  
                 var self = this;  
                   
                 if (this.logs.length === 0) {  
-                    Lampa.Noty.show('Логи порожні. Спробуйте відкрити картки акторів.');  
+                    Lampa.Noty.show('Логи порожні. Спочатку відкрийте список акторів.');  
                     return;  
                 }  
   
@@ -168,31 +119,27 @@
                                 textarea[0].setSelectionRange(0, 99999);  
                                   
                                 try {  
-                                    var successful = document.execCommand('copy');  
-                                    if (successful) {  
-                                        Lampa.Noty.show('Логи скопійовано');  
-                                    } else {  
-                                        Lampa.Noty.show('Текст виділено. Скопіюйте вручну (Ctrl+C)');  
-                                    }  
+                                    document.execCommand('copy');  
+                                    Lampa.Noty.show('Логи скопійовано');  
                                 } catch (err) {  
-                                    Lampa.Noty.show('Текст виділено. Скопіюйте вручну (Ctrl+C)');  
+                                    Lampa.Noty.show('Не вдалося скопіювати. Виділіть текст вручну.');  
                                 }  
                             }  
                         },  
                         {  
                             name: 'Виділити все',  
                             onSelect: function() {  
+                                textarea[0].focus();  
                                 textarea[0].select();  
                                 textarea[0].setSelectionRange(0, 99999);  
-                                Lampa.Noty.show('Текст виділено');  
                             }  
                         },  
                         {  
                             name: 'Очистити',  
                             onSelect: function() {  
                                 self.logs = [];  
-                                Lampa.Noty.show('Логи очищено');  
                                 Lampa.Modal.close();  
+                                Lampa.Noty.show('Логи очищено');  
                             }  
                         },  
                         {  
@@ -208,6 +155,30 @@
                     textarea[0].focus();  
                     textarea[0].select();  
                 }, 100);  
+            },  
+  
+            createSettingsButton: function() {  
+                var self = this;  
+                  
+                Lampa.SettingsApi.addComponent({  
+                    component: 'actors_logger',  
+                    name: 'Логи акторів'  
+                });  
+  
+                Lampa.SettingsApi.addParam({  
+                    component: 'actors_logger',  
+                    param: {  
+                        name: 'show_logs',  
+                        type: 'button',  
+                        default: ''  
+                    },  
+                    field: {  
+                        name: 'Переглянути логи'  
+                    },  
+                    onChange: function() {  
+                        self.showLogs();  
+                    }  
+                });  
             }  
         };  
   
