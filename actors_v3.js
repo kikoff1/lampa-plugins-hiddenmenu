@@ -1,17 +1,6 @@
 (function () {  
     'use strict';  
   
-
-
-
-
-////v333
-
-
-
-
-
-
     function startPlugin() {  
         if (window.plugin_online_cinemas_ready) return;  
         window.plugin_online_cinemas_ready = true;  
@@ -60,50 +49,44 @@
                 });  
             },  
   
-            // Патчимо сторінку акторів, щоб використовувати логіку з full_persons  
             patchActorsPage: function() {  
                 var self = this;  
                   
-                // Перехоплюємо створення активності category_full  
+                // Перехоплюємо створення активності  
                 Lampa.Listener.follow('activity', function(e) {  
                     if (e.type === 'create' && e.component === 'category_full') {  
                         var activity = Lampa.Activity.active();  
                           
-                        // Перевіряємо, чи це сторінка person/popular  
                         if (activity.url === 'person/popular') {  
-                            // Чекаємо, поки компонент створить картки  
+                            // Чекаємо, поки картки створяться  
                             setTimeout(function() {  
-                                self.applyActorLogic(activity);  
-                            }, 300);  
+                                // Знаходимо всі картки на сторінці  
+                                var cards = document.querySelectorAll('.category-full .card');  
+                                  
+                                cards.forEach(function(cardElement) {  
+                                    // Отримуємо дані картки  
+                                    var card_data = cardElement.card_data;  
+                                      
+                                    if (card_data && card_data.gender !== undefined && card_data.profile_path) {  
+                                        // Видаляємо старий обробник  
+                                        var newCard = cardElement.cloneNode(true);  
+                                        cardElement.parentNode.replaceChild(newCard, cardElement);  
+                                          
+                                        // Додаємо новий обробник, який відкриває компонент actor  
+                                        newCard.addEventListener('hover:enter', function() {  
+                                            Lampa.Activity.push({  
+                                                url: card_data.url || '',  
+                                                title: Lampa.Lang.translate('title_person'),  
+                                                component: 'actor',  
+                                                id: card_data.id,  
+                                                source: card_data.source || 'tmdb'  
+                                            });  
+                                        });  
+                                    }  
+                                });  
+                            }, 500);  
                         }  
                     }  
-                });  
-            },  
-  
-            // Застосовуємо логіку з full_persons.js:72-79  
-            applyActorLogic: function(activity) {  
-                var component = activity.activity.component;  
-                  
-                if (!component || !component.items) return;  
-                  
-                // Для кожної картки застосовуємо логіку з full_persons  
-                component.items.forEach(function(card) {  
-                    var element = card.render(true);  
-                    var card_data = card.data;  
-                      
-                    // Видаляємо старий обробник  
-                    $(element).off('hover:enter');  
-                      
-                    // Додаємо новий обробник, який копіює логіку з full_persons.js:72-79  
-                    $(element).on('hover:enter', function() {  
-                        Lampa.Activity.push({  
-                            url: card_data.url || '',  
-                            title: Lampa.Lang.translate('title_persons'),  
-                            component: 'actor',  
-                            id: card_data.id,  
-                            source: activity.source || 'tmdb'  
-                        });  
-                    });  
                 });  
             },  
   
