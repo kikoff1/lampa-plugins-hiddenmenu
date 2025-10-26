@@ -1,5 +1,9 @@
 (function () {  
     'use strict';  
+
+
+
+
   
     function startPlugin() {  
         if (window.plugin_online_cinemas_ready) return;  
@@ -15,7 +19,6 @@
                 this.createSettings();  
                 this.addActorsButton();  
                 this.initStorageListener();  
-                this.patchActorCards();  
             },  
   
             loadSettings: function() {  
@@ -51,27 +54,27 @@
   
             initStorageListener: function() {  
                 var self = this;  
-                Lampa.Storage.listener.follow('change', function(e) {  
-                    if (e.name === 'show_actors') {  
-                        self.settings.showActors = e.value;  
+                Lampa.Storage.listener.follow('change', function(event) {  
+                    if (event.name === 'show_actors') {  
+                        self.settings.showActors = event.value;  
                         self.toggleActorsButton();  
                     }  
                 });  
             },  
   
             toggleActorsButton: function() {  
-                var button = $('.menu .menu__item[data-action="actors"]');  
+                var button = $('.menu__item.actors-button');  
                 if (this.settings.showActors) {  
-                    button.show();  
+                    button.removeClass('hidden');  
                 } else {  
-                    button.hide();  
+                    button.addClass('hidden');  
                 }  
             },  
   
             addActorsButton: function() {  
                 var self = this;  
-                var button = $('<li class="menu__item selector" data-action="actors"><div class="menu__ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="white"/></svg></div><div class="menu__text">Актори</div></li>');  
-  
+                var button = $('<li class="menu__item selector actors-button"><div class="menu__item-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="currentColor"/></svg></div><div class="menu__item-text">Актори</div></li>');  
+                  
                 button.on('hover:enter', this.showActors.bind(this));  
                 $('.menu .menu__list').eq(0).append(button);  
                 this.toggleActorsButton();  
@@ -79,76 +82,156 @@
   
             showActors: function() {  
                 Lampa.Activity.push({  
-                    url: "person/popular",  
-                    title: "Популярні актори",  
-                    component: "category_full",  
-                    source: "tmdb",  
+                    url: 'person/popular',  
+                    title: 'Популярні актори',  
+                    component: 'actors_list',  
+                    source: 'tmdb',  
                     page: 1  
-                });  
-            },  
-  
-            patchActorCards: function() {  
-                // Патчимо тільки для сторінки person/popular  
-                Lampa.Listener.follow('activity', function(e) {  
-                    if (e.type === 'start' && e.component === 'category_full') {  
-                        var activity = Lampa.Activity.active();  
-                          
-                        if (activity && activity.activity && activity.activity.url === 'person/popular') {  
-                            // Чекаємо, поки картки створяться  
-                            setTimeout(function() {  
-                                var cards = $('.card.selector');  
-                                  
-                                cards.each(function() {  
-                                    var card = $(this);  
-                                    var img = card.find('img');  
-                                      
-                                    // Перевіряємо, чи це картка актора (має profile_path в src)  
-                                    if (img.length && img.attr('src') && img.attr('src').indexOf('w185_and_h278_bestv2') > -1) {  
-                                        // Видаляємо старі обробники  
-                                        card.off('hover:enter');  
-                                          
-                                        // Додаємо новий обробник  
-                                        card.on('hover:enter', function() {  
-                                            // Отримуємо ID актора з data атрибутів або з DOM  
-                                            var cardData = card.data('card');  
-                                              
-                                            if (!cardData) {  
-                                                // Спробуємо знайти ID в тексті картки  
-                                                var titleText = card.find('.card__title').text();  
-                                                  
-                                                // Шукаємо ID в глобальному контексті  
-                                                var allCards = $('.card.selector');  
-                                                var index = allCards.index(card);  
-                                                  
-                                                // Отримуємо дані з activity  
-                                                var activity = Lampa.Activity.active();  
-                                                if (activity && activity.activity && activity.activity.component) {  
-                                                    var component = activity.activity.component;  
-                                                    if (component.items && component.items[index]) {  
-                                                        cardData = component.items[index];  
-                                                    }  
-                                                }  
-                                            }  
-                                              
-                                            if (cardData && cardData.id) {  
-                                                Lampa.Activity.push({  
-                                                    url: '',  
-                                                    title: cardData.name || 'Актор',  
-                                                    component: 'actor',  
-                                                    id: cardData.id,  
-                                                    source: 'tmdb',  
-                                                    page: 1  
-                                                });  
-                                            }  
-                                        });  
-                                    }  
-                                });  
-                            }, 500);  
-                        }  
-                    }  
                 });  
             }  
         };  
+  
+        function ActorsListComponent(object) {  
+            var network = new Lampa.Reguest();  
+            var scroll = new Lampa.Scroll({  
+                mask: true,  
+                over: true,  
+                step: 250  
+            });  
+            var items = [];  
+            var html = document.createElement('div');  
+            var body = document.createElement('div');  
+            var active = 0;  
+            var last;  
+  
+            this.create = function() {  
+                var self = this;  
+                  
+                html.classList.add('category-full');  
+                body.classList.add('category-full');  
+                  
+                this.activity.loader(true);  
+  
+                scroll.minus();  
+                  
+                scroll.onWheel = function(step) {  
+                    if (step > 0) Lampa.Controller.enabled().controller.down();  
+                    else Lampa.Controller.enabled().controller.up();  
+                };  
+  
+                scroll.onScroll = function() {  
+                    Lampa.Layer.visible(scroll.render(true));  
+                };  
+  
+                scroll.onEnd = function() {  
+                    self.next();  
+                };  
+  
+                Lampa.Api.list(object, this.build.bind(this));  
+            };  
+  
+            this.next = function() {  
+                var self = this;  
+                  
+                if (object.page < 500) {  
+                    object.page++;  
+                      
+                    Lampa.Api.list(object, function(result) {  
+                        self.append(result);  
+                    });  
+                }  
+            };  
+  
+            this.append = function(data) {  
+                var self = this;  
+                  
+                data.results.forEach(function(element) {  
+                    var card = new Lampa.Card(element, {  
+                        card_category: true,  
+                        object: object  
+                    });  
+                      
+                    card.create();  
+                      
+                    card.onFocus = function(target, card_data) {  
+                        last = target;  
+                        active = items.indexOf(card);  
+                        scroll.update(card.render(true));  
+                        Lampa.Background.change(Lampa.Utils.cardImgBackground(card_data));  
+                    };  
+                      
+                    card.onEnter = function(target, card_data) {  
+                        Lampa.Activity.push({  
+                            url: '',  
+                            title: card_data.name,  
+                            component: 'actor',  
+                            id: card_data.id,  
+                            source: object.source || 'tmdb'  
+                        });  
+                    };  
+                      
+                    body.appendChild(card.render(true));  
+                    items.push(card);  
+                });  
+                  
+                Lampa.Controller.collectionSet(body);  
+                if (last) Lampa.Controller.collectionFocus(last, body);  
+            };  
+  
+            this.build = function(data) {  
+                scroll.append(body);  
+                html.appendChild(scroll.render(true));  
+                  
+                this.append(data);  
+                  
+                this.activity.loader(false);  
+                this.activity.toggle();  
+            };  
+  
+            this.start = function() {  
+                Lampa.Controller.add('content', {  
+                    toggle: function() {  
+                        Lampa.Controller.collectionSet(body);  
+                        Lampa.Controller.collectionFocus(last, body);  
+                    },  
+                    left: function() {  
+                        if (Lampa.Navigator.canmove('left')) Lampa.Navigator.move('left');  
+                        else Lampa.Controller.toggle('menu');  
+                    },  
+                    right: function() {  
+                        Lampa.Navigator.move('right');  
+                    },  
+                    up: function() {  
+                        if (Lampa.Navigator.canmove('up')) Lampa.Navigator.move('up');  
+                        else Lampa.Controller.toggle('head');  
+                    },  
+                    down: function() {  
+                        if (Lampa.Navigator.canmove('down')) Lampa.Navigator.move('down');  
+                    },  
+                    back: function() {  
+                        Lampa.Activity.backward();  
+                    }  
+                });  
+  
+                Lampa.Controller.toggle('content');  
+            };  
+  
+            this.pause = function() {};  
+            this.stop = function() {};  
+            this.render = function() {  
+                return html;  
+            };  
+            this.destroy = function() {  
+                network.clear();  
+                scroll.destroy();  
+                html.remove();  
+                body.remove();  
+                items = null;  
+                network = null;  
+            };  
+        }  
+  
+        Lampa.Component.add('actors_list', ActorsListComponent);  
   
         function add() {  
             OnlineCinemas.init();  
