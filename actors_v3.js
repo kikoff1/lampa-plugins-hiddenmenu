@@ -2,127 +2,213 @@
     'use strict';  
   
     function startPlugin() {  
-        if (window.plugin_online_cinemas_ready) return;  
-        window.plugin_online_cinemas_ready = true;  
+        if (window.plugin_popular_actors_ready) return;  
+        window.plugin_popular_actors_ready = true;  
   
-        var OnlineCinemas = {  
-            settings: {  
-                showActors: true  
-            },  
+        // Створюємо власний компонент для відображення популярних акторів  
+        function PopularActorsComponent(object) {  
+            let network = new Lampa.Reguest();  
+            let scroll = new Lampa.Scroll({mask: true, over: true});  
+            let items = [];  
+            let active = 0;  
   
-            init: function() {  
-                this.loadSettings();  
-                this.createSettings();  
-                this.addActorsButton();  
-                this.initStorageListener();  
-                this.patchActorsPage();  
-            },  
+            this.create = function() {  
+                this.activity.loader(true);  
   
-            loadSettings: function() {  
-                this.settings.showActors = Lampa.Storage.get('show_actors', true);  
-            },  
+                scroll.minus();  
   
-            createSettings: function() {  
-                Lampa.SettingsApi.addComponent({  
-                    component: 'online_cinemas',  
-                    name: 'Актори'  
+                // Завантажуємо популярних акторів з TMDB API  
+                Lampa.Api.sources.tmdb.get('person/popular', {page: object.page || 1}, (data) => {  
+                    this.activity.loader(false);  
+  
+                    if (data && data.results && data.results.length) {  
+                        // Створюємо заголовок  
+                        let title = $('<div class="category-full"><div class="category-full__title">' +   
+                                     Lampa.Lang.translate('title_actors') + '</div></div>');  
+                        scroll.append(title);  
+  
+                        // Створюємо контейнер для карток  
+                        let grid = $('<div class="category-full__grid"></div>');  
+                          
+                        // Створюємо картки для кожного актора  
+                        data.results.forEach((actor) => {  
+                            let card = this.createActorCard(actor);  
+                            grid.append(card.render(true));  
+                            items.push(card);  
+                        });  
+  
+                        scroll.append(grid);  
+  
+                        Lampa.Layer.update(scroll.render(true));  
+                        Lampa.Layer.visible(scroll.render(true));  
+  
+                        this.activity.toggle();  
+                    } else {  
+                        this.empty();  
+                    }  
+                }, this.empty.bind(this));  
+  
+                return this.render();  
+            };  
+  
+            this.createActorCard = function(actor) {  
+                // Створюємо картку актора  
+                let card = new Lampa.Card(actor, {  
+                    card_category: true,  
+                    object: object  
                 });  
   
-                Lampa.SettingsApi.addParam({  
-                    component: 'online_cinemas',  
-                    param: {  
-                        name: 'show_actors',  
-                        type: 'trigger',  
-                        default: true  
-                    },  
-                    field: {  
-                        name: 'Показувати кнопку "Актори"'  
-                    },  
-                    onChange: this.toggleActorsButton.bind(this)  
-                });  
-            },  
+                card.create();  
   
-            initStorageListener: function() {  
-                var self = this;  
-                Lampa.Storage.listener.follow('change', function(e) {  
-                    if (e.name === 'show_actors') {  
-                        self.settings.showActors = e.value;  
-                        self.toggleActorsButton();  
+                // Перевизначаємо onEnter для правильного відкриття профілю актора  
+                card.onEnter = (target, card_data) => {  
+                    Lampa.Activity.push({  
+                        url: '',  
+                        title: Lampa.Lang.translate('title_person'),  
+                        component: 'actor',  
+                        id: actor.id,  
+                        source: object.source || 'tmdb',  
+                        page: 1  
+                    });  
+                };  
+  
+                card.onFocus = (target, card_data) => {  
+                    active = items.indexOf(card);  
+                    scroll.update(card.render(true));  
+                    Lampa.Background.change(Lampa.Utils.cardImgBackground(card_data));  
+                };  
+  
+                return card;  
+            };  
+  
+            this.empty = function() {  
+                let empty = new Lampa.Empty();  
+                scroll.append(empty.render());  
+                this.start = empty.start;  
+                this.activity.loader(false);  
+                this.activity.toggle();  
+            };  
+  
+            this.start = function() {  
+                Lampa.Controller.add('content', {  
+                    toggle: () => {  
+                        Lampa.Controller.collectionSet(scroll.render(true));  
+                        Lampa.Controller.collectionFocus(false, scroll.render(true));  
+                    },  
+                    left: () => {  
+                        if (Lampa.Navigator.canmove('left')) Lampa.Navigator.move('left');  
+                        else Lampa.Controller.toggle('menu');  
+                    },  
+                    right: () => {  
+                        Lampa.Navigator.move('right');  
+                    },  
+                    up: () => {  
+                        if (Lampa.Navigator.canmove('up')) Lampa.Navigator.move('up');  
+                        else Lampa.Controller.toggle('head');  
+                    },  
+                    down: () => {  
+                        Lampa.Navigator.move('down');  
+                    },  
+                    back: () => {  
+                        Lampa.Activity.backward();  
                     }  
                 });  
-            },  
   
-            toggleActorsButton: function() {  
-                var button = $('.online-cinemas-actors');  
-                if (this.settings.showActors) {  
-                    button.removeClass('hide');  
-                } else {  
-                    button.addClass('hide');  
-                }  
-            },  
+                Lampa.Controller.toggle('content');  
+            };  
   
-            addActorsButton: function() {  
-                var ico = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></g></svg>';  
-                var button = $('<li class="menu__item selector online-cinemas-actors" data-action="actors"><div class="menu__ico">' + ico + '</div><div class="menu__text">Актори</div></li>');  
+            this.pause = function() {};  
   
-                button.on('hover:enter', this.showActors.bind(this));  
-                $('.menu .menu__list').eq(0).append(button);  
-                this.toggleActorsButton();  
-            },  
+            this.stop = function() {};  
   
-            showActors: function() {  
-                Lampa.Activity.push({  
-                    url: "person/popular",  
-                    title: "Актори",  
-                    component: "category_full",  
-                    source: "tmdb",  
-                    page: 1  
-                });  
-            },  
+            this.render = function() {  
+                return scroll.render(true);  
+            };  
   
-            patchActorsPage: function() {  
-                var self = this;  
-                  
-                Lampa.Listener.follow('activity', function(e) {  
-                    if (e.type === 'create' && e.object.component === 'category_full' && e.object.url === 'person/popular') {  
-                        setTimeout(function() {  
-                            var cards = $('.card');  
-                              
-                            cards.each(function() {  
-                                var card = $(this);  
-                                var cardData = card.data('card_data');  
-                                  
-                                if (cardData && (cardData.gender !== undefined || cardData.profile_path)) {  
-                                    card.off('hover:enter');  
-                                      
-                                    card.on('hover:enter', function() {  
-                                        Lampa.Activity.push({  
-                                            url: '',  
-                                            title: Lampa.Lang.translate('title_person'),  
-                                            component: 'actor',  
-                                            id: cardData.id,  
-                                            source: 'tmdb'  
-                                        });  
-                                    });  
-                                }  
-                            });  
-                        }, 500);  
-                    }  
-                });  
-            }  
-        };  
-  
-        function add() {  
-            OnlineCinemas.init();  
+            this.destroy = function() {  
+                network.clear();  
+                scroll.destroy();  
+                items = null;  
+            };  
         }  
   
-        if (window.appready) add();  
+        // Реєструємо компонент  
+        Lampa.Component.add('popular_actors', PopularActorsComponent);  
+  
+        // Створюємо налаштування  
+        function createSettings() {  
+            Lampa.SettingsApi.addComponent({  
+                component: 'popular_actors_settings',  
+                name: 'Популярні актори'  
+            });  
+  
+            Lampa.SettingsApi.addParam({  
+                component: 'popular_actors_settings',  
+                param: {  
+                    name: 'show_actors_menu',  
+                    type: 'trigger',  
+                    default: true  
+                },  
+                field: {  
+                    name: 'Показувати в меню'  
+                },  
+                onChange: function(value) {  
+                    if (value) {  
+                        addMenuButton();  
+                    } else {  
+                        removeMenuButton();  
+                    }  
+                }  
+            });  
+        }  
+  
+        // Додаємо кнопку в меню  
+        function addMenuButton() {  
+            if ($('.menu__item[data-action="popular_actors"]').length) return;  
+  
+            let ico = `<svg height="36" viewBox="0 0 38 36" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                <circle cx="19" cy="12" r="6" stroke="currentColor" stroke-width="2"/>  
+                <path d="M8 32C8 26 12 22 19 22C26 22 30 26 30 32" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>  
+            </svg>`;  
+  
+            let button = $(`<li class="menu__item selector" data-action="popular_actors">  
+                <div class="menu__ico">${ico}</div>  
+                <div class="menu__text">${Lampa.Lang.translate('title_actors')}</div>  
+            </li>`);  
+  
+            button.on('hover:enter', function() {  
+                Lampa.Activity.push({  
+                    url: 'person/popular',  
+                    title: Lampa.Lang.translate('title_actors'),  
+                    component: 'popular_actors',  
+                    source: 'tmdb',  
+                    page: 1  
+                });  
+            });  
+  
+            $('.menu .menu__list').eq(0).append(button);  
+        }  
+  
+        function removeMenuButton() {  
+            $('.menu__item[data-action="popular_actors"]').remove();  
+        }  
+  
+        // Ініціалізація  
+        function init() {  
+            createSettings();  
+              
+            if (Lampa.Storage.get('show_actors_menu', true)) {  
+                addMenuButton();  
+            }  
+        }  
+  
+        if (window.appready) init();  
         else {  
-            Lampa.Listener.follow('app', function (e) {  
-                if (e.type == 'ready') add();  
+            Lampa.Listener.follow('app', function(e) {  
+                if (e.type == 'ready') init();  
             });  
         }  
     }  
   
-    if(!window.plugin_online_cinemas_ready) startPlugin();  
+    if (!window.plugin_popular_actors_ready) startPlugin();  
 })();
