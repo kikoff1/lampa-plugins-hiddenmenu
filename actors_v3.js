@@ -1,5 +1,9 @@
 (function () {  
     'use strict';  
+
+
+
+
   
     function startPlugin() {  
         if (window.plugin_online_cinemas_ready) return;  
@@ -14,6 +18,7 @@
                 this.loadSettings();  
                 this.createSettings();  
                 this.initStorageListener();  
+                this.patchActorsPage();  
             },  
   
             loadSettings: function() {  
@@ -31,10 +36,10 @@
                     param: {  
                         name: 'show_actors',  
                         type: 'trigger',  
-                        default: this.settings.showActors  
+                        default: true  
                     },  
                     field: {  
-                        name: 'Показувати кнопку акторів'  
+                        name: 'Показувати пункт меню "Актори"'  
                     },  
                     onChange: this.toggleActorsButton.bind(this)  
                 });  
@@ -50,16 +55,54 @@
             },  
   
             toggleActorsButton: function() {  
-                const button = $('.menu__item.online-cinemas-actors');  
+                const button = $('.online-cinemas-actors');  
                 if (this.settings.showActors) {  
-                    button.removeClass('hide');  
+                    button.show();  
                 } else {  
-                    button.addClass('hide');  
+                    button.hide();  
                 }  
             },  
   
+            patchActorsPage: function() {  
+                var self = this;  
+                  
+                // Перехоплюємо створення активності  
+                Lampa.Listener.follow('activity', function(e) {  
+                    if (e.type === 'create' && e.component === 'category_full') {  
+                        var activity = Lampa.Activity.active();  
+                        if (activity.url === 'person/popular') {  
+                            // Чекаємо, поки картки створяться  
+                            setTimeout(function() {  
+                                // Знаходимо всі картки на сторінці  
+                                $('.card').each(function() {  
+                                    var card = $(this);  
+                                      
+                                    // Перевіряємо, чи це картка актора (має profile_path)  
+                                    var cardData = card.data('card_data');  
+                                    if (cardData && (cardData.profile_path || cardData.gender)) {  
+                                        // Видаляємо старий обробник  
+                                        card.off('hover:enter');  
+                                          
+                                        // Додаємо новий обробник, який копіює логіку з full_persons.js:72-79  
+                                        card.on('hover:enter', function() {  
+                                            Lampa.Activity.push({  
+                                                url: '',  
+                                                title: Lampa.Lang.translate('title_person'),  
+                                                component: 'actor',  
+                                                id: cardData.id,  
+                                                source: 'tmdb'  
+                                            });  
+                                        });  
+                                    }  
+                                });  
+                            }, 500);  
+                        }  
+                    }  
+                });  
+            },  
+  
             addActorsButton: function() {  
-                const ico = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none"><g fill="currentColor"><circle cx="24" cy="9" r="5"/><circle cx="35" cy="22" r="3"/><circle cx="13" cy="22" r="3"/><path d="M24 16c-3.314 0-6 2.686-6 5v3h12v-3c0-2.314-2.686-5-6-5z"/><path stroke="currentColor" stroke-width="2" d="M18 24v-4.977C18 16.226 19.864 14 24 14s6 2.226 6 5.023V24"/><path stroke-linejoin="round" d="M30 24h-6v-4.977C24 16.226 25.864 14 30 14s6 2.226 6 5.023V24h-6Zm-18 0h6v-4.977C24 16.226 22.136 14 18 14s-6 2.226-6 5.023V24h6Z"/></g></svg>';  
+                const ico = '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36"><g fill="none" fill-rule="evenodd"><path d="M0 0h36v36H0z"/><path fill="#fff" d="M18 4c7.732 0 14 6.268 14 14s-6.268 14-14 14S4 25.732 4 18 10.268 4 18 4Zm0 2C11.373 6 6 11.373 6 18s5.373 12 12 12 12-5.373 12-12S24.627 6 18 6Zm0 2c3.314 0 6 2.686 6 6s-2.686 6-6 6-6-2.686-6-6 2.686-6 6-6Zm0 2c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4Zm-6 10.023C12 24.774 14.864 27 18 27s6-2.226 6-5.023V24h-6v-4.977C12 16.226 10.136 14 6 14s-6 2.226-6 5.023V24h6Z"/></g></svg>';  
                 const button = $(`<li class="menu__item selector online-cinemas-actors" data-action="actors">  
                     <div class="menu__ico">${ico}</div>  
                     <div class="menu__text">Актори</div>  
@@ -72,52 +115,21 @@
   
             showActors: function() {  
                 Lampa.Activity.push({  
-                    url: 'person/popular',  
-                    title: 'Актори',  
-                    component: 'category_full',  
-                    source: 'tmdb',  
+                    url: "person/popular",  
+                    title: "Актори",  
+                    component: "category_full",  
+                    source: "tmdb",  
                     page: 1  
                 });  
             }  
         };  
   
-        // Патчимо category_full для правильної обробки акторів  
-        function patchCategoryFull() {  
-            Lampa.Listener.follow('activity', function(e) {  
-                if (e.type === 'create' && e.component === 'category_full') {  
-                    var activity = Lampa.Activity.active();  
-                      
-                    if (activity.url === 'person/popular') {  
-                        setTimeout(function() {  
-                            $('.card').each(function() {  
-                                var card = $(this);  
-                                var cardData = card.data('card');  
-                                  
-                                if (cardData && cardData.profile_path) {  
-                                    card.off('hover:enter').on('hover:enter', function() {  
-                                        Lampa.Activity.push({  
-                                            url: '',  
-                                            title: cardData.name || cardData.original_name,  
-                                            component: 'actor',  
-                                            id: cardData.id,  
-                                            source: 'tmdb'  
-                                        });  
-                                    });  
-                                }  
-                            });  
-                        }, 500);  
-                    }  
-                }  
-            });  
-        }  
-  
         function add() {  
             OnlineCinemas.init();  
             OnlineCinemas.addActorsButton();  
-            patchCategoryFull();  
         }  
   
-        if (window.appready) add();  
+        if(window.appready) add();  
         else {  
             Lampa.Listener.follow('app', function (e) {  
                 if (e.type == 'ready') add();  
@@ -125,5 +137,5 @@
         }  
     }  
   
-    if (!window.plugin_online_cinemas_ready) startPlugin();  
+    if(!window.plugin_online_cinemas_ready) startPlugin();  
 })();
