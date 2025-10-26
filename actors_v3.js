@@ -1,5 +1,11 @@
 (function () {  
     'use strict';  
+
+
+
+
+
+
   
     function startPlugin() {  
         if (window.plugin_online_cinemas_ready) return;  
@@ -15,6 +21,7 @@
                 this.createSettings();  
                 this.addActorsButton();  
                 this.initStorageListener();  
+                this.patchCategoryComponent();  
             },  
   
             loadSettings: function() {  
@@ -22,12 +29,10 @@
             },  
   
             createSettings: function() {  
-                var self = this;  
-  
                 Lampa.SettingsApi.addComponent({  
                     component: 'online_cinemas',  
                     name: 'Популярні актори',  
-                    icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/><path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'  
+                    icon: '<svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="18" cy="12" r="6" stroke="white" stroke-width="2"/><path d="M6 30c0-6.627 5.373-12 12-12s12 5.373 12 12" stroke="white" stroke-width="2"/></svg>'  
                 });  
   
                 Lampa.SettingsApi.addParam({  
@@ -40,26 +45,23 @@
                     field: {  
                         name: 'Показувати пункт меню "Актори"'  
                     },  
-                    onChange: function(value) {  
-                        self.settings.showActors = value;  
-                        Lampa.Storage.set('show_actors', value);  
-                        self.toggleActorsButton();  
-                    }  
+                    onChange: this.toggleActorsButton.bind(this)  
                 });  
             },  
   
             initStorageListener: function() {  
-                var self = this;  
-                Lampa.Storage.listener.follow('change', function(e) {  
+                Lampa.Storage.listener.follow('change', (e) => {  
                     if (e.name === 'show_actors') {  
-                        self.settings.showActors = e.value;  
-                        self.toggleActorsButton();  
+                        this.toggleActorsButton();  
                     }  
                 });  
             },  
   
             toggleActorsButton: function() {  
-                var button = $('.menu .menu__item[data-action="actors"]');  
+                const button = $('.menu .menu__item').filter(function() {  
+                    return $(this).find('.menu__text').text() === 'Актори';  
+                });  
+  
                 if (this.settings.showActors) {  
                     button.removeClass('hide');  
                 } else {  
@@ -67,19 +69,57 @@
                 }  
             },  
   
-            addActorsButton: function() {  
-                var self = this;  
-                var ico = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/><path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';  
+            patchCategoryComponent: function() {  
+                // Патчимо створення активності для person/popular  
+                const originalActivityPush = Lampa.Activity.push;  
                   
-                var button = $(`<li class="menu__item selector" data-action="actors">  
-                    <div class="menu__ico">${ico}</div>  
+                Lampa.Activity.push = function(params) {  
+                    const result = originalActivityPush.call(this, params);  
+                      
+                    // Якщо це сторінка person/popular  
+                    if (params.url === 'person/popular' && params.component === 'category_full') {  
+                        // Чекаємо створення компонента  
+                        setTimeout(() => {  
+                            const activity = Lampa.Activity.active();  
+                            if (activity && activity.component) {  
+                                const component = activity.component;  
+                                  
+                                // Додаємо cardRender callback  
+                                component.cardRender = function(object, element, card) {  
+                                    // Перевіряємо, чи це актор (має profile_path або gender)  
+                                    if (element.profile_path || typeof element.gender !== 'undefined') {  
+                                        // Перевизначаємо onEnter для відкриття компонента actor  
+                                        card.onEnter = function(target, card_data) {  
+                                            Lampa.Activity.push({  
+                                                url: '',  
+                                                title: card_data.name || Lampa.Lang.translate('title_person'),  
+                                                component: 'actor',  
+                                                id: card_data.id,  
+                                                source: 'tmdb'  
+                                            });  
+                                        };  
+                                    }  
+                                };  
+                            }  
+                        }, 100);  
+                    }  
+                      
+                    return result;  
+                };  
+            },  
+  
+            addActorsButton: function() {  
+                const button = $(`<li class="menu__item selector">  
+                    <div class="menu__ico">  
+                        <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                            <circle cx="18" cy="12" r="6" stroke="white" stroke-width="2"/>  
+                            <path d="M6 30c0-6.627 5.373-12 12-12s12 5.373 12 12" stroke="white" stroke-width="2"/>  
+                        </svg>  
+                    </div>  
                     <div class="menu__text">Актори</div>  
                 </li>`);  
   
-                button.on('hover:enter', function() {  
-                    self.showActors();  
-                });  
-  
+                button.on('hover:enter', this.showActors.bind(this));  
                 $('.menu .menu__list').eq(0).append(button);  
                 this.toggleActorsButton();  
             },  
@@ -92,36 +132,6 @@
                     source: "tmdb",  
                     page: 1  
                 });  
-  
-                // Патчимо компонент після його створення  
-                setTimeout(function() {  
-                    var activity = Lampa.Activity.active();  
-                    if (activity && activity.activity && activity.activity.component) {  
-                        var component = activity.activity.component;  
-                          
-                        // Перевизначаємо cardRender для правильної обробки карток акторів  
-                        var originalCardRender = component.cardRender;  
-                        component.cardRender = function(object, element, card) {  
-                            // Викликаємо оригінальний метод  
-                            if (originalCardRender) {  
-                                originalCardRender.call(this, object, element, card);  
-                            }  
-  
-                            // Перевизначаємо onEnter для карток з profile_path (актори)  
-                            if (element.profile_path || element.gender !== undefined) {  
-                                card.onEnter = function(target, card_data) {  
-                                    Lampa.Activity.push({  
-                                        url: '',  
-                                        title: Lampa.Lang.translate('title_person'),  
-                                        component: 'actor',  
-                                        id: card_data.id || element.id,  
-                                        source: object.source || 'tmdb'  
-                                    });  
-                                };  
-                            }  
-                        };  
-                    }  
-                }, 100);  
             }  
         };  
   
