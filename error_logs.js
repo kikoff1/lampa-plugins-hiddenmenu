@@ -1,71 +1,71 @@
 (function () {
     'use strict';
 
-
-
-
-
     function startPlugin() {
         if (window.plugin_error_logger_ready) return;
         window.plugin_error_logger_ready = true;
 
         var ErrorLogger = {
             logs: Lampa.Storage.get('error_logs', []) || [],
-            lastConsoleLength: 0,
+            knownCounts: {},
 
             init: function () {
                 this.setupLogging();
                 this.createSettingsButton();
-                this.addLog('✅ ErrorLogger ініціалізовано через Lampa.Console');
+                this.addLog('✅ ErrorLogger ініціалізовано (через Lampa.Console)');
             },
 
             setupLogging: function () {
                 var self = this;
 
-                // --- 1. Періодично опитуємо Lampa.Console.export() ---
-                // (отримує усі логи, які Lampa вже перехопила)
+                // ---- 1. Отримання логів безпосередньо з Lampa.Console ----
                 setInterval(function () {
                     try {
-                        var exported = Lampa.Console.export();
-                        if (!exported || !Array.isArray(exported)) return;
+                        var allLogs = Lampa.Console.export();
+                        if (!allLogs || typeof allLogs !== 'object') return;
 
-                        if (exported.length > self.lastConsoleLength) {
-                            var newLogs = exported.slice(self.lastConsoleLength);
-                            newLogs.forEach(function (entry) {
-                                if (entry.type === 'error') {
-                                    self.addLog(`[Lampa.Console] ${entry.text}`);
+                        for (var category in allLogs) {
+                            var catLogs = allLogs[category];
+                            if (!Array.isArray(catLogs)) continue;
+
+                            var prevCount = self.knownCounts[category] || 0;
+                            if (catLogs.length > prevCount) {
+                                for (var i = prevCount; i < catLogs.length; i++) {
+                                    var log = catLogs[i];
+                                    if (log && log.message) {
+                                        self.addLog(`[${category}] ${log.message}`);
+                                    }
                                 }
-                            });
-                            self.lastConsoleLength = exported.length;
-                        }
-                    } catch (e) {
-                        // Якщо щось пішло не так — пишемо у наш лог
-                        self.addLog('ErrorLogger internal error: ' + e.message);
-                    }
-                }, 2000);
-
-                // --- 2. Слухаємо помилки запитів ---
-                Lampa.Listener.follow('request_error', function (e) {
-                    try {
-                        if (e && e.params && e.error) {
-                            var msg = `RequestError: ${e.error.status} ${e.params.url}`;
-                            self.addLog(msg);
+                                self.knownCounts[category] = catLogs.length;
+                            }
                         }
                     } catch (err) {
-                        self.addLog('Listener request_error failed: ' + err.message);
+                        self.addLog('❌ Помилка читання Lampa.Console: ' + err.message);
+                    }
+                }, 1000);
+
+                // ---- 2. Слухаємо системні події помилок ----
+                Lampa.Listener.follow('request_error', function (e) {
+                    if (e && e.params && e.error) {
+                        self.addLog(`[RequestError] ${e.error.status} ${e.params.url}`);
                     }
                 });
 
-                // --- 3. Слухаємо window.onerror ---
-                window.addEventListener('error', function (e) {
-                    const msg = `${e.message || 'Unknown error'} at ${e.filename || 'unknown'}:${e.lineno || '?'}`;
-                    self.addLog('WindowError: ' + msg);
+                Lampa.Listener.follow('activity', function (e) {
+                    if (e.type === 'create' && e.error) {
+                        self.addLog(`[ActivityError] ${e.error.stack || e.error.message}`);
+                    }
                 });
 
-                // --- 4. Слухаємо unhandledrejection ---
+                // ---- 3. Глобальні події браузера ----
+                window.addEventListener('error', function (e) {
+                    const msg = `${e.message || 'Unknown'} @ ${e.filename}:${e.lineno}`;
+                    self.addLog(`[Script] ${msg}`);
+                });
+
                 window.addEventListener('unhandledrejection', function (e) {
-                    const reason = e.reason ? (e.reason.stack || e.reason.message || e.reason) : 'Unknown promise rejection';
-                    self.addLog('PromiseRejection: ' + reason);
+                    const reason = e.reason ? (e.reason.stack || e.reason.message || e.reason) : 'Unknown rejection';
+                    self.addLog(`[Promise] ${reason}`);
                 });
             },
 
@@ -73,24 +73,27 @@
                 var timestamp = new Date().toLocaleTimeString('uk-UA');
                 var entry = `[${timestamp}] ${message}`;
                 this.logs.push(entry);
-                if (this.logs.length > 300) this.logs.shift();
+
+                if (this.logs.length > 500) this.logs.shift();
                 Lampa.Storage.set('error_logs', this.logs);
+
                 console.log('%c[ErrorLogger]', 'color:lime', message);
             },
 
             showLogs: function () {
-                if (!this.logs || this.logs.length === 0) {
+                if (this.logs.length === 0) {
                     Lampa.Noty.show('Логи відсутні.');
                     return;
                 }
 
                 var self = this;
                 var logsText = this.logs.join('\n');
+
                 var textarea = $('<textarea readonly style="width:100%;height:60vh;font-family:monospace;font-size:0.9em;padding:10px;background:#003300;color:#b8ffb8;border:1px solid #008000;resize:none;"></textarea>');
                 textarea.val(logsText);
 
                 var container = $('<div class="about"></div>');
-                container.append('<div style="margin-bottom:10px; font-weight:bold; color:#0f0;">📗 Логи Lampa Console та помилок</div>');
+                container.append('<div style="margin-bottom:10px; font-weight:bold; color:#0f0;">📗 Логи системи Lampa.Console</div>');
                 container.append(textarea);
 
                 Lampa.Modal.open({
@@ -128,11 +131,6 @@
                         }
                     ]
                 });
-
-                setTimeout(function () {
-                    textarea[0].focus();
-                    textarea[0].select();
-                }, 100);
             },
 
             createSettingsButton: function () {
@@ -149,20 +147,6 @@
                     field: { name: 'Переглянути логи' },
                     onChange: function () {
                         self.showLogs();
-                    }
-                });
-
-                Lampa.SettingsApi.addParam({
-                    component: 'error_logger',
-                    param: { name: 'test_request_error', type: 'button', default: '' },
-                    field: { name: 'Створити тестову помилку' },
-                    onChange: function () {
-                        // Створюємо штучну помилку запиту
-                        Lampa.Listener.send('request_error', {
-                            params: { url: 'https://fake.lampa/request/fail' },
-                            error: { status: 404, text: 'Not Found' }
-                        });
-                        Lampa.Noty.show('Тестова помилка згенерована');
                     }
                 });
 
