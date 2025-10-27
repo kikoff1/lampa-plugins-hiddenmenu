@@ -13,7 +13,6 @@
             init: function() {  
                 this.loadSettings();  
                 this.createSettings();  
-                this.addActorsButton();  
                 this.initStorageListener();  
             },  
   
@@ -22,12 +21,12 @@
             },  
   
             createSettings: function() {  
-                var self = this;  
-  
                 Lampa.SettingsApi.addComponent({  
                     component: 'online_cinemas',  
-                    name: 'Популярні актори',  
-                    icon: '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" width="512" height="512" x="0" y="0" viewBox="0 0 20 20" style="enable-background:new 0 0 512 512" xml:space="preserve"><g><clipPath id="a"><path d="M0 0h20v20H0z" fill="currentColor" opacity="1"></path></clipPath><g clip-path="url(#a)"><path fill="currentColor" fill-rule="evenodd" d="M10 10c-2.216 0-4.019-1.794-4.019-4S7.783 2 10 2s4.019 1.794 4.019 4-1.802 4-4.019 4zm3.776.673a5.978 5.978 0 0 0 2.182-5.603C15.561 2.447 13.37.348 10.722.042 7.07-.381 3.972 2.449 3.972 6c0 1.89.88 3.574 2.252 4.673C2.852 11.934.39 14.895.004 18.891A1.012 1.012 0 0 0 1.009 20a.99.99 0 0 0 .993-.891C2.404 14.646 5.837 12 10 12s7.596 2.646 7.999 7.109a.99.99 0 0 0 .993.891 1.012 1.012 0 0 0 1.004-1.109c-.385-3.996-2.847-6.957-6.22-8.218z"></path></g></g></svg>'  
+                    icon: `<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="512" height="512" viewBox="0 0 20 20">  
+                        <path fill="currentColor" fill-rule="evenodd" d="M10 10c-2.216 0-4.019-1.794-4.019-4S7.783 2 10 2s4.019 1.794 4.019 4-1.802 4-4.019 4zm3.776.673a5.978 5.978 0 0 0 2.182-5.603C15.561 2.447 13.37.348 10.722.042 7.07-.381 3.972 2.449 3.972 6c0 1.89.88 3.574 2.252 4.673C2.852 11.934.39 14.895.004 18.891A1.012 1.012 0 0 0 1.009 20a.99.99 0 0 0 .993-.891C2.404 14.646 5.837 12 10 12s7.596 2.646 7.999 7.109a.99.99 0 0 0 .993.891 1.012 1.012 0 0 0 1.005-1.109c-.386-3.996-2.848-6.957-6.221-8.218z"/>  
+                    </svg>`,  
+                    name: 'Популярні актори'  
                 });  
   
                 Lampa.SettingsApi.addParam({  
@@ -40,26 +39,21 @@
                     field: {  
                         name: 'Показувати пункт меню "Актори"'  
                     },  
-                    onChange: function(value) {  
-                        self.settings.showActors = value;  
-                        Lampa.Storage.set('show_actors', value);  
-                        self.toggleActorsButton();  
-                    }  
+                    onChange: this.toggleActorsButton.bind(this)  
                 });  
             },  
   
             initStorageListener: function() {  
-                var self = this;  
-                Lampa.Storage.listener.follow('change', function(e) {  
+                Lampa.Storage.listener.follow('change', (e) => {  
                     if (e.name === 'show_actors') {  
-                        self.settings.showActors = e.value;  
-                        self.toggleActorsButton();  
+                        this.settings.showActors = e.value;  
+                        this.toggleActorsButton();  
                     }  
                 });  
             },  
   
             toggleActorsButton: function() {  
-                var button = $('.menu__item[data-action="actors"]');  
+                const button = $('.menu__item[data-action="actors"]');  
                 if (this.settings.showActors) {  
                     button.removeClass('hidden');  
                 } else {  
@@ -68,43 +62,24 @@
             },  
   
             addActorsButton: function() {  
-                var self = this;  
-                  
-                // Створюємо кнопку з правильною структурою  
-                var button = $('<li class="menu__item selector" data-action="actors">' +  
-                    '<div class="menu__ico">' +  
-                        '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" width="512" height="512" x="0" y="0" viewBox="0 0 20 20" style="enable-background:new 0 0 512 512" xml:space="preserve"><g><clipPath id="a"><path d="M0 0h20v20H0z" fill="currentColor" opacity="1"></path></clipPath><g clip-path="url(#a)"><path fill="currentColor" fill-rule="evenodd" d="M10 10c-2.216 0-4.019-1.794-4.019-4S7.783 2 10 2s4.019 1.794 4.019 4-1.802 4-4.019 4zm3.776.673a5.978 5.978 0 0 0 2.182-5.603C15.561 2.447 13.37.348 10.722.042 7.07-.381 3.972 2.449 3.972 6c0 1.89.88 3.574 2.252 4.673C2.852 11.934.39 14.895.004 18.891A1.012 1.012 0 0 0 1.009 20a.99.99 0 0 0 .993-.891C2.404 14.646 5.837 12 10 12s7.596 2.646 7.999 7.109a.99.99 0 0 0 .993.891 1.012 1.012 0 0 0 1.004-1.109c-.385-3.996-2.847-6.957-6.22-8.218z"></path></g></g></svg>' +  
-                    '</div>' +  
-                    '<div class="menu__text">Актори</div>' +  
-                '</li>');  
+                const ico = `<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="512" height="512" viewBox="0 0 20 20">  
+                    <path fill="currentColor" fill-rule="evenodd" d="M10 10c-2.216 0-4.019-1.794-4.019-4S7.783 2 10 2s4.019 1.794 4.019 4-1.802 4-4.019 4zm3.776.673a5.978 5.978 0 0 0 2.182-5.603C15.561 2.447 13.37.348 10.722.042 7.07-.381 3.972 2.449 3.972 6c0 1.89.88 3.574 2.252 4.673C2.852 11.934.39 14.895.004 18.891A1.012 1.012 0 0 0 1.009 20a.99.99 0 0 0 .993-.891C2.404 14.646 5.837 12 10 12s7.596 2.646 7.999 7.109a.99.99 0 0 0 .993.891 1.012 1.012 0 0 0 1.005-1.109c-.386-3.996-2.848-6.957-6.221-8.218z"/>  
+                </svg>`;  
   
-                button.on('hover:enter', function() {  
-                    Lampa.Activity.push({  
-                        url: 'person/popular',  
-                        title: 'Популярні актори',  
-                        component: 'actors_list',  
-                        source: 'tmdb',  
-                        page: 1  
-                    });  
-                });  
+                const button = $(`<li class="menu__item selector" data-action="actors">  
+                    <div class="menu__ico">${ico}</div>  
+                    <div class="menu__text">Актори</div>  
+                </li>`);  
   
-                // Додаємо кнопку ПЕРЕД останнім елементом (history)  
-                var list = $('.menu .menu__list').eq(0);  
-                var historyItem = list.find('[data-action="history"]').parent();  
-                  
-                if (historyItem.length) {  
-                    button.insertBefore(historyItem);  
-                } else {  
-                    list.append(button);  
-                }  
-  
+                button.on('hover:enter', this.showActors.bind(this));  
+                $('.menu .menu__list').eq(0).append(button);  
                 this.toggleActorsButton();  
             },  
   
             showActors: function() {  
                 Lampa.Activity.push({  
                     url: 'person/popular',  
-                    title: 'Популярні актори',  
+                    title: 'Актори',  
                     component: 'actors_list',  
                     source: 'tmdb',  
                     page: 1  
@@ -112,156 +87,170 @@
             }  
         };  
   
-        // Власний компонент для відображення акторів  
         function ActorsListComponent(object) {  
-            var network = new Lampa.Reguest();  
-            var scroll = new Lampa.Scroll({  
+            let network = new Lampa.Reguest();  
+            let scroll = new Lampa.Scroll({  
                 mask: true,  
                 over: true,  
                 step: 250  
             });  
-            var items = [];  
-            var html = $('<div></div>');  
-            var body = $('<div class="category-full"></div>');  
-            var info;  
-            var last;  
-            var page = 1;  
-            var total_pages = 1;  
+              
+            let items = [];  
+            let html;  
+            let body;  
+            let active = 0;  
+            let last;  
   
             this.create = function() {  
-                var _this = this;  
+                // Додаємо клас category-full до body для правильного CSS  
+                $('body').addClass('category-full');  
                   
-                info = $('<div class="info layer--width" style="padding:1.5em"><div class="info__title">Популярні актори</div><div class="info__title-small">TMDB</div></div>');  
+                html = $('<div></div>');  
+                body = $('<div class="category-full"></div>');  
                   
-                html.append(info);  
-                html.append(body);  
+                // Використовуємо правильну структуру scroll  
+                scroll.render().addClass('layer--wheight');  
+                scroll.minus(body);  
                   
-                scroll.render().addClass('layer--wheight').data('mheight', info);  
-                body.append(scroll.render());  
+                html.append(scroll.render());  
   
-                this.activity.loader(true);  
-                this.loading();  
+                this.loadActors();  
             };  
   
-            this.loading = function() {  
-                var _this = this;  
-                  
-                network.silent('https://api.themoviedb.org/3/person/popular?api_key=4ef0d7355d9ffb5151e987764708ce96&language=uk-UK&page=' + page, function(json) {  
-                    _this.activity.loader(false);  
-                      
-                    if (json.results && json.results.length) {  
-                        total_pages = json.total_pages;  
-                        _this.append(json.results);  
+            this.loadActors = function() {  
+                network.silent('https://api.themoviedb.org/3/person/popular?api_key=4ef0d7355d9ffb5151e987764708ce96&language=uk-UA&page=' + (object.page || 1), (data) => {  
+                    if (data.results && data.results.length) {  
+                        this.append(data);  
                           
-                        if (page == 1) {  
-                            _this.activity.toggle();  
+                        if (data.page < data.total_pages) {  
+                            this.more(data);  
                         }  
+                          
+                        // Оновлюємо Layer після додавання карток  
+                        Lampa.Layer.update(scroll.render());  
+                        Lampa.Layer.visible(scroll.render());  
                     } else {  
-                        _this.empty();  
+                        scroll.append(Lampa.Template.get('list_empty'));  
                     }  
-                }, function() {  
-                    _this.activity.loader(false);  
-                    _this.empty();  
+                }, () => {  
+                    scroll.append(Lampa.Template.get('error', {title: 'Помилка завантаження'}));  
                 });  
             };  
   
             this.append = function(data) {  
-                var _this = this;  
-                  
-                data.forEach(function(element) {  
-                    var card = new Lampa.Card(element, {  
-                        card_category: true,  
-                        object: object  
+                data.results.forEach((person) => {  
+                    let card = Lampa.Template.get('card', {  
+                        title: person.name,  
+                        release_year: ''  
                     });  
-                      
-                    card.create();  
-                      
-                    // Явно встановлюємо обробник для відкриття актора  
-                    card.onEnter = function() {  
+  
+                    card.addClass('card--category');  
+  
+                    card.find('.card__img').attr('src', person.profile_path ?   
+                        'https://image.tmdb.org/t/p/w300' + person.profile_path :   
+                        './img/actor.svg'  
+                    );  
+  
+                    card.on('hover:focus', () => {  
+                        last = card[0];  
+                        active = items.indexOf(card);  
+                        scroll.update(card, true);  
+                    });  
+  
+                    // Явно встановлюємо відкриття компонента actor  
+                    card.on('hover:enter', () => {  
                         Lampa.Activity.push({  
                             url: '',  
-                            title: element.name,  
+                            title: person.name,  
                             component: 'actor',  
-                            id: element.id,  
+                            id: person.id,  
                             source: 'tmdb'  
                         });  
-                    };  
-                      
+                    });  
+  
+                    scroll.append(card);  
                     items.push(card);  
-                    body.append(card.render());  
                 });  
+            };  
+  
+            this.more = function(data) {  
+                let more = $('<div class="category-full__more selector"><span>Показати більше</span></div>');  
                   
-                Lampa.Controller.collectionSet(scroll.render());  
-                Lampa.Controller.collectionFocus(last || false, scroll.render());  
+                more.on('hover:focus', () => {  
+                    last = more[0];  
+                    scroll.update(more, true);  
+                });  
+  
+                more.on('hover:enter', () => {  
+                    more.remove();  
+                    object.page++;  
+                    this.loadActors();  
+                });  
+  
+                scroll.append(more);  
+                items.push(more);  
             };  
   
-            this.next = function() {  
-                if (page < total_pages) {  
-                    page++;  
-                    this.loading();  
-                }  
-            };  
-  
-            this.empty = function() {  
-                var empty = new Lampa.Empty();  
-                scroll.append(empty.render());  
-                this.start = empty.start;  
-                this.activity.toggle();  
+            this.background = function() {  
+                Lampa.Background.immediately('');  
             };  
   
             this.start = function() {  
                 Lampa.Controller.add('content', {  
-                    toggle: function() {  
+                    toggle: () => {  
                         Lampa.Controller.collectionSet(scroll.render());  
                         Lampa.Controller.collectionFocus(last || false, scroll.render());  
                     },  
-                    left: function() {  
+                    left: () => {  
                         if (Navigator.canmove('left')) Navigator.move('left');  
                         else Lampa.Controller.toggle('menu');  
                     },  
-                    right: function() {  
-                        Navigator.move('right');  
-                    },  
-                    up: function() {  
-                        if (Navigator.canmove('up')) Navigator.move('up');  
-                        else Lampa.Controller.toggle('head');  
-                    },  
-                    down: function() {  
-                        if (Navigator.canmove('down')) Navigator.move('down');  
-                    },  
-                    back: function() {  
-                        Lampa.Activity.backward();  
-                    }  
+                    down: this.down,  
+                    up: this.up,  
+                    back: this.back  
                 });  
   
                 Lampa.Controller.toggle('content');  
             };  
   
+            this.down = function() {  
+                Navigator.move('down');  
+            };  
+  
+            this.up = function() {  
+                Navigator.move('up');  
+            };  
+  
+            this.back = function() {  
+                Lampa.Activity.backward();  
+            };  
+  
             this.pause = function() {};  
+  
             this.stop = function() {};  
+  
             this.render = function() {  
                 return html;  
             };  
+  
             this.destroy = function() {  
                 network.clear();  
                 scroll.destroy();  
-                html.remove();  
-                body.remove();  
-                items = null;  
-                network = null;  
+                $('body').removeClass('category-full');  
+                if (html) html.remove();  
             };  
         }  
   
-        // Реєструємо компонент  
         Lampa.Component.add('actors_list', ActorsListComponent);  
   
         function add() {  
             OnlineCinemas.init();  
+            OnlineCinemas.addActorsButton();  
         }  
   
         if (window.appready) add();  
         else {  
-            Lampa.Listener.follow('app', function(e) {  
+            Lampa.Listener.follow('app', function (e) {  
                 if (e.type == 'ready') add();  
             });  
         }  
