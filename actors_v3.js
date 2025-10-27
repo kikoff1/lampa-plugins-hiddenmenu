@@ -1,6 +1,12 @@
 (function () {  
     'use strict';  
   
+
+
+
+
+
+
     function startPlugin() {  
         if (window.plugin_online_cinemas_ready) return;  
         window.plugin_online_cinemas_ready = true;  
