@@ -1,49 +1,71 @@
 (function () {
     'use strict';
 
+
+
+
+
     function startPlugin() {
         if (window.plugin_error_logger_ready) return;
         window.plugin_error_logger_ready = true;
 
         var ErrorLogger = {
             logs: Lampa.Storage.get('error_logs', []) || [],
+            lastConsoleLength: 0,
 
             init: function () {
                 this.setupLogging();
                 this.createSettingsButton();
-                console.log('%c[ErrorLogger] Плагін ініціалізовано', 'color:lime');
-                // Тестовий запис для перевірки роботи
-                this.addLog('✅ ErrorLogger запущено');
+                this.addLog('✅ ErrorLogger ініціалізовано через Lampa.Console');
             },
 
             setupLogging: function () {
                 var self = this;
 
-                // --- Перехоплення console.error ---
-                const origConsoleError = console.error;
-                console.error = function () {
-                    const message = Array.from(arguments).map(a => (typeof a === 'object' ? JSON.stringify(a) : a)).join(' ');
-                    self.addLog('ConsoleError: ' + message);
-                    origConsoleError.apply(console, arguments);
-                };
+                // --- 1. Періодично опитуємо Lampa.Console.export() ---
+                // (отримує усі логи, які Lampa вже перехопила)
+                setInterval(function () {
+                    try {
+                        var exported = Lampa.Console.export();
+                        if (!exported || !Array.isArray(exported)) return;
 
-                // --- Перехоплення window.onerror ---
+                        if (exported.length > self.lastConsoleLength) {
+                            var newLogs = exported.slice(self.lastConsoleLength);
+                            newLogs.forEach(function (entry) {
+                                if (entry.type === 'error') {
+                                    self.addLog(`[Lampa.Console] ${entry.text}`);
+                                }
+                            });
+                            self.lastConsoleLength = exported.length;
+                        }
+                    } catch (e) {
+                        // Якщо щось пішло не так — пишемо у наш лог
+                        self.addLog('ErrorLogger internal error: ' + e.message);
+                    }
+                }, 2000);
+
+                // --- 2. Слухаємо помилки запитів ---
+                Lampa.Listener.follow('request_error', function (e) {
+                    try {
+                        if (e && e.params && e.error) {
+                            var msg = `RequestError: ${e.error.status} ${e.params.url}`;
+                            self.addLog(msg);
+                        }
+                    } catch (err) {
+                        self.addLog('Listener request_error failed: ' + err.message);
+                    }
+                });
+
+                // --- 3. Слухаємо window.onerror ---
                 window.addEventListener('error', function (e) {
-                    const msg = `${e.message || 'Unknown error'} at ${e.filename || 'unknown'}:${e.lineno || '?'}:${e.colno || '?'}`;
+                    const msg = `${e.message || 'Unknown error'} at ${e.filename || 'unknown'}:${e.lineno || '?'}`;
                     self.addLog('WindowError: ' + msg);
                 });
 
-                // --- Перехоплення unhandledrejection ---
+                // --- 4. Слухаємо unhandledrejection ---
                 window.addEventListener('unhandledrejection', function (e) {
                     const reason = e.reason ? (e.reason.stack || e.reason.message || e.reason) : 'Unknown promise rejection';
                     self.addLog('PromiseRejection: ' + reason);
-                });
-
-                // --- Події Lampa ---
-                Lampa.Listener.follow('app', function (e) {
-                    if (e.type === 'error') {
-                        self.addLog('AppError: ' + JSON.stringify(e, null, 2));
-                    }
                 });
             },
 
@@ -51,25 +73,24 @@
                 var timestamp = new Date().toLocaleTimeString('uk-UA');
                 var entry = `[${timestamp}] ${message}`;
                 this.logs.push(entry);
-                if (this.logs.length > 200) this.logs.shift();
+                if (this.logs.length > 300) this.logs.shift();
                 Lampa.Storage.set('error_logs', this.logs);
-                console.log('%c[ErrorLogger]', 'color:green', message);
+                console.log('%c[ErrorLogger]', 'color:lime', message);
             },
 
             showLogs: function () {
-                var self = this;
-
                 if (!this.logs || this.logs.length === 0) {
                     Lampa.Noty.show('Логи відсутні.');
                     return;
                 }
 
+                var self = this;
                 var logsText = this.logs.join('\n');
                 var textarea = $('<textarea readonly style="width:100%;height:60vh;font-family:monospace;font-size:0.9em;padding:10px;background:#003300;color:#b8ffb8;border:1px solid #008000;resize:none;"></textarea>');
                 textarea.val(logsText);
 
                 var container = $('<div class="about"></div>');
-                container.append('<div style="margin-bottom:10px; font-weight:bold; color:#0f0;">📗 Логи помилок</div>');
+                container.append('<div style="margin-bottom:10px; font-weight:bold; color:#0f0;">📗 Логи Lampa Console та помилок</div>');
                 container.append(textarea);
 
                 Lampa.Modal.open({
@@ -133,11 +154,15 @@
 
                 Lampa.SettingsApi.addParam({
                     component: 'error_logger',
-                    param: { name: 'test_error', type: 'button', default: '' },
-                    field: { name: 'Тестова помилка' },
+                    param: { name: 'test_request_error', type: 'button', default: '' },
+                    field: { name: 'Створити тестову помилку' },
                     onChange: function () {
-                        console.error('Це тестова помилка для перевірки ErrorLogger');
-                        Lampa.Noty.show('Тестову помилку відправлено у лог');
+                        // Створюємо штучну помилку запиту
+                        Lampa.Listener.send('request_error', {
+                            params: { url: 'https://fake.lampa/request/fail' },
+                            error: { status: 404, text: 'Not Found' }
+                        });
+                        Lampa.Noty.show('Тестова помилка згенерована');
                     }
                 });
 
