@@ -1,5 +1,8 @@
 (function () {  
     'use strict';  
+
+
+
   
     function startPlugin() {  
         if (window.plugin_online_cinemas_ready) return;  
@@ -102,7 +105,7 @@
             });  
             var items = [];  
             var html = $('<div></div>');  
-            var body = $('<div class="category-full"></div>');  
+            var body = document.createElement('div');  
             var active = 0;  
             var total_pages = 0;  
             var page = 1;  
@@ -113,16 +116,15 @@
                   
                 this.activity.loader(true);  
   
+                // Створюємо контейнер з класом category-full  
+                body.classList.add('category-full');  
+  
                 // Налаштовуємо scroll  
                 scroll.minus();  
                 scroll.onEnd = this.next.bind(this);  
                 scroll.onWheel = function(step) {  
                     if (step > 0) Lampa.Navigator.move('down');  
                     else Lampa.Navigator.move('up');  
-                };  
-                  
-                scroll.onScroll = function() {  
-                    Lampa.Layer.visible(scroll.render(true));  
                 };  
   
                 // Завантажуємо дані  
@@ -142,8 +144,9 @@
                     self.append(data);  
                       
                     if (pageNum === 1) {  
-                        body.append(scroll.render(true));  
-                        html.append(body);  
+                        // Додаємо body до scroll  
+                        scroll.append(body);  
+                        html.append(scroll.render(true));  
                         self.activity.loader(false);  
                         self.activity.toggle();  
                     }  
@@ -181,7 +184,8 @@
                         });  
                     };  
                       
-                    scroll.append(card.render(true));  
+                    // Додаємо картку до body контейнера  
+                    body.appendChild(card.render(true));  
                     items.push(card);  
                 });  
                   
@@ -243,7 +247,6 @@
                 network.clear();  
                 scroll.destroy();  
                 html.remove();  
-                body.remove();  
                 items = null;  
                 network = null;  
             };  
