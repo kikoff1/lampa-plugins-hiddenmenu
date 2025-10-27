@@ -1,154 +1,169 @@
-(function() {
+(function () {
     'use strict';
 
-    const plugin_name = 'error_logger';
-    let logs = Lampa.Storage.get('error_logs', []);
 
-    // -------- Перехоплення помилок --------
-    const originalConsoleError = console.error;
-    console.error = function() {
-        const message = Array.from(arguments).join(' ');
-        saveLog('ConsoleError: ' + message);
-        originalConsoleError.apply(console, arguments);
-    };
 
-    window.onerror = function(message, source, lineno, colno, error) {
-        const errorMsg = `${message} (${source}:${lineno}:${colno})`;
-        saveLog('WindowError: ' + errorMsg);
-    };
 
-    function saveLog(msg) {
-        logs.push({ text: msg, time: new Date().toLocaleString() });
-        if (logs.length > 100) logs.shift();
-        Lampa.Storage.set('error_logs', logs);
-    }
 
-    // -------- Компонент --------
-    Lampa.Component.add('error_logs', {
-        template: `<div class="error-logs-container" style="padding:20px; background:#004d00; color:#b8ffb8; font-size:14px; overflow:auto; height:100%;">
-            <div style="font-size:18px; font-weight:bold; margin-bottom:10px;">📜 Error Logs</div>
-            <button class="copy-logs" style="background:#00a000; color:#fff; border:none; padding:5px 10px; border-radius:5px;">📋 Копіювати</button>
-            <button class="clear-logs" style="background:#007000; color:#fff; border:none; padding:5px 10px; border-radius:5px; margin-left:10px;">🧹 Очистити</button>
-            <div class="error-logs-list" style="margin-top:15px;"></div>
-        </div>`,
+    function startPlugin() {
+        if (window.plugin_error_logger_ready) return;
+        window.plugin_error_logger_ready = true;
 
-        start: function() {
-            this.render();
-        },
+        var ErrorLogger = {
+            logs: Lampa.Storage.get('error_logs', []),
 
-        render: function() {
-            const $el = $(this.template);
-            const $list = $el.find('.error-logs-list');
+            init: function () {
+                this.interceptErrors();
+                this.createSettingsButton();
+            },
 
-            renderLogs();
+            interceptErrors: function () {
+                var self = this;
 
-            $el.find('.copy-logs').on('click', function() {
-                const text = logs.map(l => `[${l.time}] ${l.text}`).join('\n');
-                copyToClipboard(text);
-            });
+                const originalConsoleError = console.error;
+                console.error = function () {
+                    const message = Array.from(arguments).join(' ');
+                    self.addLog('ConsoleError: ' + message);
+                    originalConsoleError.apply(console, arguments);
+                };
 
-            $el.find('.clear-logs').on('click', function() {
-                logs = [];
-                Lampa.Storage.set('error_logs', logs);
-                Lampa.Noty.show('Логи очищено');
-                renderLogs();
-            });
+                window.onerror = function (message, source, lineno, colno, error) {
+                    const errorMsg = `${message} (${source}:${lineno}:${colno})`;
+                    self.addLog('WindowError: ' + errorMsg);
+                };
 
-            function renderLogs() {
-                if (!logs.length) {
-                    $list.html('<div style="opacity:0.7;">Немає помилок</div>');
-                } else {
-                    $list.html('');
-                    logs.forEach(function(log) {
-                        $list.append(`<div style="border-bottom:1px solid #006600; padding:5px 0;">
-                            <div><b>[${log.time}]</b></div>
-                            <div>${log.text}</div>
-                        </div>`);
-                    });
+                Lampa.Listener.follow('app', function (e) {
+                    if (e.type === 'error') {
+                        self.addLog('AppError: ' + JSON.stringify(e, null, 2));
+                    }
+                });
+            },
+
+            addLog: function (message) {
+                var timestamp = new Date().toLocaleTimeString('uk-UA');
+                var logEntry = '[' + timestamp + '] ' + message;
+                this.logs.push(logEntry);
+                if (this.logs.length > 100) this.logs.shift();
+                Lampa.Storage.set('error_logs', this.logs);
+                console.log('[ErrorLogger]', logEntry);
+            },
+
+            showLogs: function () {
+                var self = this;
+
+                if (this.logs.length === 0) {
+                    Lampa.Noty.show('Логи порожні.');
+                    return;
                 }
-            }
 
-            Lampa.Controller.add('error_logs', {
-                toggle: function() {
-                    Lampa.Controller.collectionSet($el);
-                    Lampa.Controller.collectionFocus($el);
-                },
-                back: function() {
-                    Lampa.Controller.toContent();
-                }
-            });
+                var logsText = this.logs.join('\n');
 
-            Lampa.Controller.toggle('error_logs');
-            Lampa.Activity.loader(false);
-            Lampa.Activity.render($el);
-        }
-    });
+                var textarea = $('<textarea readonly style="width:100%; height:60vh; font-family:monospace; font-size:0.9em; padding:10px; background:#003300; color:#b8ffb8; border:1px solid #008000; resize:none;"></textarea>');
+                textarea.val(logsText);
 
-    // -------- Копіювання --------
-    function copyToClipboard(text) {
-        if (navigator.clipboard) {
-            navigator.clipboard.writeText(text).then(() => {
-                Lampa.Noty.show('Логи скопійовано ✅');
-            }).catch(() => fallbackCopy(text));
-        } else fallbackCopy(text);
-    }
+                var container = $('<div class="about"></div>');
+                container.append('<div style="margin-bottom:10px; font-weight:bold; color:#0f0;">📗 Логи помилок Lampa</div>');
+                container.append(textarea);
 
-    function fallbackCopy(text) {
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        textarea.style.position = 'fixed';
-        textarea.style.opacity = '0';
-        document.body.appendChild(textarea);
-        textarea.select();
-        try {
-            document.execCommand('copy');
-            Lampa.Noty.show('Логи скопійовано ✅');
-        } catch (err) {
-            Lampa.Noty.show('Помилка копіювання ❌');
-        }
-        document.body.removeChild(textarea);
-    }
+                Lampa.Modal.open({
+                    title: 'Error Logger',
+                    html: container,
+                    size: 'large',
+                    buttons: [
+                        {
+                            name: '📋 Копіювати',
+                            onSelect: function () {
+                                textarea[0].select();
+                                textarea[0].setSelectionRange(0, 99999);
 
-    // -------- Додаємо пункт у меню --------
-    function addToMenu() {
-        if (!Lampa.Menu || !Lampa.Menu.add) {
-            // якщо меню ще не готове — чекаємо
-            setTimeout(addToMenu, 1000);
-            return;
-        }
+                                try {
+                                    document.execCommand('copy');
+                                    Lampa.Noty.show('Логи скопійовано');
+                                } catch (err) {
+                                    Lampa.Noty.show('Не вдалося скопіювати');
+                                }
+                            }
+                        },
+                        {
+                            name: '🧹 Очистити',
+                            onSelect: function () {
+                                self.logs = [];
+                                Lampa.Storage.set('error_logs', self.logs);
+                                Lampa.Noty.show('Логи очищено');
+                                Lampa.Modal.close();
+                            }
+                        },
+                        {
+                            name: 'Закрити',
+                            onSelect: function () {
+                                Lampa.Modal.close();
+                            }
+                        }
+                    ]
+                });
 
-        // якщо пункт уже існує — не дублюємо
-        if ($('#menu [data-action="error_logs_menu"]').length) return;
+                setTimeout(function () {
+                    textarea[0].focus();
+                    textarea[0].select();
+                }, 100);
+            },
 
-        Lampa.Menu.add({
-            id: 'error_logs_menu',
-            title: 'Error Logs',
-            icon: 'bug',
-            action: function() {
-                Lampa.Activity.push({
-                    component: 'error_logs',
-                    type: 'component',
-                    page: 1
+            createSettingsButton: function () {
+                var self = this;
+
+                // Створюємо розділ у налаштуваннях
+                Lampa.SettingsApi.addComponent({
+                    component: 'error_logger',
+                    name: 'Error Logger'
+                });
+
+                // Додаємо кнопку для перегляду логів
+                Lampa.SettingsApi.addParam({
+                    component: 'error_logger',
+                    param: {
+                        name: 'show_logs',
+                        type: 'button',
+                        default: ''
+                    },
+                    field: {
+                        name: 'Переглянути логи'
+                    },
+                    onChange: function () {
+                        self.showLogs();
+                    }
+                });
+
+                // Додаємо кнопку для очищення логів
+                Lampa.SettingsApi.addParam({
+                    component: 'error_logger',
+                    param: {
+                        name: 'clear_logs',
+                        type: 'button',
+                        default: ''
+                    },
+                    field: {
+                        name: 'Очистити логи'
+                    },
+                    onChange: function () {
+                        self.logs = [];
+                        Lampa.Storage.set('error_logs', self.logs);
+                        Lampa.Noty.show('Логи очищено');
+                    }
                 });
             }
-        });
+        };
 
-        console.log('[Error Logger] Пункт "Error Logs" додано в меню');
+        function add() {
+            ErrorLogger.init();
+        }
+
+        if (window.appready) add();
+        else {
+            Lampa.Listener.follow('app', function (e) {
+                if (e.type === 'ready') add();
+            });
+        }
     }
 
-    // -------- Реєстрація плагіна --------
-    Lampa.Manifest.plugins.push({
-        author: 'YourName',
-        version: '1.0.2',
-        name: 'Error Logger',
-        description: 'Плагін для запису і перегляду логів помилок',
-        component: 'error_logs',
-        path: plugin_name
-    });
-
-    // Запускаємо додавання в меню після запуску застосунку
-    if (window.appready) addToMenu();
-    else document.addEventListener('appready', addToMenu);
-
-    console.log('[Error Logger] Плагін активовано');
+    if (!window.plugin_error_logger_ready) startPlugin();
 })();
