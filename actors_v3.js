@@ -1,6 +1,10 @@
 (function () {  
     'use strict';  
   
+
+//v1
+
+
     function startPlugin() {  
         if (window.plugin_online_cinemas_ready) return;  
         window.plugin_online_cinemas_ready = true;  
@@ -23,15 +27,15 @@
   
             createSettings: function() {  
                 var self = this;  
-  
+                  
                 Lampa.SettingsApi.addComponent({  
-                    component: 'online_cinemas_settings',  
+                    component: 'online_cinemas',  
                     name: 'Популярні актори',  
-                    icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z" fill="currentColor"/></svg>'  
+                    icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="8" r="4" stroke="white" stroke-width="2"/><path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>'  
                 });  
   
                 Lampa.SettingsApi.addParam({  
-                    component: 'online_cinemas_settings',  
+                    component: 'online_cinemas',  
                     param: {  
                         name: 'show_actors',  
                         type: 'trigger',  
@@ -58,11 +62,15 @@
             },  
   
             addActorsButton: function() {  
+                var self = this;  
+                  
                 if (!this.settings.showActors) return;  
   
-                var button = $('<li class="menu__item selector"><div class="menu__ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z" fill="currentColor"/></svg></div><div class="menu__text">Актори</div></li>');  
+                var button = document.createElement('li');  
+                button.className = 'menu__item selector';  
+                button.innerHTML = '<div class="menu__ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/><path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div><div class="menu__text">Актори</div>';  
   
-                button.on('hover:enter', function() {  
+                button.addEventListener('hover:enter', function() {  
                     Lampa.Activity.push({  
                         url: 'person/popular',  
                         title: 'Популярні актори',  
@@ -72,20 +80,19 @@
                     });  
                 });  
   
-                var historyItem = $('.menu .menu__list').eq(0).find('[data-action="history"]');  
-                if (historyItem.length) {  
-                    button.insertBefore(historyItem);  
-                } else {  
-                    $('.menu .menu__list').eq(0).append(button);  
+                var menuList = document.querySelector('.menu .menu__list');  
+                if (menuList) {  
+                    menuList.appendChild(button);  
                 }  
             },  
   
             updateActorsButton: function() {  
-                $('.menu .menu__list').eq(0).find('.menu__item').filter(function() {  
-                    return $(this).find('.menu__text').text() === 'Актори';  
-                }).remove();  
-  
-                this.addActorsButton();  
+                var button = document.querySelector('.menu__item:has(.menu__text:contains("Актори"))');  
+                if (button) button.remove();  
+                  
+                if (this.settings.showActors) {  
+                    this.addActorsButton();  
+                }  
             }  
         };  
   
@@ -96,100 +103,108 @@
                 over: true,  
                 step: 250  
             });  
+              
             var items = [];  
             var html;  
             var body;  
             var active = 0;  
+            var total_pages = 0;  
+            var waitload = false;  
   
             this.create = function() {  
-                var _this = this;  
-  
                 html = document.createElement('div');  
-                html.className = 'category-full';  
+                html.className = 'category-items';  
   
                 body = document.createElement('div');  
-                body.className = 'category-full__body';  
+                body.className = 'category-items__body';  
+                  
+                // Додаємо inline стилі для flexbox сітки  
+                body.style.display = 'flex';  
+                body.style.flexWrap = 'wrap';  
+                body.style.padding = '0 1em';  
   
+                scroll.append(body);  
                 html.appendChild(scroll.render(true));  
-  
-                document.body.classList.add('category-full');  
   
                 this.activity.loader(true);  
   
                 Lampa.Api.list({  
-                    url: 'person/popular',  
+                    url: object.url,  
                     page: object.page,  
-                    source: 'tmdb'  
+                    source: object.source  
                 }, this.append.bind(this), this.empty.bind(this));  
   
                 return html;  
             };  
   
             this.append = function(data) {  
-                var _this = this;  
-  
                 this.activity.loader(false);  
+                this.activity.toggle();  
   
-                if (data.results && data.results.length) {  
-                    data.results.forEach(function(element) {  
-                        var card = Lampa.InteractionCategory(element, {  
-                            card_category: true,  
-                            object: object  
-                        });  
+                total_pages = data.total_pages;  
   
-                        card.create();  
-  
-                        card.onEnter = function() {  
-                            Lampa.Activity.push({  
-                                id: element.id,  
-                                component: 'actor',  
-                                source: object.source || 'tmdb'  
-                            });  
-                        };  
-  
-                        var cardElement = card.render(true);  
-                        scroll.append(cardElement);  
-                        items.push(card);  
+                data.results.forEach(element => {  
+                    let card = new Lampa.Card(element, {  
+                        card_category: true,  
+                        object: object  
                     });  
   
-                    Lampa.Controller.collectionSet(html);  
-                    Lampa.Controller.collectionFocus(items.length ? items[0].render(true) : false, html);  
-                }  
+                    card.create();  
   
-                this.activity.toggle();  
+                    card.onFocus = (target, card_data) => {  
+                        active = items.indexOf(card);  
+                        scroll.update(card.render(true));  
+                        Lampa.Background.change(Lampa.Utils.cardImgBackground(card_data));  
+                    };  
+  
+                    card.onEnter = (target, card_data) => {  
+                        Lampa.Activity.push({  
+                            url: '',  
+                            component: 'actor',  
+                            id: element.id,  
+                            source: object.source || 'tmdb'  
+                        });  
+                    };  
+  
+                    body.appendChild(card.render(true));  
+                    items.push(card);  
+                });  
+  
+                Lampa.Controller.collectionSet(html);  
+                Lampa.Controller.collectionFocus(items.length ? items[0].render(true) : false, html);  
             };  
   
             this.empty = function() {  
                 this.activity.loader(false);  
+                this.activity.toggle();  
   
                 var empty = new Lampa.Empty();  
-                scroll.append(empty.render(true));  
+                html.appendChild(empty.render());  
   
-                this.start = empty.start;  
-                this.activity.toggle();  
+                Lampa.Controller.collectionSet(html);  
             };  
   
             this.start = function() {  
                 Lampa.Controller.add('content', {  
-                    toggle: function() {  
-                        Lampa.Controller.collectionSet(html);  
-                        Lampa.Controller.collectionFocus(items.length ? items[0].render(true) : false, html);  
+                    toggle: () => {  
+                        Lampa.Controller.collectionSet(this.render());  
+                        Lampa.Controller.collectionFocus(false, this.render());  
                     },  
-                    left: function() {  
+                    left: () => {  
                         if (Lampa.Navigator.canmove('left')) Lampa.Navigator.move('left');  
                         else Lampa.Controller.toggle('menu');  
                     },  
-                    right: function() {  
+                    right: () => {  
                         Lampa.Navigator.move('right');  
                     },  
-                    up: function() {  
+                    up: () => {  
                         if (Lampa.Navigator.canmove('up')) Lampa.Navigator.move('up');  
                         else Lampa.Controller.toggle('head');  
                     },  
-                    down: function() {  
+                    down: () => {  
                         if (Lampa.Navigator.canmove('down')) Lampa.Navigator.move('down');  
                     },  
-                    back: function() {  
+                    back: () => {  
                         Lampa.Activity.backward();  
                     }  
                 });  
@@ -209,7 +224,6 @@
                 network.clear();  
                 scroll.destroy();  
                 if (html) html.remove();  
-                document.body.classList.remove('category-full');  
                 items = null;  
                 network = null;  
             };  
