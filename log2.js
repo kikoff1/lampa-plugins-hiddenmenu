@@ -1,6 +1,13 @@
 (function () {  
     'use strict';  
   
+
+
+
+
+
+
+
     function startPlugin() {  
         if (window.plugin_actors_logger_ready) return;  
         window.plugin_actors_logger_ready = true;  
@@ -17,12 +24,6 @@
                 var timestamp = new Date().toLocaleTimeString('uk-UA');  
                 var logEntry = '[' + timestamp + '] ' + message;  
                 this.logs.push(logEntry);  
-                  
-                // Обмежуємо кількість логів до 1000  
-                if (this.logs.length > 1000) {  
-                    this.logs.shift();  
-                }  
-                  
                 console.log(logEntry);  
             },  
   
@@ -36,111 +37,200 @@
                     self.addLog('URL: ' + (params.url || 'немає'));  
                     self.addLog('Component: ' + (params.component || 'немає'));  
                     self.addLog('ID: ' + (params.id || 'немає'));  
-                    self.addLog('Source: ' + (params.source || 'tmdb'));  
-                    self.addLog('Card ID: ' + (params.card && params.card.id ? params.card.id : 'немає'));  
-                    self.addLog('Method: ' + (params.method || 'немає'));  
+                    self.addLog('Source: ' + (params.source || 'немає'));  
                     self.addLog('Всі параметри: ' + JSON.stringify(params, null, 2));  
                     self.addLog('---');  
-                      
                     return originalActivityPush.apply(this, arguments);  
                 };  
   
-                // Логування запуску активностей  
+                // Слухаємо події активності  
                 Lampa.Listener.follow('activity', function(e) {  
                     if (e.type === 'start') {  
-                        self.addLog('=== Активність запущена ===');  
-                        self.addLog('Component: ' + (e.component || 'немає'));  
-                        self.addLog('URL: ' + (e.url || 'немає'));  
-                        self.addLog('ID: ' + (e.id || 'немає'));  
-                        self.addLog('Source: ' + (e.source || 'tmdb'));  
-                        self.addLog('---');  
+                        var activity = Lampa.Activity.active();  
+                        if (activity && activity.activity) {  
+                            self.addLog('=== Активність запущена ===');  
+                            self.addLog('Component: ' + (activity.activity.component || 'немає'));  
+                            self.addLog('URL: ' + (activity.activity.url || 'немає'));  
+                            self.addLog('ID: ' + (activity.activity.id || 'немає'));  
+                            self.addLog('Source: ' + (activity.activity.source || 'немає'));  
+                            self.addLog('---');  
+                        }  
                     }  
                 });  
+  
+                // Патчимо Lampa.Api.list для логування API запитів  
+                if (Lampa.Api && Lampa.Api.list) {  
+                    var originalApiList = Lampa.Api.list;  
+                    Lampa.Api.list = function(params, oncomplite, onerror) {  
+                        self.addLog('=== Api.list викликано ===');  
+                        self.addLog('URL: ' + (params.url || 'немає'));  
+                        self.addLog('Params: ' + JSON.stringify(params, null, 2));  
+                        self.addLog('---');  
+  
+                        var wrappedOnComplite = function(data) {  
+                            self.addLog('=== Api.list успішно завершено ===');  
+                            self.addLog('Кількість результатів: ' + (data && data.results ? data.results.length : 0));  
+                            if (data && data.results && data.results.length > 0) {  
+                                self.addLog('Перший результат: ' + JSON.stringify(data.results[0], null, 2));  
+                            }  
+                            self.addLog('---');  
+                            if (oncomplite) oncomplite(data);  
+                        };  
+  
+                        var wrappedOnError = function(error) {  
+                            self.addLog('=== Api.list помилка ===');  
+                            self.addLog('Error: ' + JSON.stringify(error, null, 2));  
+                            self.addLog('---');  
+                            if (onerror) onerror(error);  
+                        };  
+  
+                        return originalApiList.call(this, params, wrappedOnComplite, wrappedOnError);  
+                    };  
+                }  
+  
+                // Патчимо Lampa.TMDB.get для логування TMDB запитів  
+                if (Lampa.TMDB && Lampa.TMDB.get) {  
+                    var originalTMDBGet = Lampa.TMDB.get;  
+                    Lampa.TMDB.get = function(method, complite, error) {  
+                        self.addLog('=== TMDB.get викликано ===');  
+                        self.addLog('Method: ' + method);  
+                        self.addLog('---');  
+  
+                        var wrappedComplite = function(data) {  
+                            self.addLog('=== TMDB.get успішно завершено ===');  
+                            self.addLog('Method: ' + method);  
+                            self.addLog('Кількість результатів: ' + (data && data.results ? data.results.length : 0));  
+                            self.addLog('---');  
+                            if (complite) complite(data);  
+                        };  
+  
+                        var wrappedError = function(err) {  
+                            self.addLog('=== TMDB.get помилка ===');  
+                            self.addLog('Method: ' + method);  
+                            self.addLog('Error: ' + JSON.stringify(err, null, 2));  
+                            self.addLog('---');  
+                            if (error) error(err);  
+                        };  
+  
+                        return originalTMDBGet.call(this, method, wrappedComplite, wrappedError);  
+                    };  
+                }  
+  
+                // Патчимо Lampa.InteractionCategory для логування створення карток  
+                if (Lampa.InteractionCategory) {  
+                    var originalInteractionCategory = Lampa.InteractionCategory;  
+                    Lampa.InteractionCategory = function(element, params) {  
+                        self.addLog('=== InteractionCategory створено ===');  
+                        self.addLog('Element: ' + JSON.stringify(element, null, 2));  
+                        self.addLog('Params: ' + JSON.stringify(params, null, 2));  
+                        self.addLog('---');  
+                        return originalInteractionCategory.call(this, element, params);  
+                    };  
+                }  
+  
+                // Патчимо Lampa.Scroll для логування скролу  
+                if (Lampa.Scroll) {  
+                    var originalScroll = Lampa.Scroll;  
+                    Lampa.Scroll = function(params) {  
+                        self.addLog('=== Scroll створено ===');  
+                        self.addLog('Params: ' + JSON.stringify(params, null, 2));  
+                        self.addLog('---');  
+                          
+                        var scrollInstance = new originalScroll(params);  
+                          
+                        // Патчимо append  
+                        var originalAppend = scrollInstance.append;  
+                        scrollInstance.append = function(element) {  
+                            self.addLog('=== Scroll.append викликано ===');  
+                            self.addLog('Element type: ' + (element ? element.constructor.name : 'null'));  
+                            self.addLog('---');  
+                            return originalAppend.call(this, element);  
+                        };  
+                          
+                        return scrollInstance;  
+                    };  
+                }  
+  
+                // Патчимо Lampa.Controller для логування навігації  
+                if (Lampa.Controller) {  
+                    var originalCollectionSet = Lampa.Controller.collectionSet;  
+                    Lampa.Controller.collectionSet = function(html, params) {  
+                        self.addLog('=== Controller.collectionSet викликано ===');  
+                        self.addLog('HTML type: ' + (html ? html.constructor.name : 'null'));  
+                        self.addLog('Params: ' + JSON.stringify(params, null, 2));  
+                        self.addLog('---');  
+                        return originalCollectionSet.apply(this, arguments);  
+                    };  
+  
+                    var originalCollectionFocus = Lampa.Controller.collectionFocus;  
+                    Lampa.Controller.collectionFocus = function(target, html) {  
+                        self.addLog('=== Controller.collectionFocus викликано ===');  
+                        self.addLog('Target type: ' + (target ? target.constructor.name : 'null'));  
+                        self.addLog('HTML type: ' + (html ? html.constructor.name : 'null'));  
+                        self.addLog('---');  
+                        return originalCollectionFocus.apply(this, arguments);  
+                    };  
+                }  
+  
+                self.addLog('✅ Логування ініціалізовано');  
             },  
   
             showLogs: function() {  
                 var self = this;  
-                  
-                // Створюємо модальне вікно для відображення логів  
-                var modal = $('<div class="modal"></div>');  
-                var content = $('<div class="modal__content"></div>');  
-                var title = $('<div class="modal__title">Логи акторів</div>');  
-                var logsContainer = $('<div class="modal__text" style="max-height: 60vh; overflow-y: auto;"></div>');  
-                  
-                // Створюємо textarea для легкого копіювання  
-                var textarea = $('<textarea readonly style="width: 100%; height: 50vh; font-family: monospace; font-size: 0.9em; padding: 1em; background: #000; color: #0f0; border: 1px solid #333;"></textarea>');  
-                textarea.val(this.logs.join('\n'));  
-                  
-                logsContainer.append(textarea);  
-                  
-                // Кнопки  
-                var buttons = $('<div style="margin-top: 1em; display: flex; gap: 1em;"></div>');  
-                  
-                var copyButton = $('<div class="button selector">Копіювати</div>');  
-                copyButton.on('hover:enter', function() {  
-                    textarea[0].select();  
-                    try {  
-                        document.execCommand('copy');  
-                        Lampa.Noty.show('Логи скопійовано в буфер обміну');  
-                    } catch (err) {  
-                        Lampa.Noty.show('Помилка при копіюванні');  
-                    }  
+                var logsText = this.logs.join('\n');  
+  
+                var modal = $('<div class="modal">' +  
+                    '<div class="modal__content">' +  
+                    '<div class="modal__title">Логи акторів</div>' +  
+                    '<div class="modal__body">' +  
+                    '<textarea class="settings-field" style="width: 100%; height: 400px; font-family: monospace; font-size: 12px;">' + logsText + '</textarea>' +  
+                    '</div>' +  
+                    '<div class="modal__footer">' +  
+                    '<div class="simple-button selector" data-action="copy">Копіювати</div>' +  
+                    '<div class="simple-button selector" data-action="clear">Очистити</div>' +  
+                    '<div class="simple-button selector" data-action="close">Закрити</div>' +  
+                    '</div>' +  
+                    '</div>' +  
+                    '</div>');  
+  
+                modal.find('[data-action="copy"]').on('hover:enter', function() {  
+                    var textarea = modal.find('textarea')[0];  
+                    textarea.select();  
+                    document.execCommand('copy');  
+                    Lampa.Noty.show('Логи скопійовано');  
                 });  
-                  
-                var clearButton = $('<div class="button selector">Очистити</div>');  
-                clearButton.on('hover:enter', function() {  
+  
+                modal.find('[data-action="clear"]').on('hover:enter', function() {  
                     self.logs = [];  
-                    textarea.val('');  
+                    modal.find('textarea').val('');  
                     Lampa.Noty.show('Логи очищено');  
                 });  
-                  
-                var closeButton = $('<div class="button selector">Закрити</div>');  
-                closeButton.on('hover:enter', function() {  
+  
+                modal.find('[data-action="close"]').on('hover:enter', function() {  
                     Lampa.Modal.close();  
-                    Lampa.Controller.toggle('content');  
+                    Lampa.Controller.toggle('settings_component');  
                 });  
-                  
-                buttons.append(copyButton);  
-                buttons.append(clearButton);  
-                buttons.append(closeButton);  
-                  
-                content.append(title);  
-                content.append(logsContainer);  
-                content.append(buttons);  
-                modal.append(content);  
-                  
+  
                 Lampa.Modal.open({  
                     title: '',  
                     html: modal,  
-                    size: 'large',  
-                    mask: true,  
                     onBack: function() {  
                         Lampa.Modal.close();  
-                        Lampa.Controller.toggle('content');  
+                        Lampa.Controller.toggle('settings_component');  
                     }  
                 });  
-                  
-                Lampa.Controller.add('modal', {  
-                    toggle: function() {  
-                        Lampa.Controller.collectionSet(modal);  
-                        Lampa.Controller.collectionFocus(copyButton[0], modal[0]);  
-                    },  
-                    back: function() {  
-                        Lampa.Modal.close();  
-                        Lampa.Controller.toggle('content');  
-                    }  
-                });  
-                  
-                Lampa.Controller.toggle('modal');  
+  
+                Lampa.Controller.collectionSet(modal);  
+                Lampa.Controller.collectionFocus(modal.find('.selector').eq(0), modal);  
             },  
   
             createSettingsButton: function() {  
                 var self = this;  
-                  
+  
                 Lampa.SettingsApi.addParam({  
                     component: 'interface',  
                     param: {  
-                        name: 'show_logs',  
+                        name: 'show_actors_logs',  
                         type: 'button',  
                         default: ''  
                     },  
