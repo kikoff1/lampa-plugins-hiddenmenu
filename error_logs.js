@@ -22,11 +22,11 @@
             text: msg,
             time: new Date().toLocaleString()
         });
-        if (logs.length > 100) logs.shift(); // обмежуємо кількість
+        if (logs.length > 100) logs.shift();
         Lampa.Storage.set('error_logs', logs);
     }
 
-    // --- UI Компонент ---
+    // --- UI компонент ---
     Lampa.Component.add('error_logs', {
         template: `<div class="error-logs-container" style="padding:20px; background:#004d00; color:#b8ffb8; font-size:14px; overflow:auto; height:100%;">
             <div class="error-logs-header" style="margin-bottom:10px;">
@@ -113,22 +113,35 @@
         document.body.removeChild(textarea);
     }
 
-    // --- Реєстрація плагіна ---
+    // --- Додаємо пункт у меню ---
+    function addToMenu() {
+        Lampa.Menu.add({
+            title: 'Error Logs',
+            icon: 'bug',
+            action: function() {
+                Lampa.Activity.push({
+                    component: 'error_logs',
+                    type: 'component',
+                    page: 1
+                });
+            },
+            id: 'error_logs_menu'
+        });
+    }
+
+    // --- Реєстрація ---
     Lampa.Manifest.plugins.push({
         author: 'YourName',
-        version: '1.0.0',
+        version: '1.0.1',
         name: 'Error Logger',
         description: 'Плагін для запису та копіювання логів помилок',
         component: 'error_logs',
         path: plugin_name
     });
 
-    Lampa.Lang.add({
-        error_logger_title: {
-            ua: 'Логи помилок',
-            en: 'Error Logs'
-        }
-    });
+    // --- Додаємо пункт після повного завантаження Lampa ---
+    if (window.appready) addToMenu();
+    else document.addEventListener('appready', addToMenu);
 
     console.log('[Error Logger] Плагін активовано');
 })();
