@@ -3,9 +3,9 @@
     function Actors() {  
         let scroll = new Lampa.Scroll({ mask: true })  
         let body = $('<div class="category-full">')  
-        let empty = $('<div class="empty">Завантаження...</div>')  
-        body.append(empty)  
-        scroll.body().append(body)  
+        let items = []  
+        let active = 0  
+        let last  
   
         this.create = function () {  
             this.activity.loader(true)  
@@ -16,74 +16,73 @@
   
             network.silent(url, (json) => {  
                 this.activity.loader(false)  
-                body.empty()  
   
                 if (!json.results || !json.results.length) {  
                     body.append('<div class="empty">Немає акторів 😢</div>')  
+                    scroll.append(body)  
                     return  
                 }  
   
                 json.results.forEach((person) => {  
-                    // Використовуємо стандартний шаблон full_person  
-                    const card = Lampa.Template.get('full_person', {  
-                        name: person.name,  
-                        role: ''  
+                    // Використовуємо стандартний Card компонент, як у relise  
+                    let card = new Lampa.Card(person, {  
+                        card_category: true,  
+                        object: {  
+                            source: 'tmdb'  
+                        }  
                     })  
   
-                    // Додаємо клас для сіткового відображення  
-                    card.addClass('card--category')  
-                      
-                    // Виправляємо відступи через inline стилі  
-                    card.attr('style', 'margin-right: 0 !important; padding: 0.5em !important;')  
+                    card.create()  
   
-                    // Додаємо подію visible для lazy loading  
-                    card.on('visible', () => {  
-                        const img = card.find('img')[0]  
+                    card.onFocus = (target, card_data) => {  
+                        last = target  
+                        active = items.indexOf(card)  
+                        scroll.update(card.render(true))  
+                    }  
   
-                        img.onerror = function() {  
-                            img.src = './img/actor.svg'  
-                        }  
-  
-                        img.onload = function() {  
-                            card.addClass('full-person--loaded')  
-                        }  
-  
-                        img.src = person.profile_path  
-                            ? Lampa.Api.img(person.profile_path, 'w276_and_h350_face')  
-                            : './img/actor.svg'  
-                    })  
-  
-                    card.on('hover:enter', () => {  
+                    card.onEnter = (target, card_data) => {  
                         Lampa.Activity.push({  
+                            url: '',  
                             title: person.name,  
                             component: 'actor',  
                             id: person.id,  
-                            url: '',  
                             source: 'tmdb'  
                         })  
-                    })  
+                    }  
   
-                    body.append(card)  
+                    body.append(card.render(true))  
+                    items.push(card)  
                 })  
-  
-                // Після додавання всіх карток викликаємо Layer.visible  
-                Lampa.Layer.visible(scroll.render(true))  
   
                 Lampa.Controller.enable('content')  
             }, () => {  
                 this.activity.loader(false)  
                 body.append('<div class="empty">Помилка при завантаженні 😔</div>')  
             })  
+  
+            scroll.append(body)  
         }  
   
         this.start = function () {  
             Lampa.Controller.add('content', {  
                 toggle: () => {  
                     Lampa.Controller.collectionSet(scroll.render())  
-                    Lampa.Controller.collectionFocus(false, scroll.render())  
+                    Lampa.Controller.collectionFocus(last, scroll.render())  
                 },  
-                up: () => Lampa.Controller.back(),  
-                down: () => { },  
+                left: () => {  
+                    if (Navigator.canmove('left')) Navigator.move('left')  
+                    else Lampa.Controller.toggle('menu')  
+                },  
+                right: () => {  
+                    Navigator.move('right')  
+                },  
+                up: () => {  
+                    if (Navigator.canmove('up')) Navigator.move('up')  
+                    else Lampa.Controller.toggle('head')  
+                },  
+                down: () => {  
+                    Navigator.move('down')  
+                },  
                 back: () => {  
                     Lampa.Activity.backward()  
                 }  
@@ -93,43 +92,22 @@
             Lampa.Controller.toggle('content')  
         }  
   
+        this.pause = function () {}  
+  
+        this.stop = function () {}  
+  
         this.render = function () {  
             return scroll.render()  
         }  
   
         this.destroy = function () {  
             scroll.destroy()  
+            items.forEach(card => card.destroy())  
             body.remove()  
         }  
     }  
   
     function startPlugin() {  
-        // Додаємо CSS для виправлення відступів  
-        $('<style>')  
-            .text(`  
-                .category-full {  
-                    display: flex !important;  
-                    flex-wrap: wrap !important;  
-                }  
-                .category-full .full-person.card--category {  
-                    margin-right: 0 !important;  
-                    padding: 0.5em !important;  
-                }  
-                .full-person.card--category .full-person__body {  
-                    display: flex;  
-                    flex-direction: column;  
-                }  
-                .full-person.card--category .full-person__img {  
-                    width: 100%;  
-                    margin-bottom: 0.5em;  
-                }  
-                .full-person.card--category .full-person__name {  
-                    text-align: center;  
-                    font-size: 1.2em;  
-                }  
-            `)  
-            .appendTo('head')  
-  
         Lampa.Lang.add({  
             title_actors: {  
                 uk: 'Актори',  
@@ -140,7 +118,7 @@
   
         const manifest = {  
             type: 'content',  
-            version: '1.1.3',  
+            version: '1.1.0',  
             name: 'Actors',  
             description: 'Популярні актори з TMDB',  
             component: 'actors_list'  
