@@ -2,7 +2,7 @@
   
     function Actors() {  
         let scroll = new Lampa.Scroll({ mask: true })  
-        let body = $('<div class="actors-list">')  
+        let body = $('<div class="category-full">')  
         let empty = $('<div class="empty">Завантаження...</div>')  
         body.append(empty)  
         scroll.body().append(body)  
@@ -10,7 +10,6 @@
         this.create = function () {  
             this.activity.loader(true)  
   
-            // Отримуємо популярних акторів через TMDB API  
             let network = new Lampa.Reguest()  
             let url = Lampa.Utils.protocol() + 'api.themoviedb.org/3/person/popular?api_key=' +  
                 Lampa.TMDB.key() + '&language=' + Lampa.Storage.field('tmdb_lang')  
@@ -25,29 +24,23 @@
                 }  
   
                 json.results.forEach((person) => {  
-                    const card = Lampa.Template.get('full_person', {  
+                    let cardData = {  
+                        id: person.id,  
                         name: person.name,  
-                        role: '' // Порожній рядок замість ролі  
+                        title: person.name,  
+                        poster_path: person.profile_path,  
+                        profile_path: person.profile_path,  
+                        gender: person.gender  
+                    }  
+                      
+                    let card = new Lampa.Card(cardData, {  
+                        card_category: true,  
+                        object: { source: 'tmdb' }  
                     })  
-  
-                    // Додаємо подію visible для lazy loading  
-                    card.on('visible', () => {  
-                        const img = card.find('img')[0]  
-  
-                        img.onerror = function() {  
-                            img.src = './img/actor.svg'  
-                        }  
-  
-                        img.onload = function() {  
-                            card.addClass('full-person--loaded')  
-                        }  
-  
-                        img.src = person.profile_path  
-                            ? Lampa.Api.img(person.profile_path, 'w276_and_h350_face')  
-                            : './img/actor.svg'  
-                    })  
-  
-                    card.on('hover:enter', () => {  
+                      
+                    card.create()  
+                      
+                    card.onEnter = () => {  
                         Lampa.Activity.push({  
                             title: person.name,  
                             component: 'actor',  
@@ -55,13 +48,10 @@
                             url: '',  
                             source: 'tmdb'  
                         })  
-                    })  
-  
-                    body.append(card)  
+                    }  
+                      
+                    body.append(card.render())  
                 })  
-  
-                // Після додавання всіх карток викликаємо Layer.visible  
-                Lampa.Layer.visible(scroll.render(true))  
   
                 Lampa.Controller.enable('content')  
             }, () => {  
@@ -96,7 +86,6 @@
     }  
   
     function startPlugin() {  
-        // Переклади  
         Lampa.Lang.add({  
             title_actors: {  
                 uk: 'Актори',  
@@ -105,20 +94,17 @@
             }  
         })  
   
-        // Маніфест плагіна  
         const manifest = {  
             type: 'content',  
-            version: '1.0.4',  
+            version: '1.0.5',  
             name: 'Actors',  
             description: 'Популярні актори з TMDB',  
             component: 'actors_list'  
         }  
   
-        // Реєстрація плагіна і компонента  
         Lampa.Manifest.plugins = manifest  
         Lampa.Component.add('actors_list', Actors)  
   
-        // Додавання пункту в меню  
         function addMenuButton() {  
             let button = $(`<li class="menu__item selector">  
                 <div class="menu__ico">  
@@ -142,7 +128,6 @@
             $('.menu .menu__list').eq(0).append(button)  
         }  
   
-        // Коли додаток готовий — додаємо пункт меню  
         if (window.appready) addMenuButton()  
         else {  
             Lampa.Listener.follow('app', function (e) {  
