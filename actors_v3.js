@@ -1,5 +1,5 @@
 (function () {  
-  
+    
     function Actors() {  
         let scroll = new Lampa.Scroll({ mask: true })  
         let body = $('<div class="category-full">')  
@@ -34,9 +34,9 @@
                         gender: person.gender || 2  
                     }  
                       
+                    // ВИДАЛЕНО card_category: true  
                     let card = new Lampa.Card(cardData, {  
-                        card_category: true,  
-                        card_small: true,  // Додано параметр для зменшення розміру  
+                        card_small: true,  
                         object: { source: 'tmdb' }  
                     })  
                       
@@ -129,7 +129,7 @@
         // Маніфест плагіна  
         const manifest = {  
             type: 'content',  
-            version: '1.0.6',  
+            version: '1.0.7',  
             name: 'Actors',  
             description: 'Популярні актори з TMDB',  
             component: 'actors_list'  
