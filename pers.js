@@ -1,7 +1,7 @@
 (function() {
     "use strict";
 
-    // v1.0 ==== ПРИХОВАННЯ СТАНДАРТНОЇ КНОПКИ "ПІДПИСАТИСЯ" ====
+    // v1.1 ==== ПРИХОВАННЯ СТАНДАРТНОЇ КНОПКИ "ПІДПИСАТИСЯ" ====
     function hideSubscribeButton() {
         if (document.getElementById('hide-subscribe-style')) return;
         const css = `.button--subscribe { display: none !important; }`;
@@ -133,7 +133,7 @@
         document.head.appendChild(style);
     }
 
-    // ==== TMDB SERVICE ====
+    // ==== TMDB SERVICE (оновлено) ====
     function PersonsService() {
         this.list = function(params, onComplete) {
             const savedIds = getPersonsData();
@@ -145,14 +145,39 @@
 
             savedIds.forEach(id => {
                 const url = Lampa.TMDB.api(`person/${id}?api_key=${Lampa.TMDB.key()}&language=${lang}`);
+
                 new Lampa.Reguest().silent(url, res => {
                     const data = typeof res === 'string' ? JSON.parse(res) : res;
-                    if (data?.id) results.push(data);
-                    if (++done === savedIds.length)
-                        onComplete({ results, page: 1, total_pages: 1, total_results: results.length });
+
+                    if (data?.id) {
+                        // 🔧 Гарантуємо наявність gender, source та url
+                        if (typeof data.gender === 'undefined' || data.gender === null) {
+                            console.warn('Gender missing for person', data.id, '- setting to 0');
+                            data.gender = 0;
+                        }
+                        data.source = 'tmdb';
+                        data.url = 'person/' + data.id;
+
+                        results.push(data);
+                    }
+
+                    if (++done === savedIds.length) {
+                        onComplete({
+                            results,
+                            page: 1,
+                            total_pages: 1,
+                            total_results: results.length
+                        });
+                    }
                 }, () => {
-                    if (++done === savedIds.length)
-                        onComplete({ results, page: 1, total_pages: 1, total_results: results.length });
+                    if (++done === savedIds.length) {
+                        onComplete({
+                            results,
+                            page: 1,
+                            total_pages: 1,
+                            total_results: results.length
+                        });
+                    }
                 });
             });
         };
@@ -173,11 +198,13 @@
         initStorage();
         Lampa.Api.sources[PLUGIN_NAME] = new PersonsService();
 
+        // ==== Додаємо пункт меню ====
         const menuItem = $(`
             <li class="menu__item selector" data-action="${PLUGIN_NAME}">
                 <div class="menu__ico">${ICON_SVG}</div>
                 <div class="menu__text">${Lampa.Lang.translate('persons_plugin_title')}</div>
             </li>`);
+
         menuItem.on('hover:enter', () => {
             Lampa.Activity.push({
                 component: 'category_full',
@@ -187,8 +214,10 @@
                 url: PLUGIN_NAME + '__main'
             });
         });
+
         $('.menu .menu__list').eq(0).append(menuItem);
 
+        // ==== Очікуємо на контейнер ====
         function waitForContainer(cb) {
             let tries = 0;
             const check = () => {
@@ -198,6 +227,7 @@
             setTimeout(check, 200);
         }
 
+        // ==== Відстеження активності ====
         function checkCurrentActivity() {
             const a = Lampa.Activity.active();
             if (a && a.component === 'actor') {
