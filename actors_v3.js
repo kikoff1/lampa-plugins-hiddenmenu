@@ -1,5 +1,10 @@
 (function () {  
   
+
+//v2.
+
+
+
     function Actors() {  
         let scroll = new Lampa.Scroll({ mask: true })  
         let body = $('<div class="category-full">')  
@@ -36,6 +41,9 @@
                         </div>  
                     `)  
   
+                    // Додаємо картку до body ПЕРЕД прив'язкою події visible  
+                    body.append(card)  
+  
                     // Додаємо подію visible для lazy loading  
                     card.on('visible', () => {  
                         const img = card.find('img')[0]  
@@ -62,11 +70,11 @@
                             source: 'tmdb'  
                         })  
                     })  
-  
-                    body.append(card)  
                 })  
   
+                // Після додавання всіх карток викликаємо Layer.visible  
                 Lampa.Layer.visible(scroll.render(true))  
+  
                 Lampa.Controller.enable('content')  
             }, () => {  
                 this.activity.loader(false)  
