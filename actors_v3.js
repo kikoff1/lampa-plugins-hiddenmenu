@@ -10,7 +10,6 @@
         this.create = function () {  
             this.activity.loader(true)  
   
-            // Отримуємо популярних акторів через TMDB API  
             let network = new Lampa.Reguest()  
             let url = Lampa.Utils.protocol() + 'api.themoviedb.org/3/person/popular?api_key=' +  
                 Lampa.TMDB.key() + '&language=' + Lampa.Storage.field('tmdb_lang')  
@@ -25,16 +24,17 @@
                 }  
   
                 json.results.forEach((person) => {  
-                    const card = Lampa.Template.get('full_person', {  
-                        name: person.name,  
-                        role: ''  
-                    })  
-  
-                    // Додаємо клас для сіткового відображення  
-                    card.addClass('card--category')  
-                      
-                    // Додаємо inline стилі з !important через attr  
-                    card.attr('style', 'margin-right: 0 !important; padding-right: 0.5em !important; padding-left: 0.5em !important; padding-bottom: 1em !important;')  
+                    // Створюємо вертикальну структуру картки  
+                    const card = $(`  
+                        <div class="card selector card--category card--actor">  
+                            <div class="card__view">  
+                                <div class="card__img">  
+                                    <img class="card__img-object" />  
+                                </div>  
+                            </div>  
+                            <div class="card__title">${person.name}</div>  
+                        </div>  
+                    `)  
   
                     // Додаємо подію visible для lazy loading  
                     card.on('visible', () => {  
@@ -45,7 +45,7 @@
                         }  
   
                         img.onload = function() {  
-                            card.addClass('full-person--loaded')  
+                            card.addClass('card--loaded')  
                         }  
   
                         img.src = person.profile_path  
@@ -66,9 +66,7 @@
                     body.append(card)  
                 })  
   
-                // Після додавання всіх карток викликаємо Layer.visible  
                 Lampa.Layer.visible(scroll.render(true))  
-  
                 Lampa.Controller.enable('content')  
             }, () => {  
                 this.activity.loader(false)  
@@ -102,23 +100,40 @@
     }  
   
     function startPlugin() {  
-        // Додаємо власні стилі з високою специфічністю  
+        // Додаємо власні стилі для вертикальної структури  
         $('<style>')  
             .text(`  
-                .category-full {  
-                    display: flex !important;  
-                    flex-wrap: wrap !important;  
+                .card--actor .card__view {  
+                    padding-bottom: 100%;  
                 }  
-                .category-full .full-person.card--category {  
-                    margin-right: 0 !important;  
-                    padding-right: 0.5em !important;  
-                    padding-left: 0.5em !important;  
-                    padding-bottom: 1em !important;  
+                .card--actor .card__img {  
+                    position: absolute;  
+                    top: 0;  
+                    left: 0;  
+                    width: 100%;  
+                    height: 100%;  
+                    border-radius: 1em;  
+                    overflow: hidden;  
+                    background-color: rgba(255,255,255,0.1);  
+                }  
+                .card--actor .card__img-object {  
+                    width: 100%;  
+                    height: 100%;  
+                    object-fit: cover;  
+                    opacity: 0;  
+                    transition: opacity 0.3s;  
+                }  
+                .card--actor.card--loaded .card__img-object {  
+                    opacity: 1;  
+                }  
+                .card--actor .card__title {  
+                    margin-top: 0.8em;  
+                    font-size: 1.2em;  
+                    text-align: center;  
                 }  
             `)  
             .appendTo('head')  
   
-        // Переклади  
         Lampa.Lang.add({  
             title_actors: {  
                 uk: 'Актори',  
@@ -127,20 +142,17 @@
             }  
         })  
   
-        // Маніфест плагіна  
         const manifest = {  
             type: 'content',  
-            version: '1.0.8',  
+            version: '1.0.9',  
             name: 'Actors',  
             description: 'Популярні актори з TMDB',  
             component: 'actors_list'  
         }  
   
-        // Реєстрація плагіна і компонента  
         Lampa.Manifest.plugins = manifest  
         Lampa.Component.add('actors_list', Actors)  
   
-        // Додавання пункту в меню  
         function addMenuButton() {  
             let button = $(`<li class="menu__item selector">  
                 <div class="menu__ico">  
@@ -164,7 +176,6 @@
             $('.menu .menu__list').eq(0).append(button)  
         }  
   
-        // Коли додаток готовий — додаємо пункт меню  
         if (window.appready) addMenuButton()  
         else {  
             Lampa.Listener.follow('app', function (e) {  
