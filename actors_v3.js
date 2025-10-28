@@ -1,5 +1,8 @@
 (function () {  
   
+//v1
+
+
     function Actors() {  
         let scroll = new Lampa.Scroll({ mask: true })  
         let body = $('<div class="category-full">')  
@@ -105,20 +108,19 @@
     }  
   
     function startPlugin() {  
-        // Додаємо власні стилі для вертикальної структури  
+        // Додаємо власні стилі для виправлення відступів та формату карток  
         $('<style>')  
             .text(`  
-                .card--actor .card__view {  
-                    padding-bottom: 100%;  
+                .category-full {  
+                    display: flex !important;  
+                    flex-wrap: wrap !important;  
+                }  
+                .card--actor {  
+                    padding-bottom: 1em !important;  
                 }  
                 .card--actor .card__img {  
-                    position: absolute;  
-                    top: 0;  
-                    left: 0;  
-                    width: 100%;  
-                    height: 100%;  
-                    border-radius: 1em;  
-                    overflow: hidden;  
+                    position: relative;  
+                    padding-bottom: 150% !important;  
                     background-color: rgba(255,255,255,0.1);  
                 }  
                 .card--actor .card__img-object {  
