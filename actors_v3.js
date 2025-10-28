@@ -33,12 +33,8 @@
                     // Додаємо клас для сіткового відображення  
                     card.addClass('card--category')  
                       
-                    // Додаємо inline стилі для правильних відступів  
-                    card.css({  
-                        'margin-right': '0',  
-                        'padding-right': '0.5em',  
-                        'padding-left': '0.5em'  
-                    })  
+                    // Додаємо inline стилі з !important через attr  
+                    card.attr('style', 'margin-right: 0 !important; padding-right: 0.5em !important; padding-left: 0.5em !important; padding-bottom: 1em !important;')  
   
                     // Додаємо подію visible для lazy loading  
                     card.on('visible', () => {  
@@ -106,13 +102,18 @@
     }  
   
     function startPlugin() {  
-        // Додаємо власні стилі для виправлення відступів  
+        // Додаємо власні стилі з високою специфічністю  
         $('<style>')  
             .text(`  
-                .full-person.card--category {  
+                .category-full {  
+                    display: flex !important;  
+                    flex-wrap: wrap !important;  
+                }  
+                .category-full .full-person.card--category {  
                     margin-right: 0 !important;  
                     padding-right: 0.5em !important;  
                     padding-left: 0.5em !important;  
+                    padding-bottom: 1em !important;  
                 }  
             `)  
             .appendTo('head')  
@@ -129,7 +130,7 @@
         // Маніфест плагіна  
         const manifest = {  
             type: 'content',  
-            version: '1.0.7',  
+            version: '1.0.8',  
             name: 'Actors',  
             description: 'Популярні актори з TMDB',  
             component: 'actors_list'  
