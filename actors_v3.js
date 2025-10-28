@@ -1,10 +1,5 @@
 (function () {  
   
-
-//v2.
-
-
-
     function Actors() {  
         let scroll = new Lampa.Scroll({ mask: true })  
         let body = $('<div class="category-full">')  
@@ -90,7 +85,9 @@
                 },  
                 up: () => Lampa.Controller.back(),  
                 down: () => { },  
-                back: () => Lampa.Controller.back()  
+                back: () => {  
+                    Lampa.Activity.backward()  // Виправлено: використовуємо Activity.backward()  
+                }  
             })  
   
             this.create()  
@@ -152,7 +149,7 @@
   
         const manifest = {  
             type: 'content',  
-            version: '1.0.9',  
+            version: '1.1.0',  
             name: 'Actors',  
             description: 'Популярні актори з TMDB',  
             component: 'actors_list'  
