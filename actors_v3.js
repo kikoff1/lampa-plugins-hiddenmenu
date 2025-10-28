@@ -1,8 +1,5 @@
 (function () {  
   
-//v1
-
-
     function Actors() {  
         let scroll = new Lampa.Scroll({ mask: true })  
         let body = $('<div class="category-full">')  
@@ -27,39 +24,21 @@
                 }  
   
                 json.results.forEach((person) => {  
-                    // Створюємо вертикальну структуру картки  
-                    const card = $(`  
-                        <div class="card selector card--category card--actor">  
-                            <div class="card__view">  
-                                <div class="card__img">  
-                                    <img class="card__img-object" />  
-                                </div>  
-                            </div>  
-                            <div class="card__title">${person.name}</div>  
-                        </div>  
-                    `)  
-  
-                    // Додаємо картку до body ПЕРЕД прив'язкою події visible  
-                    body.append(card)  
-  
-                    // Додаємо подію visible для lazy loading  
-                    card.on('visible', () => {  
-                        const img = card.find('img')[0]  
-  
-                        img.onerror = function() {  
-                            img.src = './img/actor.svg'  
-                        }  
-  
-                        img.onload = function() {  
-                            card.addClass('card--loaded')  
-                        }  
-  
-                        img.src = person.profile_path  
-                            ? Lampa.Api.img(person.profile_path, 'w276_and_h350_face')  
-                            : './img/actor.svg'  
+                    // Використовуємо стандартний Card компонент  
+                    let card = new Lampa.Card({  
+                        id: person.id,  
+                        title: person.name,  
+                        original_title: person.name,  
+                        name: person.name,  
+                        poster_path: person.profile_path,  
+                        profile_path: person.profile_path  
+                    }, {  
+                        card_category: true  
                     })  
   
-                    card.on('hover:enter', () => {  
+                    card.create()  
+  
+                    card.onEnter = () => {  
                         Lampa.Activity.push({  
                             title: person.name,  
                             component: 'actor',  
@@ -67,11 +46,10 @@
                             url: '',  
                             source: 'tmdb'  
                         })  
-                    })  
-                })  
+                    }  
   
-                // Після додавання всіх карток викликаємо Layer.visible  
-                Lampa.Layer.visible(scroll.render(true))  
+                    body.append(card.render())  
+                })  
   
                 Lampa.Controller.enable('content')  
             }, () => {  
@@ -89,7 +67,7 @@
                 up: () => Lampa.Controller.back(),  
                 down: () => { },  
                 back: () => {  
-                    Lampa.Activity.backward()  // Виправлено: використовуємо Activity.backward()  
+                    Lampa.Activity.backward()  
                 }  
             })  
   
@@ -108,39 +86,6 @@
     }  
   
     function startPlugin() {  
-        // Додаємо власні стилі для виправлення відступів та формату карток  
-        $('<style>')  
-            .text(`  
-                .category-full {  
-                    display: flex !important;  
-                    flex-wrap: wrap !important;  
-                }  
-                .card--actor {  
-                    padding-bottom: 1em !important;  
-                }  
-                .card--actor .card__img {  
-                    position: relative;  
-                    padding-bottom: 150% !important;  
-                    background-color: rgba(255,255,255,0.1);  
-                }  
-                .card--actor .card__img-object {  
-                    width: 100%;  
-                    height: 100%;  
-                    object-fit: cover;  
-                    opacity: 0;  
-                    transition: opacity 0.3s;  
-                }  
-                .card--actor.card--loaded .card__img-object {  
-                    opacity: 1;  
-                }  
-                .card--actor .card__title {  
-                    margin-top: 0.8em;  
-                    font-size: 1.2em;  
-                    text-align: center;  
-                }  
-            `)  
-            .appendTo('head')  
-  
         Lampa.Lang.add({  
             title_actors: {  
                 uk: 'Актори',  
@@ -151,7 +96,7 @@
   
         const manifest = {  
             type: 'content',  
-            version: '1.1.0',  
+            version: '1.1.1',  
             name: 'Actors',  
             description: 'Популярні актори з TMDB',  
             component: 'actors_list'  
