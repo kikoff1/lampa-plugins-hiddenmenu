@@ -25,12 +25,9 @@
                 }  
   
                 json.results.forEach((person) => {  
-                    // Витягуємо рік народження, якщо він є  
-                    let birthYear = person.birthday ? person.birthday.slice(0, 4) : ''  
-                      
                     const card = Lampa.Template.get('full_person', {  
                         name: person.name,  
-                        role: birthYear || Lampa.Lang.translate('player_unknown')  
+                        role: '' // Порожній рядок замість ролі  
                     })  
   
                     // Додаємо подію visible для lazy loading  
@@ -111,7 +108,7 @@
         // Маніфест плагіна  
         const manifest = {  
             type: 'content',  
-            version: '1.0.3',  
+            version: '1.0.4',  
             name: 'Actors',  
             description: 'Популярні актори з TMDB',  
             component: 'actors_list'  
