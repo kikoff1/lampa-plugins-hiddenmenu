@@ -24,64 +24,72 @@
                 }  
   
                 json.results.forEach((person) => {  
-                    // Використовуємо стандартний Card компонент, як у relise  
-                    let card = new Lampa.Card(person, {  
+                    let cardData = {  
+                        id: person.id,  
+                        name: person.name,  
+                        title: person.name,  
+                        original_name: person.name,  
+                        poster_path: person.profile_path,  
+                        profile_path: person.profile_path,  
+                        gender: person.gender || 2  
+                    }  
+                      
+                    let card = new Lampa.Card(cardData, {  
                         card_category: true,  
-                        object: {  
-                            source: 'tmdb'  
-                        }  
+                        card_small: true,  // Додано параметр для зменшення розміру  
+                        object: { source: 'tmdb' }  
                     })  
-  
+                      
                     card.create()  
-  
+                      
                     card.onFocus = (target, card_data) => {  
                         last = target  
                         active = items.indexOf(card)  
                         scroll.update(card.render(true))  
                     }  
-  
-                    card.onEnter = (target, card_data) => {  
+                      
+                    card.onEnter = () => {  
                         Lampa.Activity.push({  
-                            url: '',  
                             title: person.name,  
                             component: 'actor',  
                             id: person.id,  
+                            url: '',  
                             source: 'tmdb'  
                         })  
                     }  
-  
+                      
                     body.append(card.render(true))  
                     items.push(card)  
                 })  
   
+                scroll.append(body)  
                 Lampa.Controller.enable('content')  
             }, () => {  
                 this.activity.loader(false)  
                 body.append('<div class="empty">Помилка при завантаженні 😔</div>')  
+                scroll.append(body)  
             })  
-  
-            scroll.append(body)  
         }  
   
         this.start = function () {  
             Lampa.Controller.add('content', {  
                 toggle: () => {  
                     Lampa.Controller.collectionSet(scroll.render())  
-                    Lampa.Controller.collectionFocus(last, scroll.render())  
-                },  
-                left: () => {  
-                    if (Navigator.canmove('left')) Navigator.move('left')  
-                    else Lampa.Controller.toggle('menu')  
-                },  
-                right: () => {  
-                    Navigator.move('right')  
+                    Lampa.Controller.collectionFocus(false, scroll.render())  
                 },  
                 up: () => {  
-                    if (Navigator.canmove('up')) Navigator.move('up')  
+                    if (Lampa.Navigator.canmove('up')) Lampa.Navigator.move('up')  
                     else Lampa.Controller.toggle('head')  
                 },  
                 down: () => {  
-                    Navigator.move('down')  
+                    Lampa.Navigator.move('down')  
+                },  
+                right: () => {  
+                    Lampa.Navigator.move('right')  
+                },  
+                left: () => {  
+                    if (Lampa.Navigator.canmove('left')) Lampa.Navigator.move('left')  
+                    else Lampa.Controller.toggle('menu')  
                 },  
                 back: () => {  
                     Lampa.Activity.backward()  
@@ -102,12 +110,14 @@
   
         this.destroy = function () {  
             scroll.destroy()  
-            items.forEach(card => card.destroy())  
             body.remove()  
+            items.forEach(card => card.destroy())  
+            items = []  
         }  
     }  
   
     function startPlugin() {  
+        // Переклади  
         Lampa.Lang.add({  
             title_actors: {  
                 uk: 'Актори',  
@@ -116,17 +126,20 @@
             }  
         })  
   
+        // Маніфест плагіна  
         const manifest = {  
             type: 'content',  
-            version: '1.1.0',  
+            version: '1.0.6',  
             name: 'Actors',  
             description: 'Популярні актори з TMDB',  
             component: 'actors_list'  
         }  
   
+        // Реєстрація плагіна і компонента  
         Lampa.Manifest.plugins = manifest  
         Lampa.Component.add('actors_list', Actors)  
   
+        // Додавання пункту в меню  
         function addMenuButton() {  
             let button = $(`<li class="menu__item selector">  
                 <div class="menu__ico">  
