@@ -34,15 +34,21 @@
                         gender: person.gender || 2  
                     }  
                       
-                    // Тільки card_small, БЕЗ card_category  
                     let card = new Lampa.Card(cardData, {  
+                        card_category: true,  
                         card_small: true,  
                         object: { source: 'tmdb' }  
                     })  
                       
                     card.create()  
-                      
-                    card.onEnter = () => {  
+  
+                    card.onFocus = (target, card_data) => {  
+                        last = target  
+                        active = items.indexOf(card)  
+                        scroll.update(card.render(true))  
+                    }  
+  
+                    card.onEnter = (target, card_data) => {  
                         Lampa.Activity.push({  
                             title: person.name,  
                             component: 'actor',  
@@ -51,17 +57,15 @@
                             source: 'tmdb'  
                         })  
                     }  
-                      
+  
+                    body.appendChild(card.render(true))  
                     items.push(card)  
-                    body.append(card.render())  
                 })  
   
-                scroll.append(body)  
-                this.activity.toggle()  
-            }, (e) => {  
+                Lampa.Controller.enable('content')  
+            }, (error) => {  
                 this.activity.loader(false)  
                 body.append('<div class="empty">Помилка при завантаженні 😔</div>')  
-                scroll.append(body)  
             })  
         }  
   
@@ -71,31 +75,16 @@
                     Lampa.Controller.collectionSet(scroll.render())  
                     Lampa.Controller.collectionFocus(false, scroll.render())  
                 },  
-                up: () => {  
-                    if (Lampa.Navigator.canmove('up')) Lampa.Navigator.move('up')  
-                    else Lampa.Controller.toggle('head')  
-                },  
-                down: () => {  
-                    Lampa.Navigator.move('down')  
-                },  
-                right: () => {  
-                    Lampa.Navigator.move('right')  
-                },  
-                left: () => {  
-                    if (Lampa.Navigator.canmove('left')) Lampa.Navigator.move('left')  
-                    else Lampa.Controller.toggle('menu')  
-                },  
+                up: () => Lampa.Controller.back(),  
+                down: () => { },  
                 back: () => {  
                     Lampa.Activity.backward()  
                 }  
             })  
   
+            this.create()  
             Lampa.Controller.toggle('content')  
         }  
-  
-        this.pause = function () {}  
-  
-        this.stop = function () {}  
   
         this.render = function () {  
             return scroll.render()  
@@ -103,19 +92,34 @@
   
         this.destroy = function () {  
             scroll.destroy()  
-            items.forEach(item => item.destroy())  
-            items = []  
+            items.forEach(card => card.destroy())  
+            body.remove()  
         }  
     }  
   
     function startPlugin() {  
-        // CSS для відображення імен під картками  
+        // Додаємо CSS для маленьких карток в сітці  
         $('<style>')  
             .text(`  
-                .card--small .card__title {  
+                .category-full {  
+                    display: flex !important;  
+                    flex-wrap: wrap !important;  
+                }  
+                  
+                /* Фіксована ширина як в Релізах */  
+                .category-full .card--small.card--category {  
+                    width: 10.8em !important;  
+                }  
+                  
+                /* Показуємо ім'я актора */  
+                .category-full .card--small.card--category .card__title {  
                     display: block !important;  
                     margin-top: 0.5em;  
                     font-size: 1.1em;  
+                }  
+                  
+                .category-full .card--small.card--category .card__view {  
+                    margin-bottom: 0.5em;  
                 }  
             `)  
             .appendTo('head')  
