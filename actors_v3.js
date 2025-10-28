@@ -9,7 +9,12 @@
         this.create = function () {  
             this.activity.loader(true)  
   
-            Lampa.TMDB.get('person/popular', {}, (json) => {  
+            // Використовуємо правильний API через Lampa.Api  
+            let network = new Lampa.Reguest()  
+            let url = Lampa.Utils.protocol() + 'api.themoviedb.org/3/person/popular?api_key=' +   
+                      Lampa.TMDB.key() + '&language=' + Lampa.Storage.field('tmdb_lang')  
+              
+            network.silent(url, (json) => {  
                 this.activity.loader(false)  
                 body.empty()  
   
@@ -26,7 +31,7 @@
   
                     const img = card.find('img')[0]  
                     img.src = person.profile_path  
-                        ? Lampa.Api.img(person.profile_path, 'w276_and_h350_face')  
+                        ? Lampa.TMDB.img(person.profile_path, 'w276_and_h350_face')  
                         : './img/actor.svg'  
   
                     card.on('hover:enter', () => {  
@@ -75,7 +80,6 @@
     }  
   
     function startPlugin() {  
-        // Переклади спочатку  
         Lampa.Lang.add({  
             title_actors: {  
                 uk: 'Актори',  
@@ -92,13 +96,9 @@
             component: 'actors_list'  
         }  
   
-        // Правильна реєстрація в маніфесті  
         Lampa.Manifest.plugins = manifest  
-  
-        // Реєстрація компонента  
         Lampa.Component.add('actors_list', Actors)  
   
-        // Функція додавання в меню  
         function add() {  
             let button = $(`<li class="menu__item selector">  
                 <div class="menu__ico">  
@@ -122,7 +122,6 @@
             $('.menu .menu__list').eq(0).append(button)  
         }  
   
-        // Чекаємо готовності додатку  
         if (window.appready) add()  
         else {  
             Lampa.Listener.follow('app', function (e) {  
