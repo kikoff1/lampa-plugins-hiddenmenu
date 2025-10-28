@@ -1,5 +1,5 @@
 (function () {  
-    
+  
     function Actors() {  
         let scroll = new Lampa.Scroll({ mask: true })  
         let body = $('<div class="category-full">')  
@@ -34,19 +34,13 @@
                         gender: person.gender || 2  
                     }  
                       
-                    // ВИДАЛЕНО card_category: true  
+                    // Тільки card_small, БЕЗ card_category  
                     let card = new Lampa.Card(cardData, {  
                         card_small: true,  
                         object: { source: 'tmdb' }  
                     })  
                       
                     card.create()  
-                      
-                    card.onFocus = (target, card_data) => {  
-                        last = target  
-                        active = items.indexOf(card)  
-                        scroll.update(card.render(true))  
-                    }  
                       
                     card.onEnter = () => {  
                         Lampa.Activity.push({  
@@ -58,13 +52,13 @@
                         })  
                     }  
                       
-                    body.append(card.render(true))  
                     items.push(card)  
+                    body.append(card.render())  
                 })  
   
                 scroll.append(body)  
-                Lampa.Controller.enable('content')  
-            }, () => {  
+                this.activity.toggle()  
+            }, (e) => {  
                 this.activity.loader(false)  
                 body.append('<div class="empty">Помилка при завантаженні 😔</div>')  
                 scroll.append(body)  
@@ -96,7 +90,6 @@
                 }  
             })  
   
-            this.create()  
             Lampa.Controller.toggle('content')  
         }  
   
@@ -110,14 +103,34 @@
   
         this.destroy = function () {  
             scroll.destroy()  
-            body.remove()  
-            items.forEach(card => card.destroy())  
+            items.forEach(item => item.destroy())  
             items = []  
         }  
     }  
   
     function startPlugin() {  
-        // Переклади  
+        // CSS для відображення імен під картками  
+        $('<style>')  
+            .text(`  
+                .card--small .card__title {  
+                    display: block !important;  
+                    margin-top: 0.5em;  
+                    font-size: 1.1em;  
+                }  
+            `)  
+            .appendTo('head')  
+  
+        const manifest = {  
+            type: 'content',  
+            version: '1.0.8',  
+            name: 'Actors',  
+            description: 'Популярні актори з TMDB',  
+            component: 'actors_list'  
+        }  
+  
+        Lampa.Manifest.plugins = manifest  
+        Lampa.Component.add('actors_list', Actors)  
+  
         Lampa.Lang.add({  
             title_actors: {  
                 uk: 'Актори',  
@@ -126,20 +139,6 @@
             }  
         })  
   
-        // Маніфест плагіна  
-        const manifest = {  
-            type: 'content',  
-            version: '1.0.7',  
-            name: 'Actors',  
-            description: 'Популярні актори з TMDB',  
-            component: 'actors_list'  
-        }  
-  
-        // Реєстрація плагіна і компонента  
-        Lampa.Manifest.plugins = manifest  
-        Lampa.Component.add('actors_list', Actors)  
-  
-        // Додавання пункту в меню  
         function addMenuButton() {  
             let button = $(`<li class="menu__item selector">  
                 <div class="menu__ico">  
