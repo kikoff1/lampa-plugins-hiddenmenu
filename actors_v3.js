@@ -1,9 +1,5 @@
 (function () {  
   
-
-
-
-
     function Actors() {  
         let scroll = new Lampa.Scroll({ mask: true })  
         let body = document.createElement('div')  
@@ -34,12 +30,11 @@
                 json.results.forEach((person) => {  
                     let cardData = {  
                         id: person.id,  
-                        name: person.name,  
                         title: person.name,  
-                        poster_path: person.profile_path,  
+                        name: person.name,  
                         profile_path: person.profile_path,  
                         gender: person.gender,  
-                        known_for_department: person.known_for_department  
+                        original_name: person.original_name  
                     }  
   
                     let card = new Lampa.Card(cardData, {  
@@ -48,6 +43,12 @@
                     })  
   
                     card.create()  
+  
+                    card.onFocus = (target) => {  
+                        last = target  
+                        active = items.indexOf(card)  
+                        scroll.update(card.render(true))  
+                    }  
   
                     card.onEnter = () => {  
                         Lampa.Activity.push({  
@@ -59,18 +60,11 @@
                         })  
                     }  
   
-                    card.onFocus = (target) => {  
-                        last = target  
-                        active = items.indexOf(card)  
-                        scroll.update(card.render(true))  
-                    }  
-  
                     body.appendChild(card.render(true))  
                     items.push(card)  
                 })  
   
                 scroll.append(body)  
-                this.html.appendChild(scroll.render(true))  
   
                 setTimeout(() => {  
                     Lampa.Layer.visible(scroll.render(true))  
@@ -79,32 +73,31 @@
                 this.activity.toggle()  
             }, (error) => {  
                 this.activity.loader(false)  
-                let empty = new Lampa.Empty()  
-                body.appendChild(empty.render(true))  
-                this.start = empty.start  
                 this.activity.toggle()  
+                console.error('Actors plugin error:', error)  
             })  
         }  
   
         this.start = function () {  
             Lampa.Controller.add('content', {  
+                link: this,  
                 toggle: () => {  
-                    Lampa.Controller.collectionSet(this.html)  
-                    Lampa.Controller.collectionFocus(last, this.html)  
+                    Lampa.Controller.collectionSet(scroll.render(true))  
+                    Lampa.Controller.collectionFocus(last || false, scroll.render(true))  
+                },  
+                left: () => {  
+                    if (Navigator.canmove('left')) Navigator.move('left')  
+                    else Lampa.Controller.toggle('menu')  
+                },  
+                right: () => {  
+                    Navigator.move('right')  
                 },  
                 up: () => {  
-                    if (Lampa.Navigator.canmove('up')) Lampa.Navigator.move('up')  
+                    if (Navigator.canmove('up')) Navigator.move('up')  
                     else Lampa.Controller.toggle('head')  
                 },  
                 down: () => {  
-                    Lampa.Navigator.move('down')  
-                },  
-                right: () => {  
-                    Lampa.Navigator.move('right')  
-                },  
-                left: () => {  
-                    if (Lampa.Navigator.canmove('left')) Lampa.Navigator.move('left')  
-                    else Lampa.Controller.toggle('menu')  
+                    Navigator.move('down')  
                 },  
                 back: () => {  
                     Lampa.Activity.backward()  
@@ -115,35 +108,20 @@
         }  
   
         this.pause = function () {}  
-  
         this.stop = function () {}  
-  
-        this.render = function () {  
-            return this.html  
-        }  
-  
         this.destroy = function () {  
             scroll.destroy()  
-            this.html.remove()  
+            body.remove()  
+        }  
+  
+        this.render = function () {  
+            return scroll.render()  
         }  
     }  
   
     function startPlugin() {  
-        const manifest = {  
-            type: 'content',  
-            version: '1.0.8',  
-            name: 'Actors',  
-            description: 'Популярні актори з TMDB',  
-            component: 'actors_list'  
-        }  
-  
-        // Додаємо CSS стилі для компактних карток  
         $('<style>')  
             .text(`  
-                .category-full {  
-                    isolation: isolate;  
-                }  
-                  
                 .category-full .card--category {  
                     width: 10.8em !important;  
                 }  
@@ -156,18 +134,20 @@
                     max-height: 3.6em;  
                     overflow: hidden;  
                     line-height: 1.2;  
-                    text-overflow: ellipsis;  
-                    display: -webkit-box;  
                     -webkit-line-clamp: 3;  
+                    display: -webkit-box;  
                     -webkit-box-orient: vertical;  
+                    text-overflow: ellipsis;  
+                }  
+                  
+                .category-full {  
+                    isolation: isolate;  
                 }  
             `)  
             .appendTo('head')  
   
-        // Реєстрація компонента  
         Lampa.Component.add('actors_list', Actors)  
   
-        // Переклади  
         Lampa.Lang.add({  
             title_actors: {  
                 uk: 'Актори',  
@@ -175,9 +155,6 @@
                 en: 'Actors'  
             }  
         })  
-  
-        // Реєстрація плагіна  
-        Lampa.Manifest.plugins = manifest  
   
         function addMenuButton() {  
             let button = $(`<li class="menu__item selector" data-action="actors">  
