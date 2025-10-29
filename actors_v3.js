@@ -2,12 +2,10 @@
   
     function Actors() {  
         let scroll = new Lampa.Scroll({ mask: true })  
-        let body = document.createElement('div')  
-        let items = []  
-        let active = 0  
-        let last  
-  
-        body.classList.add('category-full')  
+        let body = $('<div class="category-full">')  
+        let empty = $('<div class="empty">Завантаження...</div>')  
+        body.append(empty)  
+        scroll.body().append(body)  
   
         this.create = function () {  
             this.activity.loader(true)  
@@ -18,42 +16,43 @@
   
             network.silent(url, (json) => {  
                 this.activity.loader(false)  
+                body.empty()  
   
                 if (!json.results || !json.results.length) {  
-                    let empty = new Lampa.Empty()  
-                    body.appendChild(empty.render(true))  
-                    scroll.append(body)  
-                    this.activity.toggle()  
+                    body.append('<div class="empty">Немає акторів 😢</div>')  
                     return  
                 }  
   
                 json.results.forEach((person) => {  
-                    let cardData = {  
-                        id: person.id,  
+                    const card = Lampa.Template.get('full_person', {  
                         name: person.name,  
-                        title: person.name,  
-                        original_name: person.name,  
-                        poster_path: person.profile_path,  
-                        profile_path: person.profile_path,  
-                        gender: person.gender || 2  
-                    }  
-  
-                    let card = new Lampa.Card(cardData, {  
-                        card_small: true,  
-                        card_category: true,  
-                        object: { source: 'tmdb' }  
+                        role: person.known_for_department || 'Actor'  
                     })  
   
-                    card.create()  
+                    // Додаємо клас для сіткового відображення  
+                    card.addClass('card--category')  
+                      
+                    // Додаємо inline стилі для відступів  
+                    card.attr('style', 'margin-right: 0 !important; padding-right: 0.5em !important; padding-left: 0.5em !important;')  
   
-                    card.onFocus = (target, card_data) => {  
-                        last = target  
-                        active = items.indexOf(card)  
-                        scroll.update(card.render(true))  
-                    }  
+                    // Додаємо подію visible для lazy loading  
+                    card.on('visible', () => {  
+                        const img = card.find('img')[0]  
   
-                    card.onEnter = (target, card_data) => {  
-                        last = target  
+                        img.onerror = function() {  
+                            img.src = './img/actor.svg'  
+                        }  
+  
+                        img.onload = function() {  
+                            card.addClass('full-person--loaded')  
+                        }  
+  
+                        img.src = person.profile_path  
+                            ? Lampa.Api.img(person.profile_path, 'w276_and_h350_face')  
+                            : './img/actor.svg'  
+                    })  
+  
+                    card.on('hover:enter', () => {  
                         Lampa.Activity.push({  
                             title: person.name,  
                             component: 'actor',  
@@ -61,20 +60,16 @@
                             url: '',  
                             source: 'tmdb'  
                         })  
-                    }  
+                    })  
   
-                    body.appendChild(card.render(true))  
-                    items.push(card)  
+                    body.append(card)  
                 })  
   
-                scroll.append(body)  
-                this.activity.toggle()  
+                // Після додавання всіх карток викликаємо Layer.visible  
+                Lampa.Layer.visible(scroll.render(true))  
             }, (error) => {  
                 this.activity.loader(false)  
-                let empty = new Lampa.Empty()  
-                body.appendChild(empty.render(true))  
-                scroll.append(body)  
-                this.activity.toggle()  
+                body.append('<div class="empty">Помилка завантаження</div>')  
             })  
         }  
   
@@ -84,14 +79,31 @@
                     Lampa.Controller.collectionSet(scroll.render())  
                     Lampa.Controller.collectionFocus(false, scroll.render())  
                 },  
-                up: () => Lampa.Controller.toggle('head'),  
-                down: () => {},  
-                back: () => Lampa.Activity.backward()  
+                left: () => {  
+                    if (Navigator.canmove('left')) Navigator.move('left')  
+                    else Lampa.Controller.toggle('menu')  
+                },  
+                right: () => {  
+                    Navigator.move('right')  
+                },  
+                up: () => {  
+                    if (Navigator.canmove('up')) Navigator.move('up')  
+                    else Lampa.Controller.toggle('head')  
+                },  
+                down: () => {  
+                    Navigator.move('down')  
+                },  
+                back: () => {  
+                    Lampa.Activity.backward()  
+                }  
             })  
   
-            this.create()  
             Lampa.Controller.toggle('content')  
         }  
+  
+        this.pause = function () {}  
+  
+        this.stop = function () {}  
   
         this.render = function () {  
             return scroll.render()  
@@ -104,38 +116,6 @@
     }  
   
     function startPlugin() {  
-        // Додаємо CSS для відображення імен акторів  
-        $('<style>')  
-            .text(`  
-                .category-full {  
-                    display: flex !important;  
-                    flex-wrap: wrap !important;  
-                }  
-                  
-                /* Фіксована ширина як у Релізах */  
-                .category-full .card--small.card--category {  
-                    width: 10.8em !important;  
-                }  
-                  
-                /* Показуємо імена акторів */  
-                .category-full .card--small.card--category .card__title {  
-                    display: block !important;  
-                    margin-top: 0.5em;  
-                    font-size: 1.1em;  
-                    max-height: 3.6em;  
-                    overflow: hidden;  
-                    line-height: 1.2;  
-                    -webkit-line-clamp: 3;  
-                    line-clamp: 3;  
-                    -webkit-box-orient: vertical;  
-                }  
-                  
-                .category-full .card--small.card--category .card__view {  
-                    margin-bottom: 0.5em;  
-                }  
-            `)  
-            .appendTo('head')  
-  
         const manifest = {  
             type: 'content',  
             version: '1.0.8',  
@@ -144,8 +124,10 @@
             component: 'actors_list'  
         }  
   
+        // Реєстрація компонента  
         Lampa.Component.add('actors_list', Actors)  
   
+        // Переклади  
         Lampa.Lang.add({  
             title_actors: {  
                 uk: 'Актори',  
@@ -154,12 +136,40 @@
             }  
         })  
   
+        // Додаємо CSS для приховування ролі та виправлення відступів  
+        $('<style>')  
+            .text(`  
+                .category-full {  
+                    display: flex !important;  
+                    flex-wrap: wrap !important;  
+                }  
+                  
+                /* Приховуємо роль актора */  
+                .category-full .full-person__role {  
+                    display: none !important;  
+                }  
+                  
+                /* Виправляємо відступи для сіткового відображення */  
+                .category-full .full-person.card--category {  
+                    margin-right: 0 !important;  
+                    padding-right: 0.5em !important;  
+                    padding-left: 0.5em !important;  
+                    padding-bottom: 1em !important;  
+                }  
+            `)  
+            .appendTo('head')  
+  
+        // Реєстрація плагіна  
         Lampa.Manifest.plugins = manifest  
   
         function addMenuButton() {  
-            const ico = '<svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="18" cy="12" r="6" stroke="currentColor" stroke-width="2"/><path d="M6 30c0-6.627 5.373-12 12-12s12 5.373 12 12" stroke="currentColor" stroke-width="2"/></svg>'  
             const button = $(`<li class="menu__item selector" data-action="actors">  
-                <div class="menu__ico">${ico}</div>  
+                <div class="menu__ico">  
+                    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36" fill="none">  
+                        <circle cx="18" cy="12" r="6" stroke="currentColor" stroke-width="2"/>  
+                        <path d="M6 30c0-6.627 5.373-12 12-12s12 5.373 12 12" stroke="currentColor" stroke-width="2"/>  
+                    </svg>  
+                </div>  
                 <div class="menu__text">${Lampa.Lang.translate('title_actors')}</div>  
             </li>`)  
   
