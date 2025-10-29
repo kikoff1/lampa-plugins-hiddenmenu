@@ -19,66 +19,84 @@
             network.silent(url, (json) => {  
                 this.activity.loader(false)  
   
-                json.results.forEach((person) => {  
-                    let cardData = {  
-                        id: person.id,  
-                        name: person.name,  
-                        title: person.name,  
-                        original_title: person.name,  
-                        profile_path: person.profile_path,  
-                        poster_path: person.profile_path,  
-                        gender: person.gender  
-                    }  
+                if (json.results && json.results.length) {  
+                    json.results.forEach((person) => {  
+                        let card = new Lampa.Card(person, {  
+                            card_category: true,  
+                            object: { source: 'tmdb' }  
+                        })  
   
-                    let card = new Lampa.Card(cardData, {  
-                        card_category: true,  
-                        object: { source: 'tmdb' }  
+                        card.create()  
+  
+                        card.onEnter = () => {  
+                            Lampa.Activity.push({  
+                                title: person.name,  
+                                component: 'actor',  
+                                id: person.id,  
+                                url: '',  
+                                source: 'tmdb'  
+                            })  
+                        }  
+  
+                        card.onFocus = (target) => {  
+                            last = target  
+                            active = items.indexOf(card)  
+                            scroll.update(card.render(true))  
+                        }  
+  
+                        body.appendChild(card.render(true))  
+                        items.push(card)  
                     })  
   
-                    card.create()  
+                    scroll.append(body)  
   
-                    card.onEnter = () => {  
-                        Lampa.Activity.push({  
-                            title: person.name,  
-                            component: 'actor',  
-                            id: person.id,  
-                            url: '',  
-                            source: 'tmdb'  
-                        })  
-                    }  
-  
-                    body.appendChild(card.render(true))  
-                    items.push(card)  
-                })  
-  
-                scroll.append(body)  
+                    setTimeout(() => {  
+                        Lampa.Layer.visible(scroll.render(true))  
+                    }, 100)  
+                } else {  
+                    let empty = new Lampa.Empty()  
+                    scroll.append(empty.render(true))  
+                }  
   
                 this.activity.toggle()  
-  
-                setTimeout(() => {  
-                    Lampa.Layer.visible(scroll.render(true))  
-                }, 100)  
             }, (error) => {  
                 this.activity.loader(false)  
+                  
+                let empty = new Lampa.Empty()  
+                scroll.append(empty.render(true))  
+                  
                 this.activity.toggle()  
             })  
+  
+            return this.render()  
         }  
   
         this.start = function () {  
-            Lampa.Controller.add('actors_list', {  
+            Controller.add('content', {  
                 link: this,  
                 toggle: () => {  
-                    Lampa.Controller.collectionSet(scroll.render(true))  
-                    if (items.length && items[active]) {  
-                        Lampa.Controller.collectionFocus(items[active].render(true), scroll.render(true))  
-                    }  
+                    Controller.collectionSet(scroll.render(true))  
+                    Controller.collectionFocus(last, scroll.render(true))  
+                },  
+                left: () => {  
+                    if (Navigator.canmove('left')) Navigator.move('left')  
+                    else Controller.toggle('menu')  
+                },  
+                right: () => {  
+                    Navigator.move('right')  
+                },  
+                up: () => {  
+                    if (Navigator.canmove('up')) Navigator.move('up')  
+                },  
+                down: () => {  
+                    if (Navigator.canmove('down')) Navigator.move('down')  
                 },  
                 back: () => {  
                     Lampa.Activity.backward()  
                 }  
             })  
   
-            Lampa.Controller.toggle('actors_list')  
+            Controller.toggle('content')  
         }  
   
         this.pause = function () {}  
@@ -86,11 +104,12 @@
         this.stop = function () {}  
   
         this.render = function () {  
-            return scroll.render()  
+            return scroll.render(true)  
         }  
   
         this.destroy = function () {  
-            scroll.destroy()  
+            scroll.clear()  
+            items = []  
         }  
     }  
   
@@ -126,13 +145,14 @@
         Lampa.Component.add('actors_list', Actors)  
   
         function addMenuButton() {  
-            let button = $(`<li class="menu__item selector" data-action="undefined">  
+            let button = $(`<li class="menu__item selector">  
                 <div class="menu__ico">  
                     <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 48 48" width="512" height="512">  
-                        <path d="M24,4A20,20,0,1,0,44,24,20,20,0,0,0,24,4Zm0,6a6,6,0,1,1-6,6A6,6,0,0,1,24,10ZM24,38a14,14,0,0,1-12-6.7c.1-4,8-6.3,12-6.3s11.9,2.3,12,6.3A14,14,0,0,1,24,38Z"/>  
+                        <path d="M24,23.5A11.5,11.5,0,1,0,12.5,12,11.51,11.51,0,0,0,24,23.5Zm0-20A8.5,8.5,0,1,1,15.5,12,8.51,8.51,0,0,1,24,3.5Z"/>  
+                        <path d="M38.32,36.68a1.5,1.5,0,0,0-2.12,0L24,48.88,11.8,36.68a1.5,1.5,0,0,0-2.12,2.12L23.44,52.56a.79.79,0,0,0,1.12,0L38.32,38.8A1.5,1.5,0,0,0,38.32,36.68Z"/>  
                     </svg>  
                 </div>  
-                <div class="menu__text">Актори</div>  
+                <div class="menu__text">${Lampa.Lang.translate('title_actors')}</div>  
             </li>`)  
   
             button.on('hover:enter', function () {  
