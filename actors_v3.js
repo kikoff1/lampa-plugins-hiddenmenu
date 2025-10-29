@@ -2,12 +2,9 @@
   
     function Actors() {  
         let scroll = new Lampa.Scroll({ mask: true })  
-        let body = document.createElement('div')  
         let items = []  
         let active = 0  
         let last  
-  
-        body.classList.add('category-full')  
   
         this.create = function () {  
             this.activity.loader(true)  
@@ -19,86 +16,77 @@
             network.silent(url, (json) => {  
                 this.activity.loader(false)  
   
-                if(json.results && json.results.length){  
-                    json.results.forEach((person) => {  
-                        let cardData = {  
-                            id: person.id,  
-                            name: person.name,  
-                            title: person.name,  
-                            original_title: person.name,  
-                            profile_path: person.profile_path,  
-                            gender: person.gender  
-                        }  
+                scroll.body().classList.add('category-full')  
   
-                        let card = new Lampa.Card(cardData, {  
-                            card_category: true,  
-                            object: { source: 'tmdb' }  
-                        })  
+                json.results.forEach((person) => {  
+                    let cardData = {  
+                        id: person.id,  
+                        name: person.name,  
+                        title: person.name,  
+                        original_title: person.name,  
+                        profile_path: person.profile_path,  
+                        gender: person.gender  
+                    }  
   
-                        card.create()  
-  
-                        card.onEnter = () => {  
-                            Lampa.Activity.push({  
-                                title: person.name,  
-                                component: 'actor',  
-                                id: person.id,  
-                                url: '',  
-                                source: 'tmdb'  
-                            })  
-                        }  
-  
-                        if(Lampa.Controller.own(this)) Lampa.Controller.collectionAppend(card.render(true))  
-  
-                        body.appendChild(card.render(true))  
-                        items.push(card)  
+                    let card = new Lampa.Card(cardData, {  
+                        card_category: true,  
+                        object: { source: 'tmdb' }  
                     })  
   
-                    scroll.append(body)  
+                    card.create()  
   
-                    this.activity.toggle()  
+                    card.onEnter = () => {  
+                        Lampa.Activity.push({  
+                            title: person.name,  
+                            component: 'actor',  
+                            id: person.id,  
+                            url: '',  
+                            source: 'tmdb'  
+                        })  
+                    }  
   
-                    setTimeout(() => {  
-                        Lampa.Layer.visible(scroll.render(true))  
-                    }, 100)  
-                }  
-                else{  
-                    this.empty()  
-                }  
-            }, (err) => {  
+                    card.onFocus = (target) => {  
+                        last = target  
+                        active = items.indexOf(card)  
+                        scroll.update($(target), false)  
+                    }  
+  
+                    scroll.body().appendChild(card.render(true))  
+                    items.push(card)  
+                })  
+  
+                setTimeout(() => {  
+                    Lampa.Layer.visible(scroll.render(true))  
+                }, 100)  
+  
+                this.activity.toggle()  
+            }, (error) => {  
                 this.activity.loader(false)  
-                this.empty()  
+                this.activity.toggle()  
             })  
         }  
   
-        this.empty = function(){  
-            let empty = new Lampa.Empty()  
-            scroll.append(empty.render())  
-            this.activity.loader(false)  
-            this.activity.toggle()  
-        }  
-  
-        this.start = function(){  
-            Lampa.Controller.add('content',{  
-                link: this,  
-                toggle: ()=>{  
+        this.start = function () {  
+            Lampa.Controller.add('content', {  
+                toggle: () => {  
                     Lampa.Controller.collectionSet(scroll.render(true))  
-                    Lampa.Controller.collectionFocus(last || false, scroll.render(true))  
+                    Lampa.Controller.collectionFocus(last, scroll.render(true))  
                 },  
-                left: ()=>{  
-                    if(Navigator.canmove('left')) Navigator.move('left')  
+                left: () => {  
+                    if (Lampa.Navigator.canmove('left')) Lampa.Navigator.move('left')  
                     else Lampa.Controller.toggle('menu')  
                 },  
-                right: ()=>{  
-                    Navigator.move('right')  
+                right: () => {  
+                    Lampa.Navigator.move('right')  
                 },  
-                up: ()=>{  
-                    if(Navigator.canmove('up')) Navigator.move('up')  
+                up: () => {  
+                    if (Lampa.Navigator.canmove('up')) Lampa.Navigator.move('up')  
                     else Lampa.Controller.toggle('head')  
                 },  
-                down: ()=>{  
-                    Navigator.move('down')  
+                down: () => {  
+                    Lampa.Navigator.move('down')  
                 },  
-                back: ()=>{  
+                back: () => {  
                     Lampa.Activity.backward()  
                 }  
             })  
@@ -106,27 +94,22 @@
             Lampa.Controller.toggle('content')  
         }  
   
-        this.pause = function(){}  
+        this.pause = function () {}  
   
-        this.stop = function(){}  
+        this.stop = function () {}  
   
-        this.render = function(){  
-            return scroll.render()  
+        this.render = function () {  
+            return scroll.render(true)  
         }  
   
-        this.destroy = function(){  
+        this.destroy = function () {  
             scroll.destroy()  
         }  
     }  
   
     function startPlugin() {  
-        // Додаємо CSS стилі  
         $('<style>')  
             .text(`  
-                .category-full {  
-                    isolation: isolate;  
-                }  
-                  
                 .category-full .card--category {  
                     width: 10.8em !important;  
                 }  
@@ -142,6 +125,10 @@
                     display: -webkit-box;  
                     -webkit-line-clamp: 3;  
                     -webkit-box-orient: vertical;  
+                }  
+                  
+                .category-full {  
+                    isolation: isolate;  
                 }  
             `)  
             .appendTo('head')  
