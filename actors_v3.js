@@ -64,6 +64,19 @@
   
                 scroll.append(body)  
   
+                // Додаємо обробник прокручування колесом миші  
+                scroll.onWheel = (step) => {  
+                    if (!Lampa.Controller.own(this)) this.start()  
+  
+                    if (step > 0) Navigator.move('down')  
+                    else Navigator.move('up')  
+                }  
+  
+                // Додаємо обробник для оптимізації відображення  
+                scroll.onScroll = () => {  
+                    Lampa.Layer.visible(scroll.render(true))  
+                }  
+  
                 setTimeout(() => {  
                     Lampa.Layer.visible(scroll.render(true))  
                 }, 100)  
@@ -78,34 +91,13 @@
             return this.render()  
         }  
   
-        this.down = function () {  
-            active++  
-            active = Math.min(active, items.length - 1)  
-  
-            if (items[active]) {  
-                Lampa.Controller.collectionFocus(items[active].render(true), scroll.render(true))  
-                scroll.update(items[active].render(true))  
-            }  
-        }  
-  
-        this.up = function () {  
-            active--  
-  
-            if (active < 0) {  
-                active = 0  
-                Lampa.Controller.toggle('head')  
-            } else if (items[active]) {  
-                Lampa.Controller.collectionFocus(items[active].render(true), scroll.render(true))  
-                scroll.update(items[active].render(true))  
-            }  
-        }  
-  
         this.back = function () {  
             Lampa.Activity.backward()  
         }  
   
         this.start = function () {  
             Lampa.Controller.add('content', {  
+                link: this,  
                 toggle: () => {  
                     Lampa.Controller.collectionSet(scroll.render(true))  
                     Lampa.Controller.collectionFocus(last || false, scroll.render(true))  
