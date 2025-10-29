@@ -1,7 +1,4 @@
 (function () {  
-
-
-//v1
   
     function Actors() {  
         let scroll = new Lampa.Scroll({ mask: true })  
@@ -25,7 +22,6 @@
                 if (!json.results || !json.results.length) {  
                     let empty = new Lampa.Empty()  
                     body.appendChild(empty.render(true))  
-                    scroll.append(body)  
                     return  
                 }  
   
@@ -44,8 +40,6 @@
                         object: { source: 'tmdb' }  
                     })  
   
-                    card.create()  
-  
                     card.onEnter = () => {  
                         Lampa.Activity.push({  
                             title: person.name,  
@@ -56,33 +50,27 @@
                         })  
                     }  
   
-                    card.onFocus = (target) => {  
-                        last = target  
-                        active = items.indexOf(card)  
-                    }  
-  
                     body.appendChild(card.render(true))  
                     items.push(card)  
                 })  
   
-                scroll.append(body)  
-                this.activity.toggle()  
-  
                 setTimeout(() => {  
                     Lampa.Layer.visible(scroll.render(true))  
                 }, 100)  
+  
+                this.activity.toggle()  
             }, (error) => {  
                 this.activity.loader(false)  
-                this.activity.toggle()  
-                console.error('Actors plugin error:', error)  
+                let empty = new Lampa.Empty()  
+                body.appendChild(empty.render(true))  
             })  
         }  
   
         this.start = function () {  
             Lampa.Controller.add('content', {  
                 toggle: () => {  
-                    Lampa.Controller.collectionSet(scroll.render())  
-                    Lampa.Controller.collectionFocus(last, scroll.render())  
+                    Lampa.Controller.collectionSet(scroll.render(true))  
+                    Lampa.Controller.collectionFocus(last, scroll.render(true))  
                 },  
                 left: () => {  
                     if (Lampa.Navigator.canmove('left')) Lampa.Navigator.move('left')  
@@ -92,11 +80,20 @@
                     Lampa.Navigator.move('right')  
                 },  
                 up: () => {  
-                    if (Lampa.Navigator.canmove('up')) Lampa.Navigator.move('up')  
-                    else Lampa.Controller.toggle('head')  
+                    if (active > 0) {  
+                        active--  
+                        scroll.update(items[active].render(true))  
+                    } else if (Lampa.Navigator.canmove('up')) {  
+                        Lampa.Navigator.move('up')  
+                    }  
                 },  
                 down: () => {  
-                    if (Lampa.Navigator.canmove('down')) Lampa.Navigator.move('down')  
+                    if (active < items.length - 1) {  
+                        active++  
+                        scroll.update(items[active].render(true))  
+                    } else if (Lampa.Navigator.canmove('down')) {  
+                        Lampa.Navigator.move('down')  
+                    }  
                 },  
                 back: () => {  
                     Lampa.Activity.backward()  
@@ -106,29 +103,44 @@
             Lampa.Controller.toggle('content')  
         }  
   
-        this.pause = function () {}  
+        scroll.onWheel = (step) => {  
+            if (step > 0) {  
+                if (active < items.length - 1) {  
+                    active++  
+                    scroll.update(items[active].render(true))  
+                }  
+            } else {  
+                if (active > 0) {  
+                    active--  
+                    scroll.update(items[active].render(true))  
+                }  
+            }  
+        }  
   
-        this.stop = function () {}  
+        scroll.append(body)  
   
         this.render = function () {  
-            return scroll.render()  
+            return scroll.render(true)  
         }  
   
         this.destroy = function () {  
             scroll.destroy()  
-            if (body.parentNode) body.parentNode.removeChild(body)  
+            body.remove()  
         }  
     }  
   
     function startPlugin() {  
-        // Додаємо CSS стилі для компактних карток та виправлення прозорості  
+        // Додаємо CSS стилі для компактних карток  
         $('<style>')  
             .text(`  
+                .category-full {  
+                    display: flex !important;  
+                    flex-wrap: wrap !important;  
+                    isolation: isolate;  
+                }  
+                  
                 .category-full .card--category {  
                     width: 10.8em !important;  
-                    isolation: isolate;  
-                    position: relative;  
-                    z-index: 1;  
                 }  
                   
                 .category-full .card--category .card__title {  
@@ -142,7 +154,6 @@
                     text-overflow: ".";  
                     display: -webkit-box;  
                     -webkit-line-clamp: 3;  
-                    line-clamp: 3;  
                     -webkit-box-orient: vertical;  
                 }  
                   
@@ -160,8 +171,6 @@
             component: 'actors_list'  
         }  
   
-        Lampa.Manifest.plugins = manifest  
-  
         Lampa.Component.add('actors_list', Actors)  
   
         Lampa.Lang.add({  
@@ -172,13 +181,14 @@
             }  
         })  
   
+        Lampa.Manifest.plugins = manifest  
+  
         function addMenuButton() {  
-            const ico = `<svg width="38" height="31" viewBox="0 0 38 31" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                <circle cx="19" cy="12" r="6" stroke="currentColor" stroke-width="2"/>  
-                <path d="M5 26c0-7.732 6.268-14 14-14s14 6.268 14 14" stroke="currentColor" stroke-width="2"/>  
+            let ico = `<svg height="260" viewBox="0 0 244 260" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                <path d="M122 0C54.6538 0 0 54.6538 0 122C0 189.346 54.6538 244 122 244C189.346 244 244 189.346 244 122C244 54.6538 189.346 0 122 0ZM122 183.385C93.8462 183.385 60.6154 183.385 60.6154 122C60.6154 60.6154 93.8462 60.6154 122 60.6154C150.154 60.6154 183.385 60.6154 183.385 122C183.385 183.385 150.154 183.385 122 183.385Z" fill="white"/>  
             </svg>`  
   
-            const button = $(`<li class="menu__item selector">  
+            let button = $(`<li class="menu__item selector">  
                 <div class="menu__ico">${ico}</div>  
                 <div class="menu__text">${Lampa.Lang.translate('title_actors')}</div>  
             </li>`)  
