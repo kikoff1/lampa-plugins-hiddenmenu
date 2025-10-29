@@ -20,9 +20,7 @@
                 this.activity.loader(false)  
   
                 if (!json.results || !json.results.length) {  
-                    let empty = new Lampa.Empty()  
-                    body.appendChild(empty.render(true))  
-                    this.start = empty.start  
+                    body.innerHTML = '<div class="empty">Немає акторів 😢</div>'  
                     this.activity.toggle()  
                     return  
                 }  
@@ -30,11 +28,11 @@
                 json.results.forEach((person) => {  
                     let cardData = {  
                         id: person.id,  
-                        title: person.name,  
                         name: person.name,  
+                        title: person.name,  
                         profile_path: person.profile_path,  
                         gender: person.gender,  
-                        original_name: person.original_name  
+                        source: 'tmdb'  
                     }  
   
                     let card = new Lampa.Card(cardData, {  
@@ -73,14 +71,41 @@
                 this.activity.toggle()  
             }, (error) => {  
                 this.activity.loader(false)  
+                body.innerHTML = '<div class="empty">Помилка завантаження 😢</div>'  
                 this.activity.toggle()  
-                console.error('Actors plugin error:', error)  
             })  
+  
+            return this.render()  
+        }  
+  
+        this.down = function () {  
+            active++  
+            active = Math.min(active, items.length - 1)  
+  
+            if (items[active]) {  
+                Lampa.Controller.collectionFocus(items[active].render(true), scroll.render(true))  
+                scroll.update(items[active].render(true))  
+            }  
+        }  
+  
+        this.up = function () {  
+            active--  
+  
+            if (active < 0) {  
+                active = 0  
+                Lampa.Controller.toggle('head')  
+            } else if (items[active]) {  
+                Lampa.Controller.collectionFocus(items[active].render(true), scroll.render(true))  
+                scroll.update(items[active].render(true))  
+            }  
+        }  
+  
+        this.back = function () {  
+            Lampa.Activity.backward()  
         }  
   
         this.start = function () {  
             Lampa.Controller.add('content', {  
-                link: this,  
                 toggle: () => {  
                     Lampa.Controller.collectionSet(scroll.render(true))  
                     Lampa.Controller.collectionFocus(last || false, scroll.render(true))  
@@ -99,9 +124,7 @@
                 down: () => {  
                     Navigator.move('down')  
                 },  
-                back: () => {  
-                    Lampa.Activity.backward()  
-                }  
+                back: this.back  
             })  
   
             Lampa.Controller.toggle('content')  
@@ -109,19 +132,26 @@
   
         this.pause = function () {}  
         this.stop = function () {}  
-        this.destroy = function () {  
-            scroll.destroy()  
-            body.remove()  
-        }  
-  
         this.render = function () {  
             return scroll.render()  
+        }  
+  
+        this.destroy = function () {  
+            Lampa.Arrays.destroy(items)  
+            scroll.destroy()  
+            items = []  
         }  
     }  
   
     function startPlugin() {  
         $('<style>')  
             .text(`  
+                .category-full {  
+                    display: flex !important;  
+                    flex-wrap: wrap !important;  
+                    isolation: isolate;  
+                }  
+                  
                 .category-full .card--category {  
                     width: 10.8em !important;  
                 }  
@@ -133,15 +163,10 @@
                     margin-bottom: 1em;  
                     max-height: 3.6em;  
                     overflow: hidden;  
-                    line-height: 1.2;  
+                    text-overflow: ellipsis;  
                     -webkit-line-clamp: 3;  
                     display: -webkit-box;  
                     -webkit-box-orient: vertical;  
-                    text-overflow: ellipsis;  
-                }  
-                  
-                .category-full {  
-                    isolation: isolate;  
                 }  
             `)  
             .appendTo('head')  
@@ -157,6 +182,8 @@
         })  
   
         function addMenuButton() {  
+            if ($('.menu .menu__item[data-action="actors"]').length) return  
+  
             let button = $(`<li class="menu__item selector" data-action="actors">  
                 <div class="menu__ico">  
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">  
