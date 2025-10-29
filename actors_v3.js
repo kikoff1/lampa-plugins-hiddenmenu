@@ -1,10 +1,5 @@
 (function () {  
   
-
-
-
-
-
     function Actors() {  
         let scroll = new Lampa.Scroll({ mask: true })  
         let body = document.createElement('div')  
@@ -24,56 +19,46 @@
             network.silent(url, (json) => {  
                 this.activity.loader(false)  
   
-                if (!json.results || !json.results.length) {  
-                    this.empty()  
-                    return  
-                }  
+                if (json && json.results) {  
+                    json.results.forEach((person) => {  
+                        let card = new Lampa.Card({  
+                            id: person.id,  
+                            name: person.name,  
+                            title: person.name,  
+                            original_title: person.name,  
+                            profile_path: person.profile_path,  
+                            poster_path: person.profile_path,  
+                            gender: person.gender  
+                        }, {  
+                            card_category: true,  
+                            object: { source: 'tmdb' }  
+                        })  
   
-                json.results.forEach((person) => {  
-                    let cardData = {  
-                        id: person.id,  
-                        name: person.name,  
-                        title: person.name,  
-                        profile_path: person.profile_path,  
-                        gender: person.gender,  
-                        known_for_department: person.known_for_department  
-                    }  
+                        card.create()  
   
-                    let card = new Lampa.Card(cardData, {  
-                        card_category: true,  
-                        object: { source: 'tmdb' }  
+                        card.onEnter = () => {  
+                            Lampa.Activity.push({  
+                                title: person.name,  
+                                component: 'actor',  
+                                id: person.id,  
+                                url: '',  
+                                source: 'tmdb'  
+                            })  
+                        }  
+  
+                        body.appendChild(card.render(true))  
+                        items.push(card)  
                     })  
   
-                    card.create()  
+                    scroll.append(body)  
+                    this.activity.toggle()  
   
-                    card.onFocus = (target) => {  
-                        last = target  
-                        active = items.indexOf(card)  
-                        scroll.update(card.render(true))  
-                    }  
-  
-                    card.onEnter = () => {  
-                        Lampa.Activity.push({  
-                            title: person.name,  
-                            component: 'actor',  
-                            id: person.id,  
-                            url: '',  
-                            source: 'tmdb'  
-                        })  
-                    }  
-  
-                    body.appendChild(card.render(true))  
-                    items.push(card)  
-                })  
-  
-                scroll.append(body)  
-                html.appendChild(scroll.render(true))  
-  
-                setTimeout(() => {  
-                    Lampa.Layer.visible(scroll.render(true))  
-                }, 100)  
-  
-                this.activity.toggle()  
+                    setTimeout(() => {  
+                        Lampa.Layer.visible(scroll.render(true))  
+                    }, 100)  
+                } else {  
+                    this.empty()  
+                }  
             }, (error) => {  
                 this.activity.loader(false)  
                 this.empty()  
@@ -87,18 +72,19 @@
                     Lampa.Controller.collectionSet(scroll.render(true))  
                     Lampa.Controller.collectionFocus(last, scroll.render(true))  
                 },  
-                up: () => {  
-                    Lampa.Navigator.move('up')  
-                },  
-                down: () => {  
-                    Lampa.Navigator.move('down')  
-                },  
                 left: () => {  
                     if (Lampa.Navigator.canmove('left')) Lampa.Navigator.move('left')  
                     else Lampa.Controller.toggle('menu')  
                 },  
                 right: () => {  
                     Lampa.Navigator.move('right')  
+                },  
+                up: () => {  
+                    if (Lampa.Navigator.canmove('up')) Lampa.Navigator.move('up')  
+                    else Lampa.Controller.toggle('head')  
+                },  
+                down: () => {  
+                    Lampa.Navigator.move('down')  
                 },  
                 back: () => {  
                     Lampa.Activity.backward()  
@@ -113,24 +99,20 @@
         this.stop = function () {}  
   
         this.render = function () {  
-            return html  
+            return scroll.render(true)  
         }  
   
         this.destroy = function () {  
-            Lampa.Listener.remove('app', {})  
             scroll.destroy()  
-            items.forEach(item => item.destroy())  
-            items = []  
         }  
-  
-        let html = document.createElement('div')  
     }  
   
     function startPlugin() {  
-        // Додаємо CSS стилі для компактних карток  
         $('<style>')  
             .text(`  
                 .category-full {  
+                    display: flex;  
+                    flex-wrap: wrap;  
                     isolation: isolate;  
                 }  
                   
@@ -168,7 +150,7 @@
             button.on('hover:enter', function () {  
                 Lampa.Activity.push({  
                     url: '',  
-                    title: 'Актори',  
+                    title: Lampa.Lang.translate('title_actors'),  
                     component: 'actors_list',  
                     page: 1  
                 })  
