@@ -2,10 +2,12 @@
   
     function Actors() {  
         let scroll = new Lampa.Scroll({ mask: true })  
-        let body = $('<div class="category-full">')  
+        let body = document.createElement('div')  
         let items = []  
         let active = 0  
         let last  
+  
+        body.classList.add('category-full')  
   
         this.create = function () {  
             this.activity.loader(true)  
@@ -18,8 +20,10 @@
                 this.activity.loader(false)  
   
                 if (!json.results || !json.results.length) {  
-                    body.append('<div class="empty">Немає акторів 😢</div>')  
+                    let empty = new Lampa.Empty()  
+                    body.appendChild(empty.render(true))  
                     scroll.append(body)  
+                    this.activity.toggle()  
                     return  
                 }  
   
@@ -33,76 +37,43 @@
                         profile_path: person.profile_path,  
                         gender: person.gender || 2  
                     }  
-                      
+  
                     let card = new Lampa.Card(cardData, {  
                         card_category: true,  
+                        card_small: true,  
                         object: { source: 'tmdb' }  
                     })  
-                      
+  
                     card.create()  
-                      
+  
                     card.onFocus = (target, card_data) => {  
                         last = target  
                         active = items.indexOf(card)  
                         scroll.update(card.render(true))  
-                        Lampa.Background.change(Lampa.Utils.cardImgBackground(card_data))  
-                    }  
-                      
-                    card.onTouch = (target, card_data) => {  
-                        last = target  
-                        active = items.indexOf(card)  
                     }  
   
-                    // Власна логіка для відкриття сторінки актора  
                     card.onEnter = (target, card_data) => {  
-                        last = target  
-                          
                         Lampa.Activity.push({  
-                            url: '',  
                             title: person.name,  
                             component: 'actor',  
                             id: person.id,  
+                            url: '',  
                             source: 'tmdb'  
                         })  
                     }  
   
-                    body.append(card.render(true))  
+                    body.appendChild(card.render(true))  
                     items.push(card)  
                 })  
   
                 scroll.append(body)  
-                this.activity.loader(false)  
                 this.activity.toggle()  
-                  
-                Lampa.Controller.add('content', {  
-                    toggle: () => {  
-                        Lampa.Controller.collectionSet(scroll.render())  
-                        Lampa.Controller.collectionFocus(last, scroll.render())  
-                    },  
-                    left: () => {  
-                        if (Lampa.Navigator.canmove('left')) Lampa.Navigator.move('left')  
-                        else Lampa.Controller.toggle('menu')  
-                    },  
-                    right: () => {  
-                        Lampa.Navigator.move('right')  
-                    },  
-                    up: () => {  
-                        if (Lampa.Navigator.canmove('up')) Lampa.Navigator.move('up')  
-                        else Lampa.Controller.toggle('head')  
-                    },  
-                    down: () => {  
-                        if (Lampa.Navigator.canmove('down')) Lampa.Navigator.move('down')  
-                    },  
-                    back: () => {  
-                        Lampa.Activity.backward()  
-                    }  
-                })  
-  
-                Lampa.Controller.toggle('content')  
             }, (error) => {  
                 this.activity.loader(false)  
-                body.append('<div class="empty">Помилка завантаження</div>')  
+                let empty = new Lampa.Empty()  
+                body.appendChild(empty.render(true))  
                 scroll.append(body)  
+                this.activity.toggle()  
             })  
         }  
   
@@ -112,28 +83,31 @@
                     Lampa.Controller.collectionSet(scroll.render())  
                     Lampa.Controller.collectionFocus(last, scroll.render())  
                 },  
-                left: () => {  
-                    if (Lampa.Navigator.canmove('left')) Lampa.Navigator.move('left')  
-                    else Lampa.Controller.toggle('menu')  
-                },  
-                right: () => {  
-                    Lampa.Navigator.move('right')  
-                },  
                 up: () => {  
                     if (Lampa.Navigator.canmove('up')) Lampa.Navigator.move('up')  
                     else Lampa.Controller.toggle('head')  
                 },  
                 down: () => {  
-                    if (Lampa.Navigator.canmove('down')) Lampa.Navigator.move('down')  
+                    Lampa.Navigator.move('down')  
+                },  
+                right: () => {  
+                    Lampa.Navigator.move('right')  
+                },  
+                left: () => {  
+                    if (Lampa.Navigator.canmove('left')) Lampa.Navigator.move('left')  
+                    else Lampa.Controller.toggle('menu')  
                 },  
                 back: () => {  
                     Lampa.Activity.backward()  
                 }  
             })  
   
-            this.create()  
             Lampa.Controller.toggle('content')  
         }  
+  
+        this.pause = function () {}  
+  
+        this.stop = function () {}  
   
         this.render = function () {  
             return scroll.render()  
@@ -141,14 +115,34 @@
   
         this.destroy = function () {  
             scroll.destroy()  
-            body.remove()  
+            items.forEach(item => item.destroy())  
+            items = []  
         }  
     }  
   
     function startPlugin() {  
+        // Додаємо CSS стилі для компактних карток  
+        $('<style>')  
+            .text(`  
+                .category-full .card--small.card--category {  
+                    width: 10.8em !important;  
+                }  
+                  
+                .category-full .card--small.card--category .card__title {  
+                    display: block !important;  
+                    margin-top: 0.5em;  
+                    font-size: 1.1em;  
+                }  
+                  
+                .category-full .card--small.card--category .card__view {  
+                    margin-bottom: 0.5em;  
+                }  
+            `)  
+            .appendTo('head')  
+  
         const manifest = {  
             type: 'content',  
-            version: '1.0.0',  
+            version: '1.0.8',  
             name: 'Actors',  
             description: 'Популярні актори з TMDB',  
             component: 'actors_list'  
@@ -164,14 +158,12 @@
             }  
         })  
   
+        Lampa.Manifest.plugins = manifest  
+  
         function addMenuButton() {  
-            let button = $(`<li class="menu__item selector">  
-                <div class="menu__ico">  
-                    <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                        <circle cx="18" cy="12" r="6" stroke="currentColor" stroke-width="2"/>  
-                        <path d="M6 30c0-6.627 5.373-12 12-12s12 5.373 12 12" stroke="currentColor" stroke-width="2"/>  
-                    </svg>  
-                </div>  
+            const ico = '<svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="18" cy="12" r="6" stroke="currentColor" stroke-width="2"/><path d="M6 30c0-6.627 5.373-12 12-12s12 5.373 12 12" stroke="currentColor" stroke-width="2"/></svg>'  
+            const button = $(`<li class="menu__item selector">  
+                <div class="menu__ico">${ico}</div>  
                 <div class="menu__text">${Lampa.Lang.translate('title_actors')}</div>  
             </li>`)  
   
