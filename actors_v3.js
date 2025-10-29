@@ -1,3 +1,42 @@
+(function () {  
+  
+    function Actors() {  
+        let scroll = new Lampa.Scroll({ mask: true })  
+        let body = document.createElement('div')  
+        let items = []  
+        let active = 0  
+        let last  
+  
+        body.classList.add('category-full')  
+  
+        this.create = function () {  
+            this.activity.loader(true)  
+  
+            let network = new Lampa.Reguest()  
+            let url = Lampa.Utils.protocol() + 'api.themoviedb.org/3/person/popular?api_key=' +  
+                Lampa.TMDB.key() + '&language=' + Lampa.Storage.field('tmdb_lang')  
+  
+            network.silent(url, (json) => {  
+                this.activity.loader(false)  
+  
+                if (json && json.results) {  
+                    json.results.forEach((person) => {  
+                        let card = new Lampa.Card({  
+                            id: person.id,  
+                            name: person.name,  
+                            title: person.name,  
+                            original_title: person.name,  
+                            profile_path: person.profile_path,  
+                            poster_path: person.profile_path,  
+                            gender: person.gender  
+                        }, {  
+                            card_category: true,  
+                            object: { source: 'tmdb' }  
+                        })  
+  
+                        card.create()  
+  
+                        card.onEnter = () => {  
                             Lampa.Activity.push({  
                                 title: person.name,  
                                 component: 'actor',  
