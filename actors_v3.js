@@ -19,79 +19,66 @@
             network.silent(url, (json) => {  
                 this.activity.loader(false)  
   
-                if (json && json.results) {  
-                    json.results.forEach((person) => {  
-                        let card = new Lampa.Card({  
-                            id: person.id,  
-                            name: person.name,  
-                            title: person.name,  
-                            original_title: person.name,  
-                            profile_path: person.profile_path,  
-                            poster_path: person.profile_path,  
-                            gender: person.gender  
-                        }, {  
-                            card_category: true,  
-                            object: { source: 'tmdb' }  
-                        })  
+                json.results.forEach((person) => {  
+                    let cardData = {  
+                        id: person.id,  
+                        name: person.name,  
+                        title: person.name,  
+                        original_title: person.name,  
+                        profile_path: person.profile_path,  
+                        poster_path: person.profile_path,  
+                        gender: person.gender  
+                    }  
   
-                        card.create()  
-  
-                        card.onEnter = () => {  
-                            Lampa.Activity.push({  
-                                title: person.name,  
-                                component: 'actor',  
-                                id: person.id,  
-                                url: '',  
-                                source: 'tmdb'  
-                            })  
-                        }  
-  
-                        body.appendChild(card.render(true))  
-                        items.push(card)  
+                    let card = new Lampa.Card(cardData, {  
+                        card_category: true,  
+                        object: { source: 'tmdb' }  
                     })  
   
-                    scroll.append(body)  
-                    this.activity.toggle()  
+                    card.create()  
   
-                    setTimeout(() => {  
-                        Lampa.Layer.visible(scroll.render(true))  
-                    }, 100)  
-                } else {  
-                    this.empty()  
-                }  
+                    card.onEnter = () => {  
+                        Lampa.Activity.push({  
+                            title: person.name,  
+                            component: 'actor',  
+                            id: person.id,  
+                            url: '',  
+                            source: 'tmdb'  
+                        })  
+                    }  
+  
+                    body.appendChild(card.render(true))  
+                    items.push(card)  
+                })  
+  
+                scroll.append(body)  
+  
+                this.activity.toggle()  
+  
+                setTimeout(() => {  
+                    Lampa.Layer.visible(scroll.render(true))  
+                }, 100)  
             }, (error) => {  
                 this.activity.loader(false)  
-                this.empty()  
+                this.activity.toggle()  
             })  
         }  
   
         this.start = function () {  
-            Lampa.Controller.add('content', {  
+            Lampa.Controller.add('actors_list', {  
                 link: this,  
                 toggle: () => {  
                     Lampa.Controller.collectionSet(scroll.render(true))  
-                    Lampa.Controller.collectionFocus(last, scroll.render(true))  
-                },  
-                left: () => {  
-                    if (Lampa.Navigator.canmove('left')) Lampa.Navigator.move('left')  
-                    else Lampa.Controller.toggle('menu')  
-                },  
-                right: () => {  
-                    Lampa.Navigator.move('right')  
-                },  
-                up: () => {  
-                    if (Lampa.Navigator.canmove('up')) Lampa.Navigator.move('up')  
-                    else Lampa.Controller.toggle('head')  
-                },  
-                down: () => {  
-                    Lampa.Navigator.move('down')  
+                    if (items.length && items[active]) {  
+                        Lampa.Controller.collectionFocus(items[active].render(true), scroll.render(true))  
+                    }  
                 },  
                 back: () => {  
                     Lampa.Activity.backward()  
                 }  
             })  
   
-            Lampa.Controller.toggle('content')  
+            Lampa.Controller.toggle('actors_list')  
         }  
   
         this.pause = function () {}  
@@ -99,7 +86,7 @@
         this.stop = function () {}  
   
         this.render = function () {  
-            return scroll.render(true)  
+            return scroll.render()  
         }  
   
         this.destroy = function () {  
@@ -108,6 +95,7 @@
     }  
   
     function startPlugin() {  
+        // Додаємо CSS стилі для компактних карток  
         $('<style>')  
             .text(`  
                 .category-full {  
@@ -138,10 +126,10 @@
         Lampa.Component.add('actors_list', Actors)  
   
         function addMenuButton() {  
-            let button = $(`<li class="menu__item selector" data-action="actors">  
+            let button = $(`<li class="menu__item selector" data-action="undefined">  
                 <div class="menu__ico">  
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">  
-                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>  
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 48 48" width="512" height="512">  
+                        <path d="M24,4A20,20,0,1,0,44,24,20,20,0,0,0,24,4Zm0,6a6,6,0,1,1-6,6A6,6,0,0,1,24,10ZM24,38a14,14,0,0,1-12-6.7c.1-4,8-6.3,12-6.3s11.9,2.3,12,6.3A14,14,0,0,1,24,38Z"/>  
                     </svg>  
                 </div>  
                 <div class="menu__text">Актори</div>  
