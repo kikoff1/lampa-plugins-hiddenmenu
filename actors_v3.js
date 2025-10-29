@@ -43,7 +43,16 @@
                         object: { source: 'tmdb' }  
                     })  
   
-                    card.onEnter = () => {  
+                    card.create()  
+  
+                    card.onFocus = (target, card_data) => {  
+                        last = target  
+                        active = items.indexOf(card)  
+                        scroll.update(card.render(true))  
+                        Lampa.Background.change(Lampa.Utils.cardImgBackground(card_data))  
+                    }  
+  
+                    card.onEnter = (target, card_data) => {  
                         Lampa.Activity.push({  
                             title: person.name,  
                             component: 'actor',  
@@ -53,19 +62,23 @@
                         })  
                     }  
   
-                    let cardElement = card.render(true)  
-                    body.appendChild(cardElement)  
+                    body.appendChild(card.render(true))  
                     items.push(card)  
                 })  
   
                 scroll.append(body)  
-                this.activity.toggle()  
-  
+                  
+                // Викликаємо Layer.visible() після додавання всіх карток  
                 setTimeout(() => {  
                     Lampa.Layer.visible(scroll.render(true))  
                 }, 100)  
+  
+                this.activity.toggle()  
             }, (error) => {  
                 this.activity.loader(false)  
+                let empty = new Lampa.Empty()  
+                body.appendChild(empty.render(true))  
+                scroll.append(body)  
                 this.activity.toggle()  
             })  
         }  
@@ -73,22 +86,22 @@
         this.start = function () {  
             Lampa.Controller.add('content', {  
                 toggle: () => {  
-                    Lampa.Controller.collectionSet(scroll.render(), items)  
-                    Lampa.Controller.collectionFocus(last || false, scroll.render())  
+                    Lampa.Controller.collectionSet(scroll.render(true))  
+                    Lampa.Controller.collectionFocus(last, scroll.render(true))  
                 },  
                 left: () => {  
-                    if (Navigator.canmove('left')) Navigator.move('left')  
+                    if (Lampa.Navigator.canmove('left')) Lampa.Navigator.move('left')  
                     else Lampa.Controller.toggle('menu')  
                 },  
                 right: () => {  
-                    Navigator.move('right')  
+                    Lampa.Navigator.move('right')  
                 },  
                 up: () => {  
-                    if (Navigator.canmove('up')) Navigator.move('up')  
+                    if (Lampa.Navigator.canmove('up')) Lampa.Navigator.move('up')  
                     else Lampa.Controller.toggle('head')  
                 },  
                 down: () => {  
-                    Navigator.move('down')  
+                    if (Lampa.Navigator.canmove('down')) Lampa.Navigator.move('down')  
                 },  
                 back: () => {  
                     Lampa.Activity.backward()  
@@ -108,6 +121,7 @@
   
         this.destroy = function () {  
             scroll.destroy()  
+            items.forEach(card => card.destroy())  
             items = []  
         }  
     }  
@@ -121,14 +135,11 @@
                 }  
                   
                 .category-full .card--category .card__title {  
-                    display: block !important;  
-                    margin-top: 0.5em;  
-                    font-size: 1.1em;  
                     margin-bottom: 1em;  
-                    max-height: 3.6em;  
+                    font-size: 1.1em;  
+                    text-align: center;  
                     overflow: hidden;  
-                    line-height: 1.2;  
-                    text-overflow: ".";  
+                    text-overflow: ellipsis;  
                     display: -webkit-box;  
                     -webkit-line-clamp: 3;  
                     line-clamp: 3;  
@@ -166,6 +177,7 @@
                 <circle cx="18" cy="12" r="6" stroke="currentColor" stroke-width="2"/>  
                 <path d="M6 30c0-6.627 5.373-12 12-12s12 5.373 12 12" stroke="currentColor" stroke-width="2"/>  
             </svg>`  
+              
             const button = $(`<li class="menu__item selector">  
                 <div class="menu__ico">${ico}</div>  
                 <div class="menu__text">${Lampa.Lang.translate('title_actors')}</div>  
