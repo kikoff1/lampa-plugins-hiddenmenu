@@ -3,14 +3,11 @@
     function Actors() {  
         let scroll = new Lampa.Scroll({ mask: true })  
         let body = document.createElement('div')  
-        let html = document.createElement('div')  
         let items = []  
         let active = 0  
         let last  
   
         body.classList.add('category-full')  
-        scroll.append(body)  
-        html.appendChild(scroll.render(true))  
   
         this.create = function () {  
             this.activity.loader(true)  
@@ -50,9 +47,12 @@
                         })  
                     }  
   
-                    body.appendChild(card.render(true))  
+                    scroll.body(true).appendChild(card.render(true))  
                     items.push(card)  
                 })  
+  
+                scroll.append(body)  
+                html.appendChild(scroll.render(true))  
   
                 setTimeout(() => {  
                     Lampa.Layer.visible(scroll.render(true))  
@@ -103,12 +103,15 @@
         }  
   
         this.destroy = function () {  
+            network.clear()  
             scroll.destroy()  
             html.remove()  
         }  
     }  
   
     function startPlugin() {  
+        let html = document.createElement('div')  
+  
         // Додаємо CSS стилі для компактних карток  
         $('<style>')  
             .text(`  
