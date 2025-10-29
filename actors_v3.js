@@ -50,7 +50,7 @@
                         })  
                     }  
   
-                    body.appendChild(card.render(true))  
+                    body.appendChild(card.render(true)) 
                     items.push(card)  
                 })  
   
