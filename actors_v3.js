@@ -19,9 +19,18 @@
             network.silent(url, (json) => {  
                 this.activity.loader(false)  
   
-                if (json.results && json.results.length) {  
+                if(json.results && json.results.length){  
                     json.results.forEach((person) => {  
-                        let card = new Lampa.Card(person, {  
+                        let cardData = {  
+                            id: person.id,  
+                            name: person.name,  
+                            title: person.name,  
+                            original_title: person.name,  
+                            profile_path: person.profile_path,  
+                            gender: person.gender  
+                        }  
+  
+                        let card = new Lampa.Card(cardData, {  
                             card_category: true,  
                             object: { source: 'tmdb' }  
                         })  
@@ -38,11 +47,7 @@
                             })  
                         }  
   
-                        card.onFocus = (target) => {  
-                            last = target  
-                            active = items.indexOf(card)  
-                            scroll.update(card.render(true))  
-                        }  
+                        if(Lampa.Controller.own(this)) Lampa.Controller.collectionAppend(card.render(true))  
   
                         body.appendChild(card.render(true))  
                         items.push(card)  
@@ -50,76 +55,75 @@
   
                     scroll.append(body)  
   
+                    this.activity.toggle()  
+  
                     setTimeout(() => {  
                         Lampa.Layer.visible(scroll.render(true))  
                     }, 100)  
-                } else {  
-                    let empty = new Lampa.Empty()  
-                    scroll.append(empty.render(true))  
                 }  
-  
-                this.activity.toggle()  
-            }, (error) => {  
+                else{  
+                    this.empty()  
+                }  
+            }, (err) => {  
                 this.activity.loader(false)  
-                  
-                let empty = new Lampa.Empty()  
-                scroll.append(empty.render(true))  
-                  
-                this.activity.toggle()  
+                this.empty()  
             })  
-  
-            return this.render()  
         }  
   
-        this.start = function () {  
-            Controller.add('content', {  
+        this.empty = function(){  
+            let empty = new Lampa.Empty()  
+            scroll.append(empty.render())  
+            this.activity.loader(false)  
+            this.activity.toggle()  
+        }  
+  
+        this.start = function(){  
+            Lampa.Controller.add('content',{  
                 link: this,  
-                toggle: () => {  
-                    Controller.collectionSet(scroll.render(true))  
-                    Controller.collectionFocus(last, scroll.render(true))  
+                toggle: ()=>{  
+                    Lampa.Controller.collectionSet(scroll.render(true))  
+                    Lampa.Controller.collectionFocus(last || false, scroll.render(true))  
                 },  
-                left: () => {  
-                    if (Navigator.canmove('left')) Navigator.move('left')  
-                    else Controller.toggle('menu')  
+                left: ()=>{  
+                    if(Navigator.canmove('left')) Navigator.move('left')  
+                    else Lampa.Controller.toggle('menu')  
                 },  
-                right: () => {  
+                right: ()=>{  
                     Navigator.move('right')  
                 },  
-                up: () => {  
-                    if (Navigator.canmove('up')) Navigator.move('up')  
+                up: ()=>{  
+                    if(Navigator.canmove('up')) Navigator.move('up')  
+                    else Lampa.Controller.toggle('head')  
                 },  
-                down: () => {  
-                    if (Navigator.canmove('down')) Navigator.move('down')  
+                down: ()=>{  
+                    Navigator.move('down')  
                 },  
-                back: () => {  
+                back: ()=>{  
                     Lampa.Activity.backward()  
                 }  
             })  
   
-            Controller.toggle('content')  
+            Lampa.Controller.toggle('content')  
         }  
   
-        this.pause = function () {}  
+        this.pause = function(){}  
   
-        this.stop = function () {}  
+        this.stop = function(){}  
   
-        this.render = function () {  
-            return scroll.render(true)  
+        this.render = function(){  
+            return scroll.render()  
         }  
   
-        this.destroy = function () {  
-            scroll.clear()  
-            items = []  
+        this.destroy = function(){  
+            scroll.destroy()  
         }  
     }  
   
     function startPlugin() {  
-        // Додаємо CSS стилі для компактних карток  
+        // Додаємо CSS стилі  
         $('<style>')  
             .text(`  
                 .category-full {  
-                    display: flex;  
-                    flex-wrap: wrap;  
                     isolation: isolate;  
                 }  
                   
@@ -147,9 +151,8 @@
         function addMenuButton() {  
             let button = $(`<li class="menu__item selector">  
                 <div class="menu__ico">  
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 48 48" width="512" height="512">  
-                        <path d="M24,23.5A11.5,11.5,0,1,0,12.5,12,11.51,11.51,0,0,0,24,23.5Zm0-20A8.5,8.5,0,1,1,15.5,12,8.51,8.51,0,0,1,24,3.5Z"/>  
-                        <path d="M38.32,36.68a1.5,1.5,0,0,0-2.12,0L24,48.88,11.8,36.68a1.5,1.5,0,0,0-2.12,2.12L23.44,52.56a.79.79,0,0,0,1.12,0L38.32,38.8A1.5,1.5,0,0,0,38.32,36.68Z"/>  
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">  
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>  
                     </svg>  
                 </div>  
                 <div class="menu__text">${Lampa.Lang.translate('title_actors')}</div>  
