@@ -39,8 +39,8 @@
                     }  
   
                     let card = new Lampa.Card(cardData, {  
-                        card_category: true,  
                         card_small: true,  
+                        card_category: true,  
                         object: { source: 'tmdb' }  
                     })  
   
@@ -53,6 +53,7 @@
                     }  
   
                     card.onEnter = (target, card_data) => {  
+                        last = target  
                         Lampa.Activity.push({  
                             title: person.name,  
                             component: 'actor',  
@@ -81,33 +82,16 @@
             Lampa.Controller.add('content', {  
                 toggle: () => {  
                     Lampa.Controller.collectionSet(scroll.render())  
-                    Lampa.Controller.collectionFocus(last, scroll.render())  
+                    Lampa.Controller.collectionFocus(false, scroll.render())  
                 },  
-                up: () => {  
-                    if (Lampa.Navigator.canmove('up')) Lampa.Navigator.move('up')  
-                    else Lampa.Controller.toggle('head')  
-                },  
-                down: () => {  
-                    Lampa.Navigator.move('down')  
-                },  
-                right: () => {  
-                    Lampa.Navigator.move('right')  
-                },  
-                left: () => {  
-                    if (Lampa.Navigator.canmove('left')) Lampa.Navigator.move('left')  
-                    else Lampa.Controller.toggle('menu')  
-                },  
-                back: () => {  
-                    Lampa.Activity.backward()  
-                }  
+                up: () => Lampa.Controller.toggle('head'),  
+                down: () => {},  
+                back: () => Lampa.Activity.backward()  
             })  
   
+            this.create()  
             Lampa.Controller.toggle('content')  
         }  
-  
-        this.pause = function () {}  
-  
-        this.stop = function () {}  
   
         this.render = function () {  
             return scroll.render()  
@@ -115,23 +99,35 @@
   
         this.destroy = function () {  
             scroll.destroy()  
-            items.forEach(item => item.destroy())  
-            items = []  
+            body.remove()  
         }  
     }  
   
     function startPlugin() {  
-        // Додаємо CSS стилі для компактних карток  
+        // Додаємо CSS для відображення імен акторів  
         $('<style>')  
             .text(`  
+                .category-full {  
+                    display: flex !important;  
+                    flex-wrap: wrap !important;  
+                }  
+                  
+                /* Фіксована ширина як у Релізах */  
                 .category-full .card--small.card--category {  
                     width: 10.8em !important;  
                 }  
                   
+                /* Показуємо імена акторів */  
                 .category-full .card--small.card--category .card__title {  
                     display: block !important;  
                     margin-top: 0.5em;  
                     font-size: 1.1em;  
+                    max-height: 3.6em;  
+                    overflow: hidden;  
+                    line-height: 1.2;  
+                    -webkit-line-clamp: 3;  
+                    line-clamp: 3;  
+                    -webkit-box-orient: vertical;  
                 }  
                   
                 .category-full .card--small.card--category .card__view {  
@@ -162,7 +158,7 @@
   
         function addMenuButton() {  
             const ico = '<svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="18" cy="12" r="6" stroke="currentColor" stroke-width="2"/><path d="M6 30c0-6.627 5.373-12 12-12s12 5.373 12 12" stroke="currentColor" stroke-width="2"/></svg>'  
-            const button = $(`<li class="menu__item selector">  
+            const button = $(`<li class="menu__item selector" data-action="actors">  
                 <div class="menu__ico">${ico}</div>  
                 <div class="menu__text">${Lampa.Lang.translate('title_actors')}</div>  
             </li>`)  
