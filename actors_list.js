@@ -1,4 +1,3 @@
-
 (function () {
     function Actors() {
         let scroll = new Lampa.Scroll({
