@@ -12,7 +12,7 @@
         this.create = function () {
             this.activity.loader(true)
 
-            // ✅ Сумісний спосіб для будь-якої версії Lampa
+            // ✅ Універсальний спосіб для різних версій Lampa
             let network = Lampa.Request ? new Lampa.Request() : new Lampa.Reguest()
 
             let url = Lampa.Utils.protocol() + 'api.themoviedb.org/3/person/popular?api_key=' +
@@ -27,10 +27,12 @@
                 }
 
                 json.results.forEach((person) => {
-                    // 🔧 Використовуємо новий шаблон замість deprecated Card
+                    // 🔧 створюємо картку через шаблон Lampa.Template
                     let card = Lampa.Template.get('card', {
                         title: person.name,
-                        poster: person.profile_path ? 'https://image.tmdb.org/t/p/w500' + person.profile_path : '',
+                        poster: person.profile_path
+                            ? 'https://image.tmdb.org/t/p/w500' + person.profile_path
+                            : '',
                         info: '',
                         rating: '',
                         release: '',
@@ -40,7 +42,11 @@
                         favorite: false
                     })
 
-                    $(card).on('hover:enter', () => {
+                    // перетворюємо HTML у справжній DOM-вузол
+                    let $card = $(card)
+
+                    // відкриття сторінки актора
+                    $card.on('hover:enter', () => {
                         Lampa.Activity.push({
                             title: person.name,
                             component: 'actor',
@@ -50,11 +56,11 @@
                         })
                     })
 
-                    body.appendChild(card)
-                    items.push(card)
+                    body.appendChild($card[0])
+                    items.push($card[0])
                 })
 
-                // 🔧 Оновлюємо scroll лише після монтування
+                // 🔧 оновлюємо скрол після монтування елементів
                 setTimeout(() => {
                     Lampa.Layer.visible(scroll.render(true))
                     scroll.update()
@@ -94,7 +100,6 @@
         }
 
         this.pause = function () { }
-
         this.stop = function () { }
 
         this.render = function () {
@@ -110,6 +115,14 @@
     function startPlugin() {
         $('<style>')
             .text(`
+                .category-full {
+                    isolation: isolate;
+                    padding: 2em;
+                    display: flex;
+                    flex-wrap: wrap;
+                    justify-content: center;
+                }
+
                 .category-full .card {
                     width: 10.8em !important;
                     margin: 0.6em;
@@ -125,19 +138,13 @@
                     -webkit-box-orient: vertical;
                     text-align: center;
                 }
-
-                .category-full {
-                    isolation: isolate;
-                    padding: 2em;
-                    display: flex;
-                    flex-wrap: wrap;
-                    justify-content: center;
-                }
             `)
             .appendTo('head')
 
+        // Реєструємо компонент
         Lampa.Component.add('actors_list', Actors)
 
+        // Переклади
         Lampa.Lang.add({
             title_actors: {
                 uk: 'Актори',
@@ -174,7 +181,7 @@
         if (window.appready) addMenuButton()
         else {
             Lampa.Listener.follow('app', function (e) {
-                if (e.type == 'ready') addMenuButton()
+                if (e.type === 'ready') addMenuButton()
             })
         }
     }
