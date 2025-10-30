@@ -12,7 +12,7 @@
         this.create = function () {
             this.activity.loader(true)
 
-            // ✅ Універсальний спосіб для різних версій Lampa
+            // ✅ Універсальна підтримка різних версій Lampa
             let network = Lampa.Request ? new Lampa.Request() : new Lampa.Reguest()
 
             let url = Lampa.Utils.protocol() + 'api.themoviedb.org/3/person/popular?api_key=' +
@@ -27,7 +27,7 @@
                 }
 
                 json.results.forEach((person) => {
-                    // 🔧 створюємо картку через шаблон Lampa.Template
+                    // ✅ створюємо картку через шаблон
                     let card = Lampa.Template.get('card', {
                         title: person.name,
                         poster: person.profile_path
@@ -42,10 +42,9 @@
                         favorite: false
                     })
 
-                    // перетворюємо HTML у справжній DOM-вузол
                     let $card = $(card)
 
-                    // відкриття сторінки актора
+                    // Відкриваємо сторінку актора
                     $card.on('hover:enter', () => {
                         Lampa.Activity.push({
                             title: person.name,
@@ -60,11 +59,13 @@
                     items.push($card[0])
                 })
 
-                // 🔧 оновлюємо скрол після монтування елементів
+                // ✅ Безпечне оновлення скролу
                 setTimeout(() => {
                     Lampa.Layer.visible(scroll.render(true))
-                    scroll.update()
-                }, 200)
+                    if (body.querySelectorAll('.card').length) {
+                        requestAnimationFrame(() => scroll.update(true))
+                    }
+                }, 300)
 
                 this.activity.toggle()
             }, (error) => {
@@ -141,7 +142,7 @@
             `)
             .appendTo('head')
 
-        // Реєструємо компонент
+        // Реєстрація компонента
         Lampa.Component.add('actors_list', Actors)
 
         // Переклади
@@ -153,6 +154,7 @@
             }
         })
 
+        // Кнопка в головному меню
         function addMenuButton() {
             let button = $(`
                 <li class="menu__item selector">
