@@ -12,7 +12,7 @@
         this.create = function () {
             this.activity.loader(true)
 
-            // ✅ Універсальний спосіб створення запиту (для всіх версій Lampa)
+            // ✅ Сумісний спосіб для будь-якої версії Lampa
             let network = Lampa.Request ? new Lampa.Request() : new Lampa.Reguest()
 
             let url = Lampa.Utils.protocol() + 'api.themoviedb.org/3/person/popular?api_key=' +
@@ -27,19 +27,20 @@
                 }
 
                 json.results.forEach((person) => {
-                    let card = new Lampa.Card({
-                        id: person.id,
-                        name: person.name,
+                    // 🔧 Використовуємо новий шаблон замість deprecated Card
+                    let card = Lampa.Template.get('card', {
                         title: person.name,
-                        original_title: person.name,
-                        profile_path: person.profile_path,
-                        gender: person.gender
-                    }, {
-                        card_category: true,
-                        object: { source: 'tmdb' }
+                        poster: person.profile_path ? 'https://image.tmdb.org/t/p/w500' + person.profile_path : '',
+                        info: '',
+                        rating: '',
+                        release: '',
+                        adult: '',
+                        quality: '',
+                        icon: '',
+                        favorite: false
                     })
 
-                    card.onEnter = () => {
+                    $(card).on('hover:enter', () => {
                         Lampa.Activity.push({
                             title: person.name,
                             component: 'actor',
@@ -47,19 +48,17 @@
                             url: '',
                             source: 'tmdb'
                         })
-                    }
+                    })
 
-                    card.create()
-                    body.appendChild(card.render(true))
+                    body.appendChild(card)
                     items.push(card)
                 })
 
-                // 🔧 Оновлюємо скрол після додавання елементів
-                scroll.update()
-
+                // 🔧 Оновлюємо scroll лише після монтування
                 setTimeout(() => {
                     Lampa.Layer.visible(scroll.render(true))
-                }, 100)
+                    scroll.update()
+                }, 200)
 
                 this.activity.toggle()
             }, (error) => {
@@ -73,7 +72,6 @@
             Lampa.Controller.add('content', {
                 link: this,
                 toggle: () => {
-                    // Фокусуємо на картках у body
                     Lampa.Controller.collectionSet(body)
                     Lampa.Controller.collectionFocus(false, body)
                 },
@@ -112,33 +110,34 @@
     function startPlugin() {
         $('<style>')
             .text(`
-                .category-full .card--category {
+                .category-full .card {
                     width: 10.8em !important;
+                    margin: 0.6em;
                 }
 
-                .category-full .card--category .card__title {
-                    display: block !important;
+                .category-full .card__title {
                     margin-top: 0.5em;
                     font-size: 1.1em;
-                    margin-bottom: 1em;
                     max-height: 3.6em;
                     overflow: hidden;
                     -webkit-line-clamp: 3;
                     display: -webkit-box;
                     -webkit-box-orient: vertical;
+                    text-align: center;
                 }
 
                 .category-full {
                     isolation: isolate;
                     padding: 2em;
+                    display: flex;
+                    flex-wrap: wrap;
+                    justify-content: center;
                 }
             `)
             .appendTo('head')
 
-        // Реєструємо компонент
         Lampa.Component.add('actors_list', Actors)
 
-        // Переклади
         Lampa.Lang.add({
             title_actors: {
                 uk: 'Актори',
