@@ -12,7 +12,9 @@
         this.create = function () {
             this.activity.loader(true)
 
-            let network = new Lampa.Request()
+            // ✅ Універсальний спосіб створення запиту (для всіх версій Lampa)
+            let network = Lampa.Request ? new Lampa.Request() : new Lampa.Reguest()
+
             let url = Lampa.Utils.protocol() + 'api.themoviedb.org/3/person/popular?api_key=' +
                 Lampa.TMDB.key() + '&language=' + Lampa.Storage.field('tmdb_lang')
 
@@ -52,7 +54,7 @@
                     items.push(card)
                 })
 
-                // 🔧 оновлюємо скрол після додавання елементів
+                // 🔧 Оновлюємо скрол після додавання елементів
                 scroll.update()
 
                 setTimeout(() => {
@@ -71,7 +73,7 @@
             Lampa.Controller.add('content', {
                 link: this,
                 toggle: () => {
-                    // фокусуємо на списку карток
+                    // Фокусуємо на картках у body
                     Lampa.Controller.collectionSet(body)
                     Lampa.Controller.collectionFocus(false, body)
                 },
@@ -133,8 +135,10 @@
             `)
             .appendTo('head')
 
+        // Реєструємо компонент
         Lampa.Component.add('actors_list', Actors)
 
+        // Переклади
         Lampa.Lang.add({
             title_actors: {
                 uk: 'Актори',
