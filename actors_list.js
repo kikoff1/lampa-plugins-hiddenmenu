@@ -6,46 +6,34 @@
         let body = document.createElement('div')
         let items = []
 
-        body.classList.add('category-full', 'scroll--body')
+        body.classList.add('category-full')
         scroll.append(body)
 
         this.create = function () {
             this.activity.loader(true)
 
-            // ✅ Універсальна підтримка різних версій Lampa
-            let network = Lampa.Request ? new Lampa.Request() : new Lampa.Reguest()
-
+            let network = new Lampa.Request()
             let url = Lampa.Utils.protocol() + 'api.themoviedb.org/3/person/popular?api_key=' +
                 Lampa.TMDB.key() + '&language=' + Lampa.Storage.field('tmdb_lang')
 
             network.silent(url, (json) => {
                 this.activity.loader(false)
 
-                if (!json.results || !json.results.length) {
-                    this.activity.empty('Немає даних')
-                    return
-                }
-
                 json.results.forEach((person) => {
-                    // ✅ створюємо картку через шаблон
-                    let card = Lampa.Template.get('card', {
+                    let cardData = {
+                        id: person.id,
+                        name: person.name,
                         title: person.name,
-                        poster: person.profile_path
-                            ? 'https://image.tmdb.org/t/p/w500' + person.profile_path
-                            : '',
-                        info: '',
-                        rating: '',
-                        release: '',
-                        adult: '',
-                        quality: '',
-                        icon: '',
-                        favorite: false
-                    })
+                        original_title: person.name,
+                        profile_path: person.profile_path,
+                        gender: person.gender
+                    }
 
-                    let $card = $(card)
+                    // Створюємо картку через новий метод Lampa.Component
+                    let card = Lampa.Component.create('card', cardData, { card_category: true, object: { source: 'tmdb' } })
 
-                    // Відкриваємо сторінку актора
-                    $card.on('hover:enter', () => {
+                    // Обробник входу
+                    card.onEnter = () => {
                         Lampa.Activity.push({
                             title: person.name,
                             component: 'actor',
@@ -53,24 +41,23 @@
                             url: '',
                             source: 'tmdb'
                         })
-                    })
+                    }
 
-                    body.appendChild($card[0])
-                    items.push($card[0])
+                    let node = typeof card.render === 'function' ? card.render(true) : Lampa.Utils.parseHTML(card)[0]
+
+                    if (node instanceof HTMLElement) {
+                        body.appendChild(node)
+                        items.push(node)
+                    }
                 })
 
-                // ✅ Безпечне оновлення скролу
                 setTimeout(() => {
                     Lampa.Layer.visible(scroll.render(true))
-                    if (body.querySelectorAll('.card').length) {
-                        requestAnimationFrame(() => scroll.update(true))
-                    }
-                }, 300)
+                }, 100)
 
                 this.activity.toggle()
             }, (error) => {
                 this.activity.loader(false)
-                this.activity.empty('Помилка завантаження')
                 this.activity.toggle()
             })
         }
@@ -79,8 +66,8 @@
             Lampa.Controller.add('content', {
                 link: this,
                 toggle: () => {
-                    Lampa.Controller.collectionSet(body)
-                    Lampa.Controller.collectionFocus(false, body)
+                    Lampa.Controller.collectionSet(scroll.render(true))
+                    Lampa.Controller.collectionFocus(false, scroll.render(true))
                 },
                 left: () => {
                     Lampa.Controller.toggle('menu')
@@ -100,13 +87,11 @@
             Lampa.Controller.toggle('content')
         }
 
-        this.pause = function () { }
-        this.stop = function () { }
-
+        this.pause = function () {}
+        this.stop = function () {}
         this.render = function () {
             return html
         }
-
         this.destroy = function () {
             scroll.destroy()
             html.remove()
@@ -116,53 +101,40 @@
     function startPlugin() {
         $('<style>')
             .text(`
-                .category-full {
-                    isolation: isolate;
-                    padding: 2em;
-                    display: flex;
-                    flex-wrap: wrap;
-                    justify-content: center;
-                }
-
-                .category-full .card {
+                .category-full .card--category {
                     width: 10.8em !important;
-                    margin: 0.6em;
                 }
 
-                .category-full .card__title {
+                .category-full .card--category .card__title {
+                    display: block !important;
                     margin-top: 0.5em;
                     font-size: 1.1em;
+                    margin-bottom: 1em;
                     max-height: 3.6em;
                     overflow: hidden;
                     -webkit-line-clamp: 3;
                     display: -webkit-box;
                     -webkit-box-orient: vertical;
-                    text-align: center;
+                }
+
+                .category-full {
+                    isolation: isolate;
                 }
             `)
             .appendTo('head')
 
-        // Реєстрація компонента
         Lampa.Component.add('actors_list', Actors)
 
-        // Переклади
         Lampa.Lang.add({
-            title_actors: {
-                uk: 'Актори',
-                ru: 'Актеры',
-                en: 'Actors'
-            }
+            title_actors: { uk: 'Актори', ru: 'Актеры', en: 'Actors' }
         })
 
-        // Кнопка в головному меню
         function addMenuButton() {
             let button = $(`
                 <li class="menu__item selector">
                     <div class="menu__ico">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 
-                            1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 
-                            1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                         </svg>
                     </div>
                     <div class="menu__text">${Lampa.Lang.translate('title_actors')}</div>
@@ -183,7 +155,7 @@
         if (window.appready) addMenuButton()
         else {
             Lampa.Listener.follow('app', function (e) {
-                if (e.type === 'ready') addMenuButton()
+                if (e.type == 'ready') addMenuButton()
             })
         }
     }
