@@ -200,7 +200,11 @@
             .text(`    
                 .category-full .card--category {    
                     width: 10.8em !important;    
-                }    
+                }  
+                  
+                .category-full {  
+                    justify-content: center;  
+                }  
                     
                 .category-full .card--category .card__title {    
                     margin-bottom: 1.5em;    
@@ -222,7 +226,7 @@
     
         const manifest = {    
             type: 'content',    
-            version: '1.0.13',    
+            version: '1.0.14',    
             name: 'Actors',    
             description: 'Популярні актори з TMDB',    
             component: 'actors_list'    
