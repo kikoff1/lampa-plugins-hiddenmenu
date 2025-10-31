@@ -1,318 +1,335 @@
-// IIFE (Immediately Invoked Function Expression) - самовикликаюча анонімна функція.
-// Створює приватний простір, щоб уникнути конфліктів з іншими скриптами.
-(function () {
-  // 'use strict'; - вмикає строгий режим JavaScript. Це допомагає уникнути поширених помилок.
-  'use strict';
+(function() {
+    "use strict";
 
-  /**
-   * Функція для додавання перекладів (локалізації) в Lampa.
-   * Додає текстові рядки для різних мов (ru, en, uk, zh).
-   */
-  function translate() {
-      Lampa.Lang.add({
-          bat_parser: {
-              ru: 'Каталог парсеров',
-              en: 'Parsers catalog',
-              uk: 'Каталог парсерів',
-              zh: '解析器目录'
-          },
-          bat_parser_description: {
-              ru: 'Нажмите для выбора парсера из ',
-              en: 'Click to select a parser from the ',
-              uk: 'Натисніть для вибору парсера з ',
-              zh: '点击从目录中选择解析器 '
-          },
-      });
-  }
-  // Об'єкт-модуль для роботи з мовними функціями.
-  var Lang = {
-      translate: translate
-  };
+    // ==== ПРИХОВАННЯ СТАНДАРТНОЇ КНОПКИ "ПІДПИСАТИСЯ" ====
+    function hideSubscribeButton() {
+        if (document.getElementById('hide-subscribe-style')) return;
 
-  /**
-   * Основний масив, що містить інформацію про всі доступні парсери.
-   * Кожен об'єкт представляє один парсер з його унікальними налаштуваннями
-   */
-  var parsersInfo = [{
-      // Перший парсер: Spawn UA (V1).
-      base: 'spawnum_duckdns_org_59117', // Унікальний ідентифікатор
-      name: 'Spawn UA (V1)', // Назва, що відображається користувачу
-      settings: {
-          url: 'spawnum.duckdns.org:59117', // Адреса сервера парсера
-          key: '2', // Ключ API
-          parser_torrent_type: 'jackett' // Тип парсера
-      }
-  }, {
-      // Другий парсер: Spawn UA (V2).
-      base: 'spawnum_duckdns_org_49117', // Новий унікальний ідентифікатор
-      name: 'Spawn UA (V2)', // Нова назва
-      settings: {
-          url: 'spawnum.duckdns.org:49117', // Нова адреса
-          key: '2', // Новий ключ API
-          parser_torrent_type: 'jackett' // Тип парсера
-      }
-  },{
-      // Третій парсер: RedApi. Залишено без змін.
-      base: 'redapi_cfhttp_top',
-      name: 'RedApi',
-      settings: {
-          url: 'redapi.cfhttp.top',
-          key: '',
-          parser_torrent_type: 'jackett'
-      }
-  }, {
-      // Четвертий парсер: Jacred viewbox. Залишено без змін.
-      base: 'jacred_viewbox_dev',
-      name: 'Jacred Viewbox',
-      settings: {
-          url: 'jacred.viewbox.dev',
-          key: 'viewbox',
-          parser_torrent_type: 'jackett'
-      }
-  }, {
-      // П'ятий парсер: Jacred pro. Залишено без змін.
-      base: 'jacred_pro',
-      name: 'Jacred Pro',
-      settings: {
-          url: 'jacred.pro',
-          key: '',
-          parser_torrent_type: 'jackett'
-      }
-  }];
+        const css = `
+            .button--subscribe {
+                display: none !important;
+            }
+        `;
+        const style = document.createElement('style');
+        style.id = 'hide-subscribe-style';
+        style.textContent = css;
+        document.head.appendChild(style);
+    }
 
-  // Визначаємо протокол (http або https) залежно від поточного протоколу сторінки.
-  var proto = location.protocol === "https:" ? 'https://' : 'http://';
-  // Об'єкт для кешування результатів перевірки доступності парсерів.
-  var cache = {};
-  // Змінна для зберігання ідентифікатора інтервалу періодичної перевірки.
-  var checkInterval;
+    // ==== ОСНОВНА ЛОГІКА ПЛАГІНА ====
+    var PLUGIN_NAME = "persons_plugin";
+    var PERSONS_KEY = "saved_persons";
+    var PAGE_SIZE = 20;
+    var DEFAULT_PERSONS_DATA = { cards: {}, ids: [] };
+    var currentPersonId = null;
+    var my_logging = true;
 
-  /**
-   * Функція для перевірки статусу (доступності) парсерів.
-   * @param {string} type - Тип перевірки (в даному випадку завжди 'parser').
-   */
-  function checkAlive(type) {
-    if (type === 'parser') {
-      // Створюємо масив запитів до кожного парсера за допомогою .map()
-      var requests = parsersInfo.map(function (parser) {
-        var protocol = parser.base === "bat_jackett" || parser.base === "bat_prowlarr" ? "" : proto;
-        // Формуємо кінцеву точку (endpoint) для API запиту залежно від типу парсера.
-        // Цей блок логіки взято з вашого оригінального файлу.
-        var endPoint = parser.settings.parser_torrent_type === 'prowlarr' ?
-            '/api/v1/health?apikey=' + parser.settings.key :
-            "/api/v2.0/indexers/status:healthy/results?apikey=".concat(
-                parser.settings.url === 'batmen.my.to:9199'
-                    ? '9'
-                    : parser.settings.url === '12.307407.xyz'
-                        ? '12307407'
-                        : parser.settings.url === 'spawnum.duckdns.org:59117'
-                            ? '2'
-                            : parser.base === 'bat_jackett'
-                                ? parser.settings.key
-                                : ''
-            );
-        // Повне посилання для AJAX-запиту.
-        var myLink = protocol + parser.settings.url + endPoint;
-
-        // Знаходимо елемент в інтерфейсі Lampa, що відповідає парсеру, за його назвою.
-        var mySelector = $('div.selectbox-item__title').filter(function () {
-            return $(this).text().trim() === parser.name;
-        });
-
-        // Перевіряємо, чи є в кеші свіжий результат (не старіший за 30 секунд).
-        if (cache[myLink] && cache[myLink].timestamp > Date.now() - 30000) {
-            console.log('Using cached response for', myLink, cache[myLink]);
-            var color = cache[myLink].color;
-            // Встановлюємо колір тексту залежно від кешованого результату.
-            $(mySelector).css('color', color);
-            return Promise.resolve(); // Повертаємо вирішений проміс, щоб не робити новий запит.
+    var pluginTranslations = {
+        persons_title: {
+            ru: "Персоны",
+            en: "Persons",
+            uk: "Персони",
+            be: "Асобы",
+            pt: "Pessoas",
+            zh: "人物",
+            he: "אנשים",
+            cs: "Osobnosti",
+            bg: "Личности"
+        },
+        subscriibbe: {
+            ru: "Подписаться",
+            en: "subscriibbe",
+            uk: "Підписатися",
+            be: "Падпісацца",
+            pt: "Inscrever",
+            zh: "订阅",
+            he: "הירשם",
+            cs: "Přihlásit se",
+            bg: "Абонирай се"
+        },
+        unsubscriibbe: {
+            ru: "Отписаться",
+            en: "Unsubscriibbe",
+            uk: "Відписатися",
+            be: "Адпісацца",
+            pt: "Cancelar inscrição",
+            zh: "退订",
+            he: "בטל מנוי",
+            cs: "Odhlásit se",
+            bg: "Отписване"
+        },
+        persons_not_found: {
+            ru: "Персоны не найдены",
+            en: "No persons found",
+            uk: "Особи не знайдені",
+            be: "Асобы не знойдзены",
+            pt: "Nenhuma pessoa encontrada",
+            zh: "未找到人物",
+            he: "לא נמצאו אנשים",
+            cs: "Nebyly nalezeny žádné osoby",
+            bg: "Не са намерени хора"
         }
+    };
 
-        // Повертаємо новий Promise, який виконає AJAX-запит.
-        return new Promise(function (resolve) {
-            $.ajax({
-                url: myLink,
-                method: 'GET',
-                timeout: 5000, // Таймаут запиту - 5 секунд.
-                // Функція, що виконується при успішному запиті.
-                success: function success(response, textStatus, xhr) {
-                    var color;
-                    if (xhr.status === 200) {
-                        color = '1aff00'; // Зелений колір
-                    } else if (xhr.status === 401) {
-                        color = 'ff2e36'; // Червоний колір
-                    } else {
-                        color = 'ff2e36'; // Червоний колір
-                    }
-                    $(mySelector).css('color', color);
+    var ICON_SVG = '<svg height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 11C17.66 11 18.99 9.66 18.99 8C18.99 6.34 17.66 5 16 5C14.34 5 13 6.34 13 8C13 9.66 14.34 11 16 11ZM8 11C9.66 11 10.99 9.66 10.99 8C10.99 6.34 9.66 5 8 5C6.34 5 5 6.34 5 8C5 9.66 6.34 11 8 11ZM8 13C5.67 13 1 14.17 1 16.5V19H15V16.5C15 14.17 10.33 13 8 13ZM16 13C15.71 13 15.38 13.02 15.03 13.05C16.19 13.89 17 15.02 17 16.5V19H23V16.5C23 14.17 18.33 13 16 13Z" fill="currentColor"/></svg>';
 
-                    // Якщо колір було визначено, кешуємо результат.
-                    if (color) {
-                        cache[myLink] = {
-                            color: color,
-                            timestamp: Date.now()
-                        };
+    function log() {
+        if (my_logging && console && console.log) {
+            try { console.log.apply(console, arguments); } catch (e) {}
+        }
+    }
+
+    function error() {
+        if (my_logging && console && console.error) {
+            try { console.error.apply(console, arguments); } catch (e) {}
+        }
+    }
+
+    function getCurrentLanguage() {
+        return localStorage.getItem('language') || 'en';
+    }
+
+    function initStorage() {
+        var current = Lampa.Storage.get(PERSONS_KEY);
+        if (!current || !current.cards) {
+            Lampa.Storage.set(PERSONS_KEY, DEFAULT_PERSONS_DATA);
+        }
+    }
+
+    function getPersonsData() {
+        return Lampa.Storage.get(PERSONS_KEY, DEFAULT_PERSONS_DATA);
+    }
+
+    function savePersonCard(personId, personData) {
+        var savedPersons = getPersonsData();
+        savedPersons.cards[personId] = personData;
+        
+        if (!savedPersons.ids.includes(personId)) {
+            savedPersons.ids.push(personId);
+        }
+        Lampa.Storage.set(PERSONS_KEY, savedPersons);
+    }
+
+    function removePersonCard(personId) {
+        var savedPersons = getPersonsData();
+        delete savedPersons.cards[personId];
+        var index = savedPersons.ids.indexOf(personId);
+        if (index !== -1) savedPersons.ids.splice(index, 1);
+        Lampa.Storage.set(PERSONS_KEY, savedPersons);
+    }
+
+    function togglePersonSubscription(personId) {
+        var savedPersons = getPersonsData();
+        var index = savedPersons.ids.indexOf(personId);
+
+        if (index === -1) {
+            var currentLang = getCurrentLanguage();
+            var url = Lampa.TMDB.api(`person/${personId}?api_key=${Lampa.TMDB.key()}&language=${currentLang}`);
+            
+            new Lampa.Reguest().silent(url, function (response) {
+                try {
+                    var json = typeof response === 'string' ? JSON.parse(response) : response;
+                    if (json && json.id) {
+                        savePersonCard(personId, json);
+                        updatePersonsList();
                     }
-                },
-                // Функція, що виконується при помилці запиту.
-                error: function error() {
-                    $(mySelector).css('color', 'ff2e36'); // Червоний колір
-                },
-                // Функція, що виконується завжди після success або error.
-                complete: function complete() {
-                    return resolve(); // Вирішуємо проміс, сигналізуючи про завершення запиту.
+                } catch (e) {
+                    error('Error saving person data:', e);
                 }
             });
-        });
-      });
-      // Promise.all чекає, поки всі запити в масиві `requests` завершаться.
-      return Promise.all(requests).then(function () {
-          console.log('All requests completed');
-      });
+            return true;
+        } else {
+            removePersonCard(personId);
+            updatePersonsList();
+            return false;
+        }
     }
-  }
 
-  /**
-   * Запускає періодичну перевірку доступності парсерів кожні 30 секунд.
-   */
-  function startPeriodicCheck() {
-      checkAlive("parser"); // Перший запуск одразу.
-      checkInterval = setInterval(function() {
-          checkAlive("parser");
-      }, 30000); // Повторювати кожні 30000 мс.
-  }
+    function isPersonsubscriibbed(personId) {
+        var savedPersons = getPersonsData();
+        return savedPersons.ids.includes(personId);
+    }
 
-  /**
-   * Зупиняє періодичну перевірку.
-   */
-  function stopPeriodicCheck() {
-      if (checkInterval) {
-          clearInterval(checkInterval);
-      }
-  }
+    function addButtonToContainer(bottomBlock) {
+        var existingButton = bottomBlock.querySelector('.button--subscriibbe-plugin');
+        if (existingButton && existingButton.parentNode) existingButton.parentNode.removeChild(existingButton);
 
-  // Слухач подій Lampa. Спрацьовує, коли відкривається випадаючий список.
-  Lampa.Controller.listener.follow('toggle', function (e) {
-      if (e.name === 'select') {
-          // Запускаємо перевірку парсерів, коли користувач відкриває список вибору.
-          checkAlive("parser");
-      }
-  });
+        var issubscriibbed = isPersonsubscriibbed(currentPersonId);
+        var buttonText = issubscriibbed ? 
+            Lampa.Lang.translate('persons_plugin_unsubscriibbe') : 
+            Lampa.Lang.translate('persons_plugin_subscriibbe');
 
-  /**
-   * Змінює налаштування парсера в сховищі Lampa на основі вибору користувача.
-   */
-  function changeParser() {
-      // Отримуємо ідентифікатор вибраного парсера зі сховища.
-      var jackettUrlTwo = Lampa.Storage.get("bat_url_two");
-      // Знаходимо об'єкт парсера в масиві `parsersInfo` за його ідентифікатором.
-      var selectedParser = parsersInfo.find(function (parser) {
-          return parser.base === jackettUrlTwo;
-      });
-      // Якщо парсер знайдено, оновлюємо глобальні налаштування Lampa.
-      if (selectedParser) {
-          var settings = selectedParser.settings;
-          Lampa.Storage.set(settings.parser_torrent_type === 'prowlarr' ? "prowlarr_url" : "jackett_url", settings.url);
-          Lampa.Storage.set(settings.parser_torrent_type === 'prowlarr' ? "prowlarr_key" : "jackett_key", settings.key);
-          Lampa.Storage.set("parser_torrent_type", settings.parser_torrent_type);
-      } else {
-          console.warn("Jackett URL not found in parsersInfo");
-      }
-  }
+        var button = document.createElement('div');
+        button.className = 'full-start__button selector button--subscriibbe-plugin';
+        button.classList.add(issubscriibbed ? 'button--unsubscriibbe' : 'button--subscriibbe');
+        button.setAttribute('data-focusable', 'true');
 
-  // Готуємо об'єкт `s_values` для випадаючого списку в налаштуваннях.
-  // Використовуємо .reduce() для перетворення масиву `parsersInfo` в об'єкт формату {id: name}.
-  var s_values = parsersInfo.reduce(function (prev, _ref) {
-      var base = _ref.base,
-          name = _ref.name;
-      prev[base] = name;
-      return prev;
-  }, {
-      no_parser: 'Обрати парсер' // Додаємо опцію за замовчуванням.
-  });
+        button.innerHTML =
+            '<svg width="25" height="30" viewBox="0 0 25 30" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+            '<path d="M6.01892 24C6.27423 27.3562 9.07836 30 12.5 30C15.9216 30 18.7257 27.3562 18.981 24H15.9645C15.7219 25.6961 14.2632 27 12.5 27C10.7367 27 9.27804 25.6961 9.03542 24H6.01892Z" fill="currentColor"></path>' +
+            '<path d="M3.81972 14.5957V10.2679C3.81972 5.41336 7.7181 1.5 12.5 1.5C17.2819 1.5 21.1803 5.41336 21.1803 10.2679V14.5957C21.1803 15.8462 21.5399 17.0709 22.2168 18.1213L23.0727 19.4494C24.2077 21.2106 22.9392 23.5 20.9098 23.5H4.09021C2.06084 23.5 0.792282 21.2106 1.9273 19.4494L2.78317 18.1213C3.46012 17.0709 3.81972 15.8462 3.81972 14.5957Z" stroke="currentColor" stroke-width="2.5" fill="transparent"></path>' +
+            '</svg>' +
+            '<span>' + buttonText + '</span>';
 
-  /**
-   * Створює та додає елемент налаштувань для вибору парсера в інтерфейс Lampa.
-   */
-  function parserSetting() {
-      Lampa.SettingsApi.addParam({
-          component: 'parser', // Компонент, до якого належить налаштування.
-          param: {
-              name: 'bat_url_two', // Назва параметра в сховищі.
-              type: 'select', // Тип елемента - випадаючий список.
-              values: s_values, // Значення для списку.
-              "default": 'no_parser' // Значення за замовчуванням.
-          },
-          // Оригінальний блок field з HTML-розміткою. ЗАЛИШЕНО БЕЗ ЗМІН.
-          field: {
-              name: "<div class=\"settings-folder\" style=\"padding:0!important\"><div style=\"font-size:1.0em\">".concat(Lampa.Lang.translate('bat_parser'), "</div></div>"),
-              description: "".concat(Lampa.Lang.translate('bat_parser_description'), " ").concat(parsersInfo.length)
-          },
-          // Функція, що викликається при зміні значення.
-          onChange: function onChange(value) {
-              changeParser(); // Оновлюємо налаштування.
-              Lampa.Settings.update(); // Оновлюємо інтерфейс налаштувань.
-          },
-          // Оригінальна функція onRender.
-          // Саме вона відповідає за зміну кольору та позиції.
-          onRender: function onRender(item) {
-              $('.settings-param__value p.parserName').remove();
-              changeParser();
-              setTimeout(function () {
-                  $('div[data-children="parser"]').on('hover:enter', function () {
-                      Lampa.Settings.update();
-                  });
-                  if (Lampa.Storage.field('parser_use')) {
-                      item.show();
-                      $('.settings-param__name', item).css('color', 'f3d900');
-                      $('div[data-name="bat_url_two"]').insertAfter('div[data-children="parser"]');
-                  } else {
-                      item.hide();
-                  }
-              });
-          }
-      });
-  }
+        button.addEventListener('hover:enter', function () {
+            var wasAdded = togglePersonSubscription(currentPersonId);
+            var newText = wasAdded ?
+                Lampa.Lang.translate('persons_plugin_unsubscriibbe') :
+                Lampa.Lang.translate('persons_plugin_subscriibbe');
 
-  // Об'єкт-модуль для функцій, пов'язаних з парсером.
-  var Parser = {
-      parserSetting: parserSetting
-  };
+            button.classList.remove('button--subscriibbe', 'button--unsubscriibbe');
+            button.classList.add(wasAdded ? 'button--unsubscriibbe' : 'button--subscriibbe');
+            var span = button.querySelector('span');
+            if (span) span.textContent = newText;
+        });
 
-  Lampa.Platform.tv();
+        var buttonsContainer = bottomBlock.querySelector('.full-start__buttons');
+        if (buttonsContainer) buttonsContainer.append(button);
+        else bottomBlock.append(button);
+    }
 
-  /**
-   * Головна функція для ініціалізації плагіна.
-   */
-  function add() {
-      Lang.translate(); // Додаємо переклади.
-      Parser.parserSetting(); // Додаємо налаштування в інтерфейс.
-      startPeriodicCheck(); // Запускаємо періодичну перевірку.
-  }
+    function addsubscriibbeButton() {
+        if (!currentPersonId) return;
 
-  /**
-   * Функція-завантажувач. Перевіряє, чи готова програма Lampa, і запускає плагін.
-   */
-  function startPlugin() {
-      // Встановлюємо прапорець, що плагін завантажено, щоб уникнути повторного запуску.
-      window.plugin_batpublictorr_ready = true;
-      // Якщо Lampa вже готова, запускаємо `add()`.
-      if (window.appready) add();
-      // Інакше, чекаємо на подію 'ready' від Lampa.
-      else {
-          Lampa.Listener.follow('app', function (e) {
-              if (e.type === 'ready') add();
-          });
-      }
-  }
+        var bottomBlock = document.querySelector('.person-start__bottom');
+        if (bottomBlock) addButtonToContainer(bottomBlock);
+        else {
+            let attempts = 0;
+            const maxAttempts = 10;
 
-  // Запускаємо плагін, якщо він ще не був запущений.
-  if (!window.plugin_batpublictorr_ready) startPlugin();
+            function tryAgain() {
+                attempts++;
+                var container = document.querySelector('.person-start__bottom');
+                if (container) addButtonToContainer(container);
+                else if (attempts < maxAttempts) setTimeout(tryAgain, 300);
+            }
 
-  // Додаємо слухача події 'unload' (коли користувач закриває сторінку).
-  // Це потрібно для очищення ресурсів, зокрема, для зупинки інтервалу.
-  window.addEventListener('unload', function() {
-      stopPeriodicCheck();
-  });
+            setTimeout(tryAgain, 300);
+        }
+    }
 
+    function updatePersonsList() {
+        var activity = Lampa.Activity.active();
+        if (activity && activity.component === 'category_full' && activity.source === PLUGIN_NAME) {
+            Lampa.Activity.reload();
+        }
+    }
+
+    function addButtonStyles() {
+        if (document.getElementById('subscriibbe-button-styles')) return;
+        var css = `
+            .full-start__button.selector.button--subscriibbe-plugin.button--subscriibbe {
+                color: #4CAF50;
+            }
+            .full-start__button.selector.button--subscriibbe-plugin.button--unsubscriibbe {
+                color: #F44336;
+            }`;
+        var style = document.createElement('style');
+        style.id = 'subscriibbe-button-styles';
+        style.textContent = css;
+        document.head.appendChild(style);
+    }
+
+    // ==== PersonsService ====
+    function PersonsService() {
+        this.list = function (params, onComplete) {  
+            var savedPersons = getPersonsData();  
+            var results = [];  
+              
+            savedPersons.ids.forEach(function(personId) {  
+                var card = savedPersons.cards[personId];  
+                if (card) {  
+                    var modifiedCard = Object.assign({}, card);
+                    modifiedCard.gender = card.gender || 2;
+                    modifiedCard.id = parseInt(personId, 10);
+                    modifiedCard.source = 'tmdb';
+                    results.push(modifiedCard);  
+                }  
+            });  
+              
+            onComplete({  
+                results: results,  
+                page: 1,  
+                total_pages: 1,  
+                total_results: results.length  
+            });  
+        };
+    }
+
+    // ==== Старт плагіна ====
+    function startPlugin() {
+        hideSubscribeButton();
+
+        Lampa.Lang.add({
+            persons_plugin_title: pluginTranslations.persons_title,
+            persons_plugin_subscriibbe: pluginTranslations.subscriibbe,
+            persons_plugin_unsubscriibbe: pluginTranslations.unsubscriibbe,
+            persons_plugin_not_found: pluginTranslations.persons_not_found,
+        });
+
+        initStorage();
+
+        var personsService = new PersonsService();
+        Lampa.Api.sources[PLUGIN_NAME] = personsService;
+
+        var menuItem = $(
+            '<li class="menu__item selector" data-action="' + PLUGIN_NAME + '">' +
+            '<div class="menu__ico">' + ICON_SVG + '</div>' +
+            '<div class="menu__text">' + Lampa.Lang.translate('persons_plugin_title') + '</div>' +
+            '</li>'
+        );
+
+        menuItem.on("hover:enter", function () {
+            Lampa.Activity.push({
+                component: "category_full",
+                source: PLUGIN_NAME,
+                title: Lampa.Lang.translate('persons_plugin_title'),
+                page: 1,
+                url: PLUGIN_NAME + '__main'
+            });
+        });
+
+        $(".menu .menu__list").eq(0).append(menuItem);
+
+        function waitForContainer(callback) {
+            let attempts = 0;
+            const max = 15;
+
+            function check() {
+                attempts++;
+                if (document.querySelector('.person-start__bottom')) callback();
+                else if (attempts < max) setTimeout(check, 200);
+            }
+
+            setTimeout(check, 200);
+        }
+
+        function checkCurrentActivity() {
+            var activity = Lampa.Activity.active();
+            if (activity && activity.component === 'actor') {
+                currentPersonId = parseInt(activity.id || activity.params?.id || location.pathname.match(/\/actor\/(\d+)/)?.[1], 10);
+                if (currentPersonId) waitForContainer(addsubscriibbeButton);
+            }
+        }
+
+        Lampa.Listener.follow('activity', function (e) {
+            if (e.type === 'start' && e.component === 'actor' && e.object?.id) {
+                currentPersonId = parseInt(e.object.id, 10);
+                waitForContainer(addsubscriibbeButton);
+            } else if (e.type === 'resume' && e.component === 'category_full' && e.object?.source === PLUGIN_NAME) {
+                setTimeout(() => Lampa.Activity.reload(), 100);
+            }
+        });
+
+        setTimeout(checkCurrentActivity, 1500);
+        addButtonStyles();
+    }
+
+    if (window.appready) {
+        startPlugin();
+    } else {
+        Lampa.Listener.follow('app', function (e) {
+            if (e.type === 'ready') startPlugin();
+        });
+    }
 })();
