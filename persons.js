@@ -20,6 +20,7 @@
     // ==== ОСНОВНА ЛОГІКА ПЛАГІНА ====
     var PLUGIN_NAME = "persons_plugin";
     var PERSONS_KEY = "saved_persons";
+    var PAGE_SIZE = 20;
     var DEFAULT_PERSONS_DATA = { cards: {}, ids: [] };
     var currentPersonId = null;
     var my_logging = true;
@@ -38,7 +39,7 @@
         },
         subscriibbe: {
             ru: "Подписаться",
-            en: "Subscribe",
+            en: "subscriibbe",
             uk: "Підписатися",
             be: "Падпісацца",
             pt: "Inscrever",
@@ -49,7 +50,7 @@
         },
         unsubscriibbe: {
             ru: "Отписаться",
-            en: "Unsubscribe",
+            en: "Unsubscriibbe",
             uk: "Відписатися",
             be: "Адпісацца",
             pt: "Cancelar inscrição",
@@ -104,50 +105,53 @@
         return Lampa.Storage.get(PERSONS_KEY, DEFAULT_PERSONS_DATA);
     }
 
-    // ==== МІГРАЦІЯ СТАРИХ КАРТОК (додає gender, якщо відсутній) ====
-    function migrateOldPersons() {
-        var data = getPersonsData();
-        var changed = false;
-
-        data.ids.forEach(id => {
-            var card = data.cards[id];
-            if (card && typeof card.gender === 'undefined') {
-                card.gender = 0;
-                changed = true;
-            }
-            if (card && typeof card.source === 'undefined') {
-                card.source = 'tmdb';
-                changed = true;
-            }
-            if (card && typeof card.id === 'undefined') {
-                card.id = parseInt(id, 10);
-                changed = true;
-            }
-        });
-
-        if (changed) {
-            Lampa.Storage.set(PERSONS_KEY, data);
-            log('[Persons Plugin] Міграцію завершено — додано відсутні поля.');
-        }
-    }
-
+    // ========== ОНОВЛЕНА ФУНКЦІЯ ЗБЕРЕЖЕННЯ ==========
     function savePersonCard(personId, personData) {
         var savedPersons = getPersonsData();
-        savedPersons.cards[personId] = personData;
-
+        
+        // Зберігаємо ЛИШЕ необхідні поля
+        savedPersons.cards[personId] = {
+            id: personData.id,
+            name: personData.name,
+            profile_path: personData.profile_path,
+            gender: personData.gender || 0
+        };
+        
         if (!savedPersons.ids.includes(personId)) {
             savedPersons.ids.push(personId);
         }
-
+        
         Lampa.Storage.set(PERSONS_KEY, savedPersons);
     }
 
     function removePersonCard(personId) {
         var savedPersons = getPersonsData();
+        
         delete savedPersons.cards[personId];
+        
         var index = savedPersons.ids.indexOf(personId);
-        if (index !== -1) savedPersons.ids.splice(index, 1);
+        if (index !== -1) {
+            savedPersons.ids.splice(index, 1);
+        }
+        
         Lampa.Storage.set(PERSONS_KEY, savedPersons);
+    }
+
+    function migrateOldData() {
+        var savedPersons = getPersonsData();
+        var needsMigration = false;
+        
+        savedPersons.ids.forEach(function(personId) {
+            var card = savedPersons.cards[personId];
+            if (card && typeof card.gender === 'undefined') {
+                needsMigration = true;
+                card.gender = 0;
+            }
+        });
+        
+        if (needsMigration) {
+            Lampa.Storage.set(PERSONS_KEY, savedPersons);
+        }
     }
 
     function togglePersonSubscription(personId) {
@@ -155,10 +159,9 @@
         var index = savedPersons.ids.indexOf(personId);
 
         if (index === -1) {
-            // Підписка
             var currentLang = getCurrentLanguage();
             var url = Lampa.TMDB.api(`person/${personId}?api_key=${Lampa.TMDB.key()}&language=${currentLang}`);
-
+            
             new Lampa.Reguest().silent(url, function (response) {
                 try {
                     var json = typeof response === 'string' ? JSON.parse(response) : response;
@@ -172,7 +175,6 @@
             });
             return true;
         } else {
-            // Відписка
             removePersonCard(personId);
             updatePersonsList();
             return false;
@@ -186,12 +188,14 @@
 
     function addButtonToContainer(bottomBlock) {
         var existingButton = bottomBlock.querySelector('.button--subscriibbe-plugin');
-        if (existingButton) existingButton.remove();
+        if (existingButton && existingButton.parentNode) {
+            existingButton.parentNode.removeChild(existingButton);
+        }
 
         var issubscriibbed = isPersonsubscriibbed(currentPersonId);
-        var buttonText = issubscriibbed
-            ? Lampa.Lang.translate('persons_plugin_unsubscriibbe')
-            : Lampa.Lang.translate('persons_plugin_subscriibbe');
+        var buttonText = issubscriibbed ? 
+            Lampa.Lang.translate('persons_plugin_unsubscriibbe') : 
+            Lampa.Lang.translate('persons_plugin_subscriibbe');
 
         var button = document.createElement('div');
         button.className = 'full-start__button selector button--subscriibbe-plugin';
@@ -207,30 +211,40 @@
 
         button.addEventListener('hover:enter', function () {
             var wasAdded = togglePersonSubscription(currentPersonId);
-            var newText = wasAdded
-                ? Lampa.Lang.translate('persons_plugin_unsubscriibbe')
-                : Lampa.Lang.translate('persons_plugin_subscriibbe');
+            var newText = wasAdded ?
+                Lampa.Lang.translate('persons_plugin_unsubscriibbe') :
+                Lampa.Lang.translate('persons_plugin_subscriibbe');
 
-            button.classList.toggle('button--subscriibbe', !wasAdded);
-            button.classList.toggle('button--unsubscriibbe', wasAdded);
+            button.classList.remove('button--subscriibbe', 'button--unsubscriibbe');
+            button.classList.add(wasAdded ? 'button--unsubscriibbe' : 'button--subscriibbe');
 
             var span = button.querySelector('span');
             if (span) span.textContent = newText;
         });
 
-        (bottomBlock.querySelector('.full-start__buttons') || bottomBlock).append(button);
+        var buttonsContainer = bottomBlock.querySelector('.full-start__buttons');
+        if (buttonsContainer) buttonsContainer.append(button);
+        else bottomBlock.append(button);
     }
 
     function addsubscriibbeButton() {
         if (!currentPersonId) return;
 
-        let attempts = 0;
-        const tryFind = () => {
-            const bottomBlock = document.querySelector('.person-start__bottom');
-            if (bottomBlock) addButtonToContainer(bottomBlock);
-            else if (attempts++ < 10) setTimeout(tryFind, 300);
-        };
-        tryFind();
+        var bottomBlock = document.querySelector('.person-start__bottom');
+        if (bottomBlock) addButtonToContainer(bottomBlock);
+        else {
+            let attempts = 0;
+            const maxAttempts = 10;
+
+            function tryAgain() {
+                attempts++;
+                var container = document.querySelector('.person-start__bottom');
+                if (container) addButtonToContainer(container);
+                else if (attempts < maxAttempts) setTimeout(tryAgain, 300);
+            }
+
+            setTimeout(tryAgain, 300);
+        }
     }
 
     function updatePersonsList() {
@@ -255,90 +269,73 @@
         document.head.appendChild(style);
     }
 
-    // ==== ДЖЕРЕЛО ДАНИХ ПЕРСОН ====
     function PersonsService() {
-        this.list = function (params, onComplete) {
-            var savedPersons = getPersonsData();
-            var results = [];
+        var self = this;
 
-            savedPersons.ids.forEach(function (personId) {
-                var card = savedPersons.cards[personId];
-                if (card) {
-                    var modifiedCard = Object.assign({}, card);
-
-                    modifiedCard.id = parseInt(personId, 10);
-                    modifiedCard.source = 'tmdb';
-
-                    if (typeof modifiedCard.gender === 'undefined') {
-                        modifiedCard.gender = card.gender || 0;
-                    }
-
-                    // Прибираємо старі поля (не потрібні у v3.0.0)
-                    delete modifiedCard.click;
-                    delete modifiedCard.component;
-                    delete modifiedCard.type;
-
-                    results.push(modifiedCard);
-                }
-            });
-
-            onComplete({
-                results: results,
-                page: 1,
-                total_pages: 1,
-                total_results: results.length
-            });
+        this.list = function (params, onComplete) {  
+            var savedPersons = getPersonsData();  
+            var results = [];  
+              
+            savedPersons.ids.forEach(function(personId) {  
+                var card = savedPersons.cards[personId];  
+                if (card) {  
+                    results.push({
+                        id: card.id,
+                        name: card.name,
+                        profile_path: card.profile_path,
+                        gender: card.gender
+                    });  
+                }  
+            });  
+            onComplete(results);  
         };
     }
 
     function startPlugin() {
         hideSubscribeButton();
+        migrateOldData();
 
-        Lampa.Lang.add({
-            persons_plugin_title: pluginTranslations.persons_title,
-            persons_plugin_subscriibbe: pluginTranslations.subscriibbe,
-            persons_plugin_unsubscriibbe: pluginTranslations.unsubscriibbe,
-            persons_plugin_not_found: pluginTranslations.persons_not_found,
-        });
+        function checkCurrentActivity() {
+            var activity = Lampa.Activity.active();
+            if (activity && activity.component === 'actor') {
+                currentPersonId = parseInt(activity.id || activity.params?.id || location.pathname.match(/\/actor\/(\d+)/)?.[1], 10);
+                if (currentPersonId) {
+                    waitForContainer(addsubscriibbeButton);
+                }
+            }
+        }
 
-        initStorage();
-        migrateOldPersons();
+        function waitForContainer(callback) {
+            let attempts = 0;
+            const max = 15;
 
-        var personsService = new PersonsService();
-        Lampa.Api.sources[PLUGIN_NAME] = personsService;
+            function check() {
+                attempts++;
+                if (document.querySelector('.person-start__bottom')) callback();
+                else if (attempts < max) setTimeout(check, 200);
+            }
 
-        var menuItem = $(
-            '<li class="menu__item selector" data-action="' + PLUGIN_NAME + '">' +
-            '<div class="menu__ico">' + ICON_SVG + '</div>' +
-            '<div class="menu__text">' + Lampa.Lang.translate('persons_plugin_title') + '</div>' +
-            '</li>'
-        );
-
-        menuItem.on("hover:enter", function () {
-            Lampa.Activity.push({
-                component: "category_full",
-                source: PLUGIN_NAME,
-                title: Lampa.Lang.translate('persons_plugin_title'),
-                page: 1,
-                url: PLUGIN_NAME + '__main'
-            });
-        });
-
-        $(".menu .menu__list").eq(0).append(menuItem);
+            setTimeout(check, 200);
+        }
 
         Lampa.Listener.follow('activity', function (e) {
             if (e.type === 'start' && e.component === 'actor' && e.object?.id) {
                 currentPersonId = parseInt(e.object.id, 10);
-                addsubscriibbeButton();
+                waitForContainer(addsubscriibbeButton);
             } else if (e.type === 'resume' && e.component === 'category_full' && e.object?.source === PLUGIN_NAME) {
                 setTimeout(() => Lampa.Activity.reload(), 100);
             }
         });
 
+        setTimeout(checkCurrentActivity, 1500);
         addButtonStyles();
     }
 
-    if (window.appready) startPlugin();
-    else Lampa.Listener.follow('app', e => { if (e.type === 'ready') startPlugin(); });
-
+    if (window.appready) {
+        startPlugin();
+    } else {
+        Lampa.Listener.follow('app', function (e) {
+            if (e.type === 'ready') startPlugin();
+        });
+    }
 })();
