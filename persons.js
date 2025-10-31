@@ -1,7 +1,7 @@
 (function() {
     "use strict";
 
-    // ==== ПРИХОВАННЯ СТАНДАРТНОЇ КНОПКИ "ПІДПИСАТИСЯ" ====
+    //v1.1 ==== ПРИХОВАННЯ СТАНДАРТНОЇ КНОПКИ "ПІДПИСАТИСЯ" ====
     function hideSubscribeButton() {
         if (document.getElementById('hide-subscribe-style')) return;
 
@@ -19,7 +19,6 @@
     // ==== ОСНОВНА ЛОГІКА ПЛАГІНА ====
     var PLUGIN_NAME = "persons_plugin";
     var PERSONS_KEY = "saved_persons";
-    var PAGE_SIZE = 20;
     var DEFAULT_PERSONS_DATA = { cards: {}, ids: [] };
     var currentPersonId = null;
     var my_logging = true;
@@ -38,7 +37,7 @@
         },
         subscriibbe: {
             ru: "Подписаться",
-            en: "subscriibbe",
+            en: "Subscribe",
             uk: "Підписатися",
             be: "Падпісацца",
             pt: "Inscrever",
@@ -49,7 +48,7 @@
         },
         unsubscriibbe: {
             ru: "Отписаться",
-            en: "Unsubscriibbe",
+            en: "Unsubscribe",
             uk: "Відписатися",
             be: "Адпісацца",
             pt: "Cancelar inscrição",
@@ -73,6 +72,7 @@
 
     var ICON_SVG = '<svg height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 11C17.66 11 18.99 9.66 18.99 8C18.99 6.34 17.66 5 16 5C14.34 5 13 6.34 13 8C13 9.66 14.34 11 16 11ZM8 11C9.66 11 10.99 9.66 10.99 8C10.99 6.34 9.66 5 8 5C6.34 5 5 6.34 5 8C5 9.66 6.34 11 8 11ZM8 13C5.67 13 1 14.17 1 16.5V19H15V16.5C15 14.17 10.33 13 8 13ZM16 13C15.71 13 15.38 13.02 15.03 13.05C16.19 13.89 17 15.02 17 16.5V19H23V16.5C23 14.17 18.33 13 16 13Z" fill="currentColor"/></svg>';
 
+    // ==== СЕРВІСНІ ФУНКЦІЇ ====
     function log() {
         if (my_logging && console && console.log) {
             try { console.log.apply(console, arguments); } catch (e) {}
@@ -150,6 +150,7 @@
         return savedPersons.ids.includes(personId);
     }
 
+    // ==== КНОПКА ПІДПИСКИ ====
     function addButtonToContainer(bottomBlock) {
         var existingButton = bottomBlock.querySelector('.button--subscriibbe-plugin');
         if (existingButton && existingButton.parentNode) existingButton.parentNode.removeChild(existingButton);
@@ -196,14 +197,12 @@
         else {
             let attempts = 0;
             const maxAttempts = 10;
-
             function tryAgain() {
                 attempts++;
                 var container = document.querySelector('.person-start__bottom');
                 if (container) addButtonToContainer(container);
                 else if (attempts < maxAttempts) setTimeout(tryAgain, 300);
             }
-
             setTimeout(tryAgain, 300);
         }
     }
@@ -230,30 +229,47 @@
         document.head.appendChild(style);
     }
 
-    // ==== PersonsService ====
-    function PersonsService() {
-        this.list = function (params, onComplete) {  
-            var savedPersons = getPersonsData();  
-            var results = [];  
-              
-            savedPersons.ids.forEach(function(personId) {  
-                var card = savedPersons.cards[personId];  
-                if (card) {  
-                    var modifiedCard = Object.assign({}, card);
-                    modifiedCard.gender = card.gender || 2;
-                    modifiedCard.id = parseInt(personId, 10);
-                    modifiedCard.source = 'tmdb';
-                    results.push(modifiedCard);  
+    // ==== PersonsService (оновлений) ====
+    function PersonsService() {  
+        this.list = function (params, onComplete) {    
+            var savedPersons = getPersonsData();    
+            var results = [];    
+            
+            savedPersons.ids.forEach(function(personId) {    
+                var card = savedPersons.cards[personId];    
+                if (card) {    
+                    var modifiedCard = Object.assign({}, card);  
+                    modifiedCard.gender = card.gender || 2;  
+                    modifiedCard.id = parseInt(personId, 10);  
+                    modifiedCard.source = 'tmdb';  
+                    results.push(modifiedCard);    
+                }    
+            });    
+            
+            onComplete({    
+                results: results,    
+                page: 1,    
+                total_pages: 1,    
+                total_results: results.length,  
+                cardClass: function(element, params) {  
+                    var card = new Lampa.Card(element, params);  
+                    var originalCreate = card.create.bind(card);  
+                    card.create = function() {  
+                        originalCreate();  
+                        card.card.removeEventListener('hover:enter', card.card._hoverEnterHandler);  
+                        card.card.addEventListener('hover:enter', function() {  
+                            Lampa.Activity.push({  
+                                title: element.name,  
+                                component: 'actor',  
+                                id: element.id,  
+                                source: 'tmdb'  
+                            });  
+                        });  
+                    };  
+                    return card;  
                 }  
-            });  
-              
-            onComplete({  
-                results: results,  
-                page: 1,  
-                total_pages: 1,  
-                total_results: results.length  
-            });  
-        };
+            });    
+        };  
     }
 
     // ==== Старт плагіна ====
@@ -294,13 +310,11 @@
         function waitForContainer(callback) {
             let attempts = 0;
             const max = 15;
-
             function check() {
                 attempts++;
                 if (document.querySelector('.person-start__bottom')) callback();
                 else if (attempts < max) setTimeout(check, 200);
             }
-
             setTimeout(check, 200);
         }
 
