@@ -1,7 +1,7 @@
 (function () {    
     
     function Actors() {    
-        let scroll = new Lampa.Scroll({ mask: true })    
+        let scroll = new Lampa.Scroll({ mask: true, over: true, step: 250 })    
         let body = document.createElement('div')    
         let items = []    
         let active = 0    
@@ -51,6 +51,11 @@
                         scroll.update(card.render(true))    
                         Lampa.Background.change(Lampa.Utils.cardImgBackground(card_data))    
                     }    
+                      
+                    card.onTouch = (target, card_data) => {    
+                        last = target    
+                        active = items.indexOf(card)    
+                    }    
     
                     card.onEnter = (target, card_data) => {    
                         Lampa.Activity.push({    
@@ -81,8 +86,6 @@
                 scroll.onScroll = () => {  
                     this.limit()  
                 }  
-                  
-                this.limit()  
     
                 this.activity.toggle()    
             }, (error) => {    
@@ -113,10 +116,14 @@
         }  
     
         this.start = function () {    
-            Lampa.Controller.add('content', {    
+            Lampa.Controller.add('content', {  
+                link: this,  
                 toggle: () => {    
                     Lampa.Controller.collectionSet(scroll.render(true))    
-                    Lampa.Controller.collectionFocus(last, scroll.render(true))    
+                    Lampa.Controller.collectionFocus(last || false, scroll.render(true))  
+                      
+                    // Викликаємо limit() тільки після того, як Controller налаштований  
+                    this.limit()  
                 },    
                 left: () => {    
                     if (Lampa.Navigator.canmove('left')) Lampa.Navigator.move('left')    
@@ -164,7 +171,7 @@
                 }    
                     
                 .category-full .card--category .card__title {    
-                    margin-bottom: 1em;    
+                    margin-bottom: 1.5em;    
                     font-size: 1.1em;    
                     text-align: center;    
                     overflow: hidden;    
@@ -183,7 +190,7 @@
     
         const manifest = {    
             type: 'content',    
-            version: '1.0.10',    
+            version: '1.0.11',    
             name: 'Actors',    
             description: 'Популярні актори з TMDB',    
             component: 'actors_list'    
