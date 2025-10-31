@@ -73,14 +73,13 @@
     
                 scroll.append(body)    
                   
-                // Налаштування прокрутки  
                 scroll.minus()  
                   
                 scroll.onWheel = (step) => {  
                     if (!Lampa.Controller.own(this)) this.start()  
                       
-                    if (step > 0) Lampa.Navigator.move('down')  
-                    else Lampa.Navigator.move('up')  
+                    if (step > 0) Navigator.move('down')  
+                    else Navigator.move('up')  
                 }  
                   
                 scroll.onScroll = () => {  
@@ -109,8 +108,8 @@
                 }  
             })  
               
-            Lampa.Navigator.setCollection(items.slice(Math.max(0, active - 36), active + 36).map(c => c.render(true)))  
-            Lampa.Navigator.focused(last)  
+            Navigator.setCollection(items.slice(Math.max(0, active - 36), active + 36).map(c => c.render(true)))  
+            Navigator.focused(last)  
               
             Lampa.Layer.visible(scroll.render(true))  
         }  
@@ -122,22 +121,21 @@
                     Lampa.Controller.collectionSet(scroll.render(true))    
                     Lampa.Controller.collectionFocus(last || false, scroll.render(true))  
                       
-                    // Викликаємо limit() тільки після того, як Controller налаштований  
                     this.limit()  
                 },    
                 left: () => {    
-                    if (Lampa.Navigator.canmove('left')) Lampa.Navigator.move('left')    
+                    if (Navigator.canmove('left')) Navigator.move('left')    
                     else Lampa.Controller.toggle('menu')    
                 },    
                 right: () => {    
-                    Lampa.Navigator.move('right')    
+                    Navigator.move('right')    
                 },    
                 up: () => {    
-                    if (Lampa.Navigator.canmove('up')) Lampa.Navigator.move('up')    
+                    if (Navigator.canmove('up')) Navigator.move('up')    
                     else Lampa.Controller.toggle('head')    
                 },    
                 down: () => {    
-                    if (Lampa.Navigator.canmove('down')) Lampa.Navigator.move('down')    
+                    if (Navigator.canmove('down')) Navigator.move('down')    
                 },    
                 back: () => {    
                     Lampa.Activity.backward()    
@@ -163,7 +161,6 @@
     }    
     
     function startPlugin() {    
-        // Додаємо CSS стилі для компактних карток    
         $('<style>')    
             .text(`    
                 .category-full .card--category {    
@@ -190,7 +187,7 @@
     
         const manifest = {    
             type: 'content',    
-            version: '1.0.11',    
+            version: '1.0.12',    
             name: 'Actors',    
             description: 'Популярні актори з TMDB',    
             component: 'actors_list'    
