@@ -1,31 +1,43 @@
 (function () {    
     
     function Actors() {    
-        let scroll = new Lampa.Scroll({ mask: true, over: true, step: 250 })    
+        let scroll = new Lampa.Scroll({ mask: true, over: true, step: 250, end_ratio: 2 })    
         let body = document.createElement('div')    
         let items = []    
         let active = 0    
         let last    
+        let total_pages = 0  
+        let current_page = 1  
+        let waitload = false  
     
         body.classList.add('category-full')    
     
         this.create = function () {    
             this.activity.loader(true)    
-    
+            this.loadPage(1)  
+        }  
+          
+        this.loadPage = function(page) {  
             let network = new Lampa.Reguest()    
             let url = Lampa.Utils.protocol() + 'api.themoviedb.org/3/person/popular?api_key=' +    
-                Lampa.TMDB.key() + '&language=' + Lampa.Storage.field('tmdb_lang')    
+                Lampa.TMDB.key() + '&language=' + Lampa.Storage.field('tmdb_lang') + '&page=' + page  
     
             network.silent(url, (json) => {    
                 this.activity.loader(false)    
+                waitload = false  
     
                 if (!json.results || !json.results.length) {    
-                    let empty = new Lampa.Empty()    
-                    body.appendChild(empty.render(true))    
-                    scroll.append(body)    
-                    this.activity.toggle()    
+                    if (page === 1) {  
+                        let empty = new Lampa.Empty()    
+                        body.appendChild(empty.render(true))    
+                        scroll.append(body)    
+                        this.activity.toggle()  
+                    }  
                     return    
                 }    
+                  
+                total_pages = json.total_pages  
+                current_page = page  
     
                 json.results.forEach((person) => {    
                     let cardData = {    
@@ -68,33 +80,56 @@
                     }    
     
                     body.appendChild(card.render(true))    
-                    items.push(card)    
-                })    
-    
-                scroll.append(body)    
-                  
-                scroll.minus()  
-                  
-                scroll.onWheel = (step) => {  
-                    if (!Lampa.Controller.own(this)) this.start()  
+                    items.push(card)  
                       
-                    if (step > 0) Navigator.move('down')  
-                    else Navigator.move('up')  
+                    if (page > 1) {  
+                        Lampa.Controller.collectionAppend(card.render(true))  
+                    }  
+                })    
+                  
+                if (page === 1) {  
+                    scroll.append(body)    
+                      
+                    scroll.minus()  
+                      
+                    scroll.onWheel = (step) => {  
+                        if (!Lampa.Controller.own(this)) this.start()  
+                          
+                        if (step > 0) Navigator.move('down')  
+                        else Navigator.move('up')  
+                    }  
+                      
+                    scroll.onScroll = () => {  
+                        this.limit()  
+                    }  
+                      
+                    scroll.onEnd = this.next.bind(this)  
+                      
+                    this.activity.toggle()  
                 }  
                   
-                scroll.onScroll = () => {  
-                    this.limit()  
-                }  
-    
-                this.activity.toggle()    
+                this.limit()  
             }, (error) => {    
                 this.activity.loader(false)    
-                let empty = new Lampa.Empty()    
-                body.appendChild(empty.render(true))    
-                scroll.append(body)    
-                this.activity.toggle()    
+                waitload = false  
+                  
+                if (page === 1) {  
+                    let empty = new Lampa.Empty()    
+                    body.appendChild(empty.render(true))    
+                    scroll.append(body)    
+                    this.activity.toggle()  
+                }  
             })    
-        }    
+        }  
+          
+        this.next = function() {  
+            if (waitload) return  
+              
+            if (current_page < total_pages) {  
+                waitload = true  
+                this.loadPage(current_page + 1)  
+            }  
+        }  
           
         this.limit = function() {  
             let limit_view = 12  
@@ -187,7 +222,7 @@
     
         const manifest = {    
             type: 'content',    
-            version: '1.0.12',    
+            version: '1.0.13',    
             name: 'Actors',    
             description: 'Популярні актори з TMDB',    
             component: 'actors_list'    
