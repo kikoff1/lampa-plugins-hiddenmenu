@@ -2,10 +2,10 @@
     'use strict';  
   
     function startPlugin() {  
-        // Додаємо CSS стилі  
+        // Додаємо CSS стилі з максимальною специфічністю  
         $('<style>' +  
           'body.true--mobile .navigation-bar.plugin-hide { display: none !important; }' +  
-          'body.true--mobile .navigation-bar.plugin-show { display: block !important; }' +  
+          'body.true--mobile .navigation-bar:not(.plugin-hide) { display: block !important; }' +  
           '</style>').appendTo('head');  
   
         // Додаємо налаштування  
@@ -27,10 +27,14 @@
   
         // Функція для приховування/показу панелі  
         function toggleNavigationBar(hide) {  
+            var $nav = $('.navigation-bar');  
+              
             if (hide) {  
-                $('.navigation-bar').removeClass('plugin-show').addClass('plugin-hide');  
+                $nav.addClass('plugin-hide');  
             } else {  
-                $('.navigation-bar').removeClass('plugin-hide').addClass('plugin-show');  
+                $nav.removeClass('plugin-hide');  
+                // Форсуємо перерахунок стилів  
+                $nav[0].offsetHeight;  
             }  
               
             // Зберігаємо стан  
