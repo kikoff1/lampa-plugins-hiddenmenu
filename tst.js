@@ -33,17 +33,19 @@
             } else {  
                 $nav.removeClass('plugin-hide');  
                   
-                // Використовуємо requestAnimationFrame для синхронізації з рендерингом  
+                // КЛЮЧОВЕ РІШЕННЯ: примусово перезавантажуємо елемент  
                 if ($('body').hasClass('true--mobile')) {  
-                    requestAnimationFrame(function() {  
-                        $nav.css('display', 'block');  
-                          
-                        requestAnimationFrame(function() {  
-                            if (window.Lampa && Lampa.Layer) {  
-                                Lampa.Layer.update();  
-                            }  
-                        });  
-                    });  
+                    var parent = $nav.parent();  
+                    var navClone = $nav.clone();  
+                    $nav.remove();  
+                    parent.append(navClone);  
+                      
+                    // Оновлюємо Layer після перезавантаження  
+                    setTimeout(function() {  
+                        if (window.Lampa && Lampa.Layer) {  
+                            Lampa.Layer.update();  
+                        }  
+                    }, 50);  
                 }  
             }  
               
