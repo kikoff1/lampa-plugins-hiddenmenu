@@ -30,28 +30,34 @@
               
             if (hide) {  
                 $nav.addClass('plugin-hide');  
+                $nav.css('display', '');  
             } else {  
                 $nav.removeClass('plugin-hide');  
-                // Форсуємо відображення через inline стиль  
+                  
+                // Примусове відображення для мобільних  
                 if ($('body').hasClass('true--mobile')) {  
                     $nav.css('display', 'block');  
+                      
+                    // Примусовий reflow  
+                    $nav[0].offsetHeight;  
+                      
+                    // Видаляємо inline стиль після короткої затримки  
+                    setTimeout(function() {  
+                        $nav.css('display', '');  
+                    }, 100);  
                 }  
             }  
               
-            // КЛЮЧОВА ЗМІНА: Викликаємо оновлення Layer та Controller  
+            // Оновлюємо Layer кілька разів для надійності  
             setTimeout(function() {  
                 if (window.Lampa && Lampa.Layer) {  
                     Lampa.Layer.update();  
+                      
+                    setTimeout(function() {  
+                        Lampa.Layer.update();  
+                    }, 100);  
                 }  
-                  
-                // Перемикаємо Controller для оновлення стану  
-                if (window.Lampa && Lampa.Controller) {  
-                    var currentController = Lampa.Controller.enabled();  
-                    if (currentController && currentController.name) {  
-                        Lampa.Controller.toggle(currentController.name);  
-                    }  
-                }  
-            }, 50);  
+            }, 10);  
               
             // Зберігаємо стан  
             Lampa.Storage.set('hide_navigation_bar', hide);  
