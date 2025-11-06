@@ -2,10 +2,9 @@
     'use strict';  
   
     function startPlugin() {  
-        // Додаємо CSS стилі з максимальною специфічністю  
+        // Додаємо CSS стилі  
         $('<style>' +  
           'body.true--mobile .navigation-bar.plugin-hide { display: none !important; }' +  
-          'body.true--mobile .navigation-bar:not(.plugin-hide) { display: block !important; }' +  
           '</style>').appendTo('head');  
   
         // Додаємо налаштування  
@@ -33,8 +32,12 @@
                 $nav.addClass('plugin-hide');  
             } else {  
                 $nav.removeClass('plugin-hide');  
-                // Форсуємо перерахунок стилів  
-                $nav[0].offsetHeight;  
+                // Форсуємо відображення через inline стиль  
+                setTimeout(function() {  
+                    if ($('body').hasClass('true--mobile')) {  
+                        $nav.css('display', 'block');  
+                    }  
+                }, 10);  
             }  
               
             // Зберігаємо стан  
