@@ -2,8 +2,8 @@
     'use strict';  
   
     function startPlugin() {  
-        // Додаємо CSS стиль для класу .hide  
-        $('<style>.navigation-bar.hide { display: none !important; }</style>').appendTo('head');  
+        // Додаємо CSS стиль  
+        $('<style>.navigation-bar.plugin-hide { visibility: hidden !important; }</style>').appendTo('head');  
   
         // Додаємо налаштування  
         Lampa.SettingsApi.addParam({  
@@ -24,16 +24,10 @@
   
         // Функція для приховування/показу панелі  
         function toggleNavigationBar(hide) {  
-            var isMobile = $('body').hasClass('true--mobile');  
-              
             if (hide) {  
-                $('.navigation-bar').addClass('hide');  
+                $('.navigation-bar').addClass('plugin-hide');  
             } else {  
-                $('.navigation-bar').removeClass('hide');  
-                // Якщо не мобільний пристрій, панель має бути прихована за замовчуванням  
-                if (!isMobile) {  
-                    $('.navigation-bar').css('display', 'none');  
-                }  
+                $('.navigation-bar').removeClass('plugin-hide');  
             }  
               
             // Зберігаємо стан  
