@@ -38,7 +38,7 @@
     }).join('\n');
     document.head.appendChild(style);
 
-    // Функція для заміни текстів у вказаних контейнерах
+    // Функція для заміни текстів
     function replaceTexts() {
         const containers = [
             '.online-prestige-watched__body',
@@ -95,7 +95,17 @@
     observer.observe(document.body, { childList: true, subtree: true });
     updateAll();
 
-    /* 🧩 Додаємо функцію приховування панелі навігації */
+    /* 🧩 Додаємо секцію UiTweaks у налаштування */
+    Lampa.SettingsApi.addComponent({
+        component: 'UiTweaks',
+        name: 'Налаштування інтерфейсу',
+        icon: '<svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 0a10 10 0 1 0 10 10A10.011 10.011 0 0 0 10 0zm1 15H9v-2h2zm0-4H9V5h2z"/></svg>',
+        onRender: function(){},
+        onOpen: function(){},
+        onBack: function(){}
+    });
+
+    /* 🧩 Додаємо параметр — приховування панелі навігації */
     Lampa.SettingsApi.addParam({
         component: 'UiTweaks',
         param: {
