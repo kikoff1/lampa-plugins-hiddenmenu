@@ -1,80 +1,128 @@
-(() => {
-    "use strict";
+(function(){
+    // Список текстових замін
+    const REPLACEMENTS = {
+        'Дублированный': 'Дубльований',
+        'Ukr': '🇺🇦 Українською',
+        'Ua': '🇺🇦 Ua',
+        'Дубляж': 'Дубльований',
+        'Многоголосый': 'Багатоголосий',
+        'Украинский': '🇺🇦 Українською',
+        'Zetvideo': 'UaFlix',
+        'Нет истории просмотра': 'Історія перегляду відсутня'
+    };
 
-    const MENU_COMPONENT = 'hide_standard_menu';
-    const menuItems = [
-        { id: 'feed', title: 'Стрічка' },
-        { id: 'movie', title: 'Фільми' },
-        { id: 'tv', title: 'Серіали' },
-        { id: 'anime', title: 'Аніме' },
-        { id: 'myperson', title: 'Особи' },
-        { id: 'catalog', title: 'Каталог' },
-        { id: 'filter', title: 'Фільтр' },
-        { id: 'relise', title: 'Релізи' },
-        { id: 'favorite', title: 'Вибране' },
-        { id: 'history', title: 'Історія' },
-        { id: 'subscribes', title: 'Підписки' },
-        { id: 'timetable', title: 'Розклад' },
-        { id: 'mytorrents', title: 'Торренти' },
-        { id: 'undefined', title: 'Спорт' },
-        { id: 'about', title: 'Інформація' }
-    ];
+    // Конфігурація стилів
+    const STYLES = {
+        '.torrent-item__seeds span.high-seeds': {
+            color: '#00ff00',
+            'font-weight': 'bold'
+        },
+        '.torrent-item__bitrate span.high-bitrate': {
+            color: '#ff0000',
+            'font-weight': 'bold'
+        },
+        '.torrent-item__tracker.utopia': {
+            color: '#9b59b6',
+            'font-weight': 'bold'
+        },
+        '.torrent-item__tracker.toloka': {
+            color: '#2ecc71',
+            'font-weight': 'bold'
+        }
+    };
 
-    function addSettingsComponent() {
-        Lampa.SettingsApi.addComponent({
-            component: MENU_COMPONENT,
-            icon: `
-                <svg xmlns="http://www.w3.org/2000/svg" height="36" viewBox="0 0 24 24" fill="white">
-                    <path d="M0 0h24v24H0z" fill="none"/>
-                    <path d="M3 18h6v-2H3v2zm0-5h12v-2H3v2zm0-7v2h18V6H3z"/>
-                </svg>
-            `,
-            name: "Приховати меню"
-        });
+    // Додаємо CSS-стилі
+    let style = document.createElement('style');
+    style.innerHTML = Object.entries(STYLES).map(([selector, props]) => {
+        return `${selector} { ${Object.entries(props).map(([prop, val]) => `${prop}: ${val} !important`).join('; ')} }`;
+    }).join('\n');
+    document.head.appendChild(style);
 
-        menuItems.forEach(({ id, title }) => {
-            Lampa.SettingsApi.addParam({
-                component: MENU_COMPONENT,
-                param: {
-                    name: `hide_${id}`,
-                    type: "select",
-                    values: { 0: "Показати", 1: "Приховати" },
-                    default: 0
-                },
-                field: { name: title }
+    // Функція для заміни текстів у вказаних контейнерах
+    function replaceTexts() {
+        const containers = [
+            '.online-prestige-watched__body',
+            '.online-prestige--full .online-prestige__title',
+            '.online-prestige--full .online-prestige__info'
+        ];
+
+        containers.forEach(selector => {
+            document.querySelectorAll(selector).forEach(container => {
+                const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
+                let node;
+                while (node = walker.nextNode()) {
+                    let text = node.nodeValue;
+                    Object.entries(REPLACEMENTS).forEach(([original, replacement]) => {
+                        if (text.includes(original)) {
+                            text = text.replace(new RegExp(original, 'g'), replacement);
+                        }
+                    });
+                    node.nodeValue = text;
+                }
             });
         });
     }
 
-    function toggleMenuVisibility() {
-        menuItems.forEach(({ id }) => {
-            const shouldHide = +Lampa.Storage.get(`hide_${id}`, MENU_COMPONENT) === 1;
-            const item = $(`.menu__list .menu__item[data-action="${id}"]`);
-            item.toggle(!shouldHide);
+    // Функція для оновлення стилів торентів
+    function updateTorrentStyles() {
+        document.querySelectorAll('.torrent-item__seeds span').forEach(span => {
+            span.classList.toggle('high-seeds', (parseInt(span.textContent) || 0) > 19);
+        });
+
+        document.querySelectorAll('.torrent-item__bitrate span').forEach(span => {
+            span.classList.toggle('high-bitrate', (parseFloat(span.textContent) || 0) > 50);
+        });
+
+        document.querySelectorAll('.torrent-item__tracker').forEach(tracker => {
+            const text = tracker.textContent.trim();
+            tracker.classList.remove('utopia', 'toloka');
+            if (text.includes('UTOPIA (API)')) tracker.classList.add('utopia');
+            else if (text.includes('Toloka')) tracker.classList.add('toloka');
         });
     }
 
-    function init() {
-        if (window.plugin_hide_standard_ready) return;
+    // Основна функція оновлення
+    function updateAll() {
+        replaceTexts();
+        updateTorrentStyles();
+    }
 
-        addSettingsComponent();
+    // Спостерігач
+    const observer = new MutationObserver(mutations => {
+        if (mutations.some(m => m.addedNodes.length)) updateAll();
+    });
 
-        Lampa.Listener.follow('settings', (e) => {
-            if (['open', 'change'].includes(e.type)) {
-                setTimeout(toggleMenuVisibility, 100);
+    observer.observe(document.body, { childList: true, subtree: true });
+    updateAll();
+
+    /* 🧩 Додаємо функцію приховування панелі навігації */
+    Lampa.SettingsApi.addParam({
+        component: 'UiTweaks',
+        param: {
+            name: 'HideNavBar',
+            type: 'trigger',
+            default: false
+        },
+        field: {
+            name: 'Приховати панель навігації',
+            description: 'Ховає ліве меню для мінімалістичного вигляду'
+        },
+        onChange: function () {
+            if (Lampa.Storage.field('HideNavBar')) {
+                Lampa.Template.add('hide_navbar', '<style id="hide_navbar">#app > div.menu {display:none !important;}</style>');
+                $('body').append(Lampa.Template.get('hide_navbar', {}, true));
+            } else {
+                $('#hide_navbar').remove();
             }
-        });
+        },
+        onRender: function () {
+            if (Lampa.Storage.field('HideNavBar')) {
+                Lampa.Template.add('hide_navbar', '<style id="hide_navbar">#app > div.menu {display:none !important;}</style>');
+                $('body').append(Lampa.Template.get('hide_navbar', {}, true));
+            }
+        }
+    });
 
-        setTimeout(toggleMenuVisibility, 1500); // Початкове приховування після запуску
-
-        window.plugin_hide_standard_ready = true;
-    }
-
-    if (window.appready) {
-        init();
-    } else {
-        Lampa.Listener.follow("app", (e) => {
-            if (e.type === "ready") init();
-        });
-    }
 })();
+
+Lampa.Platform.tv();
