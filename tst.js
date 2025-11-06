@@ -2,7 +2,10 @@
     'use strict';  
   
     function startPlugin() {  
-        //v1 Додаємо налаштування  
+        // Додаємо CSS стиль для класу .hide  
+        $('<style>.navigation-bar.hide { display: none !important; }</style>').appendTo('head');  
+  
+        // Додаємо налаштування  
         Lampa.SettingsApi.addParam({  
             component: 'interface',  
             param: {  
@@ -22,9 +25,9 @@
         // Функція для приховування/показу панелі  
         function toggleNavigationBar(hide) {  
             if (hide) {  
-                $('.navigation-bar').css('display', 'none');  
+                $('.navigation-bar').addClass('hide');  
             } else {  
-                $('.navigation-bar').css('display', '');  
+                $('.navigation-bar').removeClass('hide');  
             }  
               
             // Зберігаємо стан  
