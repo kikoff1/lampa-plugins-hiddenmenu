@@ -2,8 +2,11 @@
     'use strict';  
   
     function startPlugin() {  
-        // Додаємо CSS стиль  
-        $('<style>.navigation-bar.plugin-hide { visibility: hidden !important; }</style>').appendTo('head');  
+        // Додаємо CSS стилі  
+        $('<style>' +  
+          'body.true--mobile .navigation-bar.plugin-hide { display: none !important; }' +  
+          'body.true--mobile .navigation-bar.plugin-show { display: block !important; }' +  
+          '</style>').appendTo('head');  
   
         // Додаємо налаштування  
         Lampa.SettingsApi.addParam({  
@@ -25,9 +28,9 @@
         // Функція для приховування/показу панелі  
         function toggleNavigationBar(hide) {  
             if (hide) {  
-                $('.navigation-bar').addClass('plugin-hide');  
+                $('.navigation-bar').removeClass('plugin-show').addClass('plugin-hide');  
             } else {  
-                $('.navigation-bar').removeClass('plugin-hide');  
+                $('.navigation-bar').removeClass('plugin-hide').addClass('plugin-show');  
             }  
               
             // Зберігаємо стан  
