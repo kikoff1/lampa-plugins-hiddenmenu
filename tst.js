@@ -33,12 +33,17 @@
             } else {  
                 $nav.removeClass('plugin-hide');  
                 // Форсуємо відображення через inline стиль  
-                setTimeout(function() {  
-                    if ($('body').hasClass('true--mobile')) {  
-                        $nav.css('display', 'block');  
-                    }  
-                }, 10);  
+                if ($('body').hasClass('true--mobile')) {  
+                    $nav.css('display', 'block');  
+                }  
             }  
+              
+            // КЛЮЧОВА ЗМІНА: Викликаємо оновлення Layer  
+            setTimeout(function() {  
+                if (window.Lampa && Lampa.Layer) {  
+                    Lampa.Layer.update();  
+                }  
+            }, 50);  
               
             // Зберігаємо стан  
             Lampa.Storage.set('hide_navigation_bar', hide);  
