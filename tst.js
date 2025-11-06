@@ -15,38 +15,30 @@
                 description: 'Приховує нижню панель навігації (Назад, Головна, Пошук, Налаштування)'  
             },  
             onChange: function(value) {  
-                toggleNavigationBar(value);  
+                if (value == true) {  
+                    Lampa.Template.add('hide_nav_bar', '<style id="hide_nav_bar">.navigation-bar{display:none!important}</style>');  
+                    $('body').append(Lampa.Template.get('hide_nav_bar', {}, true));  
+                }  
+                if (value == false) {  
+                    $('#hide_nav_bar').remove();  
+                }  
+                  
+                // Зберігаємо стан  
+                Lampa.Storage.set('hide_navigation_bar', value);  
             }  
         });  
-  
-        // Функція для приховування/показу панелі  
-        function toggleNavigationBar(hide) {  
-            if (hide) {  
-                // Додаємо стиль через Lampa.Template  
-                Lampa.Template.add('hide_nav_bar', '<style id="hide_nav_bar">.navigation-bar{display:none!important}</style>');  
-                $('body').append(Lampa.Template.get('hide_nav_bar', {}, true));  
-            } else {  
-                // Просто видаляємо стиль  
-                $('#hide_nav_bar').remove();  
-            }  
-              
-            // Зберігаємо стан  
-            Lampa.Storage.set('hide_navigation_bar', hide);  
-        }  
   
         // Застосовуємо налаштування при запуску  
-        Lampa.Listener.follow('app', function(e) {  
-            if (e.type === 'ready') {  
-                var hideNav = Lampa.Storage.get('hide_navigation_bar', false);  
-                toggleNavigationBar(hideNav);  
-            }  
-        });  
+        if (Lampa.Storage.field('hide_navigation_bar') == true) {  
+            Lampa.Template.add('hide_nav_bar', '<style id="hide_nav_bar">.navigation-bar{display:none!important}</style>');  
+            $('body').append(Lampa.Template.get('hide_nav_bar', {}, true));  
+        }  
     }  
   
     if (window.appready) startPlugin();  
     else {  
         Lampa.Listener.follow('app', function(e) {  
-            if (e.type === 'ready') startPlugin();  
+            if (e.type == 'ready') startPlugin();  
         });  
     }  
 })();
