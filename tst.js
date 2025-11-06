@@ -24,10 +24,16 @@
   
         // Функція для приховування/показу панелі  
         function toggleNavigationBar(hide) {  
+            var isMobile = $('body').hasClass('true--mobile');  
+              
             if (hide) {  
                 $('.navigation-bar').addClass('hide');  
             } else {  
                 $('.navigation-bar').removeClass('hide');  
+                // Якщо не мобільний пристрій, панель має бути прихована за замовчуванням  
+                if (!isMobile) {  
+                    $('.navigation-bar').css('display', 'none');  
+                }  
             }  
               
             // Зберігаємо стан  
@@ -37,7 +43,7 @@
         // Застосовуємо налаштування при запуску  
         Lampa.Listener.follow('app', function(e) {  
             if (e.type === 'ready') {  
-                let hideNav = Lampa.Storage.get('hide_navigation_bar', false);  
+                var hideNav = Lampa.Storage.get('hide_navigation_bar', false);  
                 toggleNavigationBar(hideNav);  
             }  
         });  
