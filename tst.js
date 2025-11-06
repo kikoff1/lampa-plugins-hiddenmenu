@@ -1,5 +1,8 @@
 (function(){
-    // Список текстових замін
+    'use strict';
+    Lampa.Platform.tv();
+
+    //v1 Список текстових замін
     const REPLACEMENTS = {
         'Дублированный': 'Дубльований',
         'Ukr': '🇺🇦 Українською',
@@ -87,7 +90,7 @@
         updateTorrentStyles();
     }
 
-    // Спостерігач
+    // Спостерігач за змінами DOM
     const observer = new MutationObserver(mutations => {
         if (mutations.some(m => m.addedNodes.length)) updateAll();
     });
@@ -95,44 +98,59 @@
     observer.observe(document.body, { childList: true, subtree: true });
     updateAll();
 
-    /* 🧩 Додаємо секцію UiTweaks у налаштування */
-    Lampa.SettingsApi.addComponent({
-        component: 'UiTweaks',
-        name: 'Налаштування інтерфейсу',
-        icon: '<svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 0a10 10 0 1 0 10 10A10.011 10.011 0 0 0 10 0zm1 15H9v-2h2zm0-4H9V5h2z"/></svg>',
-        onRender: function(){},
-        onOpen: function(){},
-        onBack: function(){}
-    });
-
-    /* 🧩 Додаємо параметр — приховування панелі навігації */
+    // === 📦 Додано: Приховання панелі навігації ===
     Lampa.SettingsApi.addParam({
-        component: 'UiTweaks',
+        component: 'Multi_Menu_Component',
         param: {
-            name: 'HideNavBar',
+            name: 'NavyBar',
             type: 'trigger',
             default: false
         },
         field: {
-            name: 'Приховати панель навігації',
-            description: 'Ховає ліве меню для мінімалістичного вигляду'
+            name: 'Сховати панель навігації',
+            description: 'Корисно, якщо неправильно визначився тип пристрою'
         },
-        onChange: function () {
-            if (Lampa.Storage.field('HideNavBar')) {
-                Lampa.Template.add('hide_navbar', '<style id="hide_navbar">#app > div.menu {display:none !important;}</style>');
-                $('body').append(Lampa.Template.get('hide_navbar', {}, true));
-            } else {
-                $('#hide_navbar').remove();
+        onChange: function(value) {
+            if (Lampa.Storage.field('NavyBar') == true) {
+                // Додаємо стилі для приховування панелі
+                Lampa.Template.add('no_bar', '<style id="no_bar">.menu{display:none!important;}</style>');
+                $('body').append(Lampa.Template.get('no_bar', {}, true));
+
+                // Додаємо кнопку пошуку замість панелі
+                var searchReturnButton = `
+                    <div id="searchReturnButton" class="selector" style="margin-left: 1em;">
+                        🔍 Пошук
+                    </div>`;
+                $('.open--search').hide();
+                $('#searchReturnButton').remove();
+                $('#app > div.head > div > div.head__actions').append(searchReturnButton);
+
+                $('#searchReturnButton').on('hover:enter hover:click hover:touch', function() {
+                    Lampa.Search.open();
+                });
             }
-        },
-        onRender: function () {
-            if (Lampa.Storage.field('HideNavBar')) {
-                Lampa.Template.add('hide_navbar', '<style id="hide_navbar">#app > div.menu {display:none !important;}</style>');
-                $('body').append(Lampa.Template.get('hide_navbar', {}, true));
+
+            if (Lampa.Storage.field('NavyBar') == false) {
+                $('.open--search').show();
+                $('#no_bar').remove();
+                $('#searchReturnButton').remove();
             }
         }
     });
 
-})();
+    // Автоматичне застосування при запуску
+    if (Lampa.Storage.field('NavyBar') == true) {
+        Lampa.Template.add('no_bar', '<style id="no_bar">.menu{display:none!important;}</style>');
+        $('body').append(Lampa.Template.get('no_bar', {}, true));
+        var searchReturnButton = `
+            <div id="searchReturnButton" class="selector" style="margin-left: 1em;">
+                🔍 Пошук
+            </div>`;
+        $('#app > div.head > div > div.head__actions').append(searchReturnButton);
+        $('#searchReturnButton').on('hover:enter hover:click hover:touch', function() {
+            Lampa.Search.open();
+        });
+        $('.open--search').hide();
+    }
 
-Lampa.Platform.tv();
+})();
