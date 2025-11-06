@@ -22,6 +22,15 @@
                 }  
                 if (value == false) {  
                     $('#hide_nav_bar').remove();  
+                      
+                    // КЛЮЧОВА ЗМІНА: примусово оновлюємо стилі  
+                    var $nav = $('.navigation-bar');  
+                    if ($nav.length > 0) {  
+                        // Примусовий reflow  
+                        $nav[0].offsetHeight;  
+                        // Тригеруємо перерахунок стилів  
+                        $nav.hide().show();  
+                    }  
                 }  
                   
                 // Зберігаємо стан  
