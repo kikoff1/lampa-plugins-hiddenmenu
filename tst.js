@@ -2,11 +2,6 @@
     'use strict';  
   
     function startPlugin() {  
-        // Додаємо CSS стилі  
-        $('<style>' +  
-          'body.true--mobile .navigation-bar.plugin-hide { display: none !important; }' +  
-          '</style>').appendTo('head');  
-  
         // Додаємо налаштування  
         Lampa.SettingsApi.addParam({  
             component: 'interface',  
@@ -26,27 +21,13 @@
   
         // Функція для приховування/показу панелі  
         function toggleNavigationBar(hide) {  
-            var $nav = $('.navigation-bar');  
-              
             if (hide) {  
-                $nav.addClass('plugin-hide');  
+                // Додаємо стиль через Lampa.Template  
+                Lampa.Template.add('hide_nav_bar', '<style id="hide_nav_bar">.navigation-bar{display:none!important}</style>');  
+                $('body').append(Lampa.Template.get('hide_nav_bar', {}, true));  
             } else {  
-                $nav.removeClass('plugin-hide');  
-                  
-                // КЛЮЧОВЕ РІШЕННЯ: примусово перезавантажуємо елемент  
-                if ($('body').hasClass('true--mobile')) {  
-                    var parent = $nav.parent();  
-                    var navClone = $nav.clone();  
-                    $nav.remove();  
-                    parent.append(navClone);  
-                      
-                    // Оновлюємо Layer після перезавантаження  
-                    setTimeout(function() {  
-                        if (window.Lampa && Lampa.Layer) {  
-                            Lampa.Layer.update();  
-                        }  
-                    }, 50);  
-                }  
+                // Просто видаляємо стиль  
+                $('#hide_nav_bar').remove();  
             }  
               
             // Зберігаємо стан  
