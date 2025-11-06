@@ -38,10 +38,18 @@
                 }  
             }  
               
-            // КЛЮЧОВА ЗМІНА: Викликаємо оновлення Layer  
+            // КЛЮЧОВА ЗМІНА: Викликаємо оновлення Layer та Controller  
             setTimeout(function() {  
                 if (window.Lampa && Lampa.Layer) {  
                     Lampa.Layer.update();  
+                }  
+                  
+                // Перемикаємо Controller для оновлення стану  
+                if (window.Lampa && Lampa.Controller) {  
+                    var currentController = Lampa.Controller.enabled();  
+                    if (currentController && currentController.name) {  
+                        Lampa.Controller.toggle(currentController.name);  
+                    }  
                 }  
             }, 50);  
               
