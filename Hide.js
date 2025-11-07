@@ -4,7 +4,7 @@
     function startPlugin() {  
         let manifest = {  
             type: 'other',  
-            version: '1.0.5',  
+            version: '1.0.6',  
             name: 'Розширений редактор меню',  
             description: 'Редагування всіх пунктів меню з можливістю сортування та приховування',  
         }  
@@ -26,6 +26,11 @@
             'open--profile': Lampa.Lang.translate ? Lampa.Lang.translate('title_profile') : 'Профіль'  
         }  
   
+        // Функція для видалення стандартного пункту "Редагувати"  
+        function removeEditMenuItem() {  
+            $('.menu__item[data-action="edit"]').remove()  
+        }  
+  
         function init() {  
             items_map = []  
               
@@ -35,13 +40,15 @@
                 })  
             })  
   
+            // Видаляємо стандартний пункт "Редагувати"  
+            removeEditMenuItem()  
+  
             observe()  
         }  
   
         function initHead() {  
             head_items_map = []  
               
-            // Збираємо пункти з верхнього меню  
             $('.head__actions').children().each(function() {  
                 if(!$(this).hasClass('head__split') &&   
                    !$(this).hasClass('head__logo') &&  
@@ -54,21 +61,18 @@
         function initSettings() {  
             settings_items_map = []  
               
-            // Збираємо компоненти з правого меню налаштувань  
             $('.settings-list .settings-list__item').each(function() {  
                 settings_items_map.push($(this))  
             })  
         }  
   
         function getHeadItemName(item) {  
-            // Спробуємо знайти назву за класом  
             for (let className in headMenuNames) {  
                 if (item.hasClass(className)) {  
                     return headMenuNames[className]  
                 }  
             }  
               
-            // Якщо не знайшли, спробуємо отримати з атрибутів  
             let name = item.attr('data-title') ||   
                       item.find('[data-title]').attr('data-title') ||  
                       item.attr('title') ||   
@@ -126,7 +130,6 @@
                     </div>  
                 </div>`)  
   
-                // Додаємо іконку  
                 if(item_icon && item_icon.length > 0) {  
                     if(type === 'menu') {  
                         item_sort.find('.menu-edit-list__icon').append(item_icon.html())  
@@ -306,9 +309,10 @@
             if(type === 'menu') {  
                 order()  
                 hide()  
-            } else if(type === 'head')
-
-  orderHead()  
+                // Видаляємо стандартний пункт після оновлення  
+                removeEditMenuItem()  
+            } else if(type === 'head') {  
+                orderHead()  
                 hideHead()  
             } else if(type === 'settings') {  
                 orderSettings()  
@@ -407,7 +411,7 @@
             if (e.type == 'ready') {  
                 init()  
                 addSettingsItem()  
-                $('.menu__item[data-action="edit"]').remove()  
+                removeEditMenuItem()  
                 update('menu')  
             }  
         })  
@@ -426,4 +430,3 @@
         window.addEventListener('load', startPlugin)  
     }  
 })();
-  
