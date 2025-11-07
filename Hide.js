@@ -4,7 +4,7 @@
     function startPlugin() {  
         let manifest = {  
             type: 'other',  
-            version: '1.0.3',  
+            version: '1.0.4',  
             name: 'Розширений редактор меню',  
             description: 'Редагування всіх пунктів меню з можливістю сортування та приховування',  
         }  
@@ -32,8 +32,11 @@
         function initHead() {  
             head_items_map = []  
               
-            $('.head .head__actions .selector').each(function() {  
-                if(!$(this).hasClass('open--search') && !$(this).hasClass('open--premium')) {  
+            // Збираємо пункти з верхнього меню, виключаючи пошук та преміум  
+            $('.head__actions > *').each(function() {  
+                if(!$(this).hasClass('open--search') &&   
+                   !$(this).hasClass('open--premium') &&   
+                   !$(this).hasClass('head__split')) {  
                     head_items_map.push($(this))  
                 }  
             })  
@@ -42,7 +45,8 @@
         function initSettings() {  
             settings_items_map = []  
               
-            $('.settings .settings-param.selector').each(function() {  
+            // Збираємо компоненти з правого меню налаштувань  
+            $('.settings-list__item').each(function() {  
                 settings_items_map.push($(this))  
             })  
         }  
@@ -54,16 +58,30 @@
             let current_items = type === 'head' ? head_items_map : type === 'settings' ? settings_items_map : items_map  
             let title = type === 'head' ? 'Редагування верхнього меню' : type === 'settings' ? 'Редагування меню налаштувань' : 'Редагування меню'  
   
+            if(current_items.length === 0) {  
+                Lampa.Noty.show('Немає пунктів для редагування')  
+                return  
+            }  
+  
             current_items.forEach(function(item_orig) {  
                 let item_clone = item_orig.clone()  
                 let item_title = ''  
+                let item_icon = null  
                   
                 if(type === 'head') {  
-                    item_title = item_clone.attr('title') || item_clone.find('svg').parent().attr('title') || 'Пункт меню'  
+                    // Отримуємо назву з різних можливих атрибутів  
+                    item_title = item_clone.attr('data-title') ||   
+                                item_clone.find('[data-title]').attr('data-title') ||  
+                                item_clone.attr('title') ||   
+                                item_clone.text().trim() ||  
+                                'Пункт верхнього меню'  
+                    item_icon = item_clone.find('svg').first()  
                 } else if(type === 'settings') {  
-                    item_title = item_clone.find('.settings-param__name').text() || 'Налаштування'  
+                    item_title = item_clone.find('.settings-list__title').text().trim() || 'Налаштування'  
+                    item_icon = item_clone.find('svg').first()  
                 } else {  
                     item_title = item_clone.find('.menu__text').text()  
+                    item_icon = item_clone.find('.menu__ico')  
                 }  
   
                 let item_sort = $(`<div class="menu-edit-list__item">  
@@ -87,10 +105,13 @@
                     </div>  
                 </div>`)  
   
-                if(type === 'menu') {  
-                    item_sort.find('.menu-edit-list__icon').append(item_clone.find('.menu__ico').html())  
-                } else if(type === 'head') {  
-                    item_sort.find('.menu-edit-list__icon').append(item_clone.find('svg').clone())  
+                // Додаємо іконку  
+                if(item_icon && item_icon.length > 0) {  
+                    if(type === 'menu') {  
+                        item_sort.find('.menu-edit-list__icon').append(item_icon.html())  
+                    } else {  
+                        item_sort.find('.menu-edit-list__icon').append(item_icon.clone())  
+                    }  
                 }  
   
                 item_sort.find('.move-up').on('hover:enter', () => {  
@@ -154,6 +175,38 @@
             }  
         }  
   
+        function orderHead() {  
+            let items = Lampa.Storage.get('head_sort_extended', '[]')  
+              
+            if (items.length) {  
+                let container = $('.head__actions')  
+                items.forEach((item) => {  
+                    let el = container.children().filter(function() {  
+                        let title = $(this).attr('data-title') ||   
+                                   $(this).find('[data-title]').attr('data-title') ||  
+                                   $(this).attr('title') ||   
+                                   $(this).text().trim()  
+                        return title === item  
+                    })  
+                    if (el.length) el.appendTo(container)  
+                })  
+            }  
+        }  
+  
+        function orderSettings() {  
+            let items = Lampa.Storage.get('settings_sort_extended', '[]')  
+              
+            if (items.length) {  
+                let container = $('.settings-list')  
+                items.forEach((item) => {  
+                    let el = container.find('.settings-list__item').filter(function() {  
+                        return $(this).find('.settings-list__title').text().trim() === item  
+                    })  
+                    if (el.length) el.appendTo(container)  
+                })  
+            }  
+        }  
+  
         function hide() {  
             let items = Lampa.Storage.get('menu_hide_extended', '[]')  
               
@@ -176,6 +229,38 @@
             })  
         }  
   
+        function hideHead() {  
+            let items = Lampa.Storage.get('head_hide_extended', '[]')  
+              
+            $('.head__actions > *').removeClass('hidden')  
+  
+            if (items.length) {  
+                items.forEach((item) => {  
+                    $('.head__actions > *').filter(function() {  
+                        let title = $(this).attr('data-title') ||   
+                                   $(this).find('[data-title]').attr('data-title') ||  
+                                   $(this).attr('title') ||   
+                                   $(this).text().trim()  
+                        return title === item  
+                    }).addClass('hidden')  
+                })  
+            }  
+        }  
+  
+        function hideSettings() {  
+            let items = Lampa.Storage.get('settings_hide_extended', '[]')  
+              
+            $('.settings-list__item').removeClass('hidden')  
+  
+            if (items.length) {  
+                items.forEach((item) => {  
+                    $('.settings-list__item').filter(function() {  
+                        return $(this).find('.settings-list__title').text().trim() === item  
+                    }).addClass('hidden')  
+                })  
+            }  
+        }  
+  
         function save(type = 'menu') {  
             let sort = []  
             let hide_items = []  
@@ -187,9 +272,13 @@
                 if(type === 'menu') {  
                     name = item.find('.menu__text').text().trim()  
                 } else if(type === 'head') {  
-                    name = item.attr('title') || item.find('svg').parent().attr('title') || 'item_' + current_items.indexOf(item)  
+                    name = item.attr('data-title') ||   
+                          item.find('[data-title]').attr('data-title') ||  
+                          item.attr('title') ||   
+                          item.text().trim() ||  
+                          'item_' + current_items.indexOf(item)  
                 } else if(type === 'settings') {  
-                    name = item.find('.settings-param__name').text().trim()  
+                    name = item.find('.settings-list__title').text().trim()  
                 }  
                   
                 sort.push(name)  
@@ -201,12 +290,20 @@
             Lampa.Storage.set(storage_prefix + '_sort_extended', sort)  
             Lampa.Storage.set(storage_prefix + '_hide_extended', hide_items)  
               
-            update()  
+            update(type)  
         }  
   
-        function update() {  
-            order()  
-            hide()  
+        function update(type = 'menu') {  
+            if(type === 'menu') {  
+                order()  
+                hide()  
+            } else if(type === 'head') {  
+                orderHead()  
+                hideHead()  
+            } else if(type === 'settings') {  
+                orderSettings()  
+                hideSettings()  
+            }  
         }  
   
         function observe() {  
@@ -226,7 +323,7 @@
   
                 Lampa.Storage.set('menu_sort_extended', memory)  
   
-                update()  
+                update('menu')  
             }, 500)  
         }  
   
@@ -301,14 +398,14 @@
                 init()  
                 addSettingsItem()  
                 $('.menu__item[data-action="edit"]').remove()  
-                update()  
+                update('menu')  
             }  
         })  
   
         Lampa.Listener.follow('menu', function(e) {  
             if (e.type == 'end') {  
                 init()  
-                update()  
+                update('menu')  
             }  
         })  
     }  
@@ -318,4 +415,4 @@
     } else {  
         window.addEventListener('load', startPlugin)  
     }  
-})();
+})();  
