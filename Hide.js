@@ -306,5 +306,124 @@
             if(type === 'menu') {  
                 order()  
                 hide()  
-            } else if(type === 'head')  
+            } else if(type === 'head')
+
+  orderHead()  
+                hideHead()  
+            } else if(type === 'settings') {  
+                orderSettings()  
+                hideSettings()  
+            }  
+        }  
+  
+        function observe() {  
+            clearTimeout(timer)  
+              
+            timer = setTimeout(() => {  
+                let memory = Lampa.Storage.get('menu_sort_extended', '[]')  
+                let anon = []  
+  
+                items_map.forEach(function(item) {  
+                    anon.push(item.find('.menu__text').text().trim())  
+                })  
+  
+                anon.forEach((item) => {  
+                    if (memory.indexOf(item) == -1) memory.push(item)  
+                })  
+  
+                Lampa.Storage.set('menu_sort_extended', memory)  
+  
+                update('menu')  
+            }, 500)  
+        }  
+  
+        function addSettingsItem() {  
+            Lampa.SettingsApi.addComponent({  
+                component: 'menu_editor',  
+                name: 'Редагування меню',  
+                icon: `<svg width="30" height="29" viewBox="0 0 30 29" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                    <path d="M18.2989 5.27973L2.60834 20.9715C2.52933 21.0507 2.47302 21.1496 2.44528 21.258L0.706081 28.2386C0.680502 28.3422 0.682069 28.4507 0.710632 28.5535C0.739195 28.6563 0.793788 28.75 0.869138 28.8255C0.984875 28.9409 1.14158 29.0057 1.30498 29.0059C1.35539 29.0058 1.4056 28.9996 1.45449 28.9873L8.43509 27.2479C8.54364 27.2206 8.64271 27.1643 8.72172 27.0851L24.4137 11.3944L18.2989 5.27973ZM28.3009 3.14018L26.5543 1.39363C25.3869 0.226285 23.3524 0.227443 22.1863 1.39363L20.0469 3.53318L26.1614 9.64766L28.3009 7.50816C28.884 6.9253 29.2052 6.14945 29.2052 5.32432C29.2052 4.49919 28.884 3.72333 28.3009 3.14018Z" fill="currentColor"/>  
+                </svg>`  
+            })  
+  
+            Lampa.SettingsApi.addParam({  
+                component: 'menu_editor',  
+                param: {  
+                    name: 'edit_menu_button',  
+                    type: 'button',  
+                    default: true  
+                },  
+                field: {  
+                    name: 'Редагувати ліве меню',  
+                    description: 'Налаштуйте порядок та видимість пунктів лівого меню'  
+                },  
+                onRender: (item) => {  
+                    item.on('hover:enter', () => {  
+                        start('menu')  
+                    })  
+                }  
+            })  
+  
+            Lampa.SettingsApi.addParam({  
+                component: 'menu_editor',  
+                param: {  
+                    name: 'edit_head_button',  
+                    type: 'button',  
+                    default: true  
+                },  
+                field: {  
+                    name: 'Редагувати верхнє меню',  
+                    description: 'Налаштуйте порядок та видимість пунктів верхнього меню'  
+                },  
+                onRender: (item) => {  
+                    item.on('hover:enter', () => {  
+                        initHead()  
+                        start('head')  
+                    })  
+                }  
+            })  
+  
+            Lampa.SettingsApi.addParam({  
+                component: 'menu_editor',  
+                param: {  
+                    name: 'edit_settings_button',  
+                    type: 'button',  
+                    default: true  
+                },  
+                field: {  
+                    name: 'Редагувати меню налаштувань',  
+                    description: 'Налаштуйте порядок та видимість пунктів меню налаштувань'  
+                },  
+                onRender: (item) => {  
+                    item.on('hover:enter', () => {  
+                        initSettings()  
+                        start('settings')  
+                    })  
+                }  
+            })  
+        }  
+  
+        Lampa.Listener.follow('app', function(e) {  
+            if (e.type == 'ready') {  
+                init()  
+                addSettingsItem()  
+                $('.menu__item[data-action="edit"]').remove()  
+                update('menu')  
+            }  
+        })  
+  
+        Lampa.Listener.follow('menu', function(e) {  
+            if (e.type == 'end') {  
+                init()  
+                update('menu')  
+            }  
+        })  
+    }  
+  
+    if (window.Lampa) {  
+        startPlugin()  
+    } else {  
+        window.addEventListener('load', startPlugin)  
+    }  
+})();
   
