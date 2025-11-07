@@ -4,23 +4,23 @@
     function startPlugin() {  
         let manifest = {  
             type: 'other',  
-            version: '1.0.0',  
+            version: '1.0.1',  
             name: 'Розширений редактор меню',  
             description: 'Редагування всіх пунктів меню з можливістю сортування та приховування',  
         }  
           
         Lampa.Manifest.plugins = manifest  
   
-        let menu  
+        let items_map = []  
         let timer  
   
-        function init(html) {  
-            // Об'єднуємо всі пункти меню з обох секцій  
-            menu = $('<ul class="menu__list"></ul>')  
+        function init() {  
+            items_map = []  
               
-            html.find('.menu__list').each(function() {  
+            // Збираємо всі пункти з обох секцій лівого меню  
+            $('.menu .menu__list').each(function() {  
                 $(this).find('.menu__item').each(function() {  
-                    menu.append($(this).clone(true))  
+                    items_map.push($(this))  
                 })  
             })  
   
@@ -30,9 +30,8 @@
         function start() {  
             let list = $('<div class="menu-edit-list"></div>')  
   
-            menu.find('.menu__item').each(function() {  
-                let item_orig = $(this)  
-                let item_clone = $(this).clone()  
+            items_map.forEach(function(item_orig) {  
+                let item_clone = item_orig.clone()  
                 let item_sort = $(`<div class="menu-edit-list__item">  
                     <div class="menu-edit-list__icon"></div>  
                     <div class="menu-edit-list__title">${item_clone.find('.menu__text').text()}</div>  
@@ -58,19 +57,25 @@
   
                 item_sort.find('.move-up').on('hover:enter', () => {  
                     let prev = item_sort.prev()  
-  
                     if (prev.length) {  
                         item_sort.insertBefore(prev)  
-                        item_orig.insertBefore(item_orig.prev())  
+                        let idx = items_map.indexOf(item_orig)  
+                        if (idx > 0) {  
+                            items_map.splice(idx, 1)  
+                            items_map.splice(idx - 1, 0, item_orig)  
+                        }  
                     }  
                 })  
   
                 item_sort.find('.move-down').on('hover:enter', () => {  
                     let next = item_sort.next()  
-  
                     if (next.length) {  
                         item_sort.insertAfter(next)  
-                        item_orig.insertAfter(item_orig.next())  
+                        let idx = items_map.indexOf(item_orig)  
+                        if (idx < items_map.length - 1) {  
+                            items_map.splice(idx, 1)  
+                            items_map.splice(idx + 1, 0, item_orig)  
+                        }  
                     }  
                 })  
   
@@ -99,7 +104,7 @@
             let items = Lampa.Storage.get('menu_sort_extended', '[]')  
               
             if (items.length) {  
-                $('.menu__list').each(function() {  
+                $('.menu .menu__list').each(function() {  
                     let list = $(this)  
                     items.forEach((item) => {  
                         let el = $('.menu__item', list).filter(function() {  
@@ -114,11 +119,11 @@
         function hide() {  
             let items = Lampa.Storage.get('menu_hide_extended', '[]')  
               
-            $('.menu__item').removeClass('hidden')  
+            $('.menu .menu__item').removeClass('hidden')  
   
             if (items.length) {  
                 items.forEach((item) => {  
-                    $('.menu__item').filter(function() {  
+                    $('.menu .menu__item').filter(function() {  
                         return $(this).find('.menu__text').text().trim() === item  
                     }).addClass('hidden')  
                 })  
@@ -129,12 +134,10 @@
             let sort = []  
             let hide_items = []  
   
-            menu.find('.menu__item').each(function() {  
-                let name = $(this).find('.menu__text').text().trim()  
-                  
+            items_map.forEach(function(item) {  
+                let name = item.find('.menu__text').text().trim()  
                 sort.push(name)  
-  
-                if ($(this).hasClass('hidden')) {  
+                if (item.hasClass('hidden')) {  
                     hide_items.push(name)  
                 }  
             })  
@@ -157,8 +160,8 @@
                 let memory = Lampa.Storage.get('menu_sort_extended', '[]')  
                 let anon = []  
   
-                menu.find('.menu__item').each(function() {  
-                    anon.push($(this).find('.menu__text').text().trim())  
+                items_map.forEach(function(item) {  
+                    anon.push(item.find('.menu__text').text().trim())  
                 })  
   
                 anon.forEach((item) => {  
@@ -171,7 +174,6 @@
             }, 500)  
         }  
   
-        // Додаємо пункт в налаштування  
         function addSettingsItem() {  
             Lampa.SettingsApi.addComponent({  
                 component: 'menu_editor',  
@@ -200,29 +202,18 @@
             })  
         }  
   
-        // Ініціалізація після завантаження додатку  
         Lampa.Listener.follow('app', function(e) {  
             if (e.type == 'ready') {  
-                // Ініціалізуємо редактор з усіма пунктами меню  
-                let html = $('.menu')  
-                init(html)  
-                  
-                // Додаємо пункт в налаштування  
+                init()  
                 addSettingsItem()  
-                  
-                // Видаляємо старий пункт "Редагувати" з меню  
                 $('.menu__item[data-action="edit"]').remove()  
-                  
-                // Застосовуємо збережені налаштування  
                 update()  
             }  
         })  
   
         Lampa.Listener.follow('menu', function(e) {  
             if (e.type == 'end') {  
-                // Оновлюємо меню після його ініціалізації  
-                let html = $('.menu')  
-                init(html)  
+                init()  
                 update()  
             }  
         })  
