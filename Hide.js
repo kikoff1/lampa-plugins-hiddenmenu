@@ -4,7 +4,7 @@
     function startPlugin() {  
         let manifest = {  
             type: 'other',  
-            version: '1.0.1',  
+            version: '1.0.2',  
             name: 'Розширений редактор меню',  
             description: 'Редагування всіх пунктів меню з можливістю сортування та приховування',  
         }  
@@ -119,6 +119,7 @@
         function hide() {  
             let items = Lampa.Storage.get('menu_hide_extended', '[]')  
               
+            // Спочатку видаляємо клас hidden з усіх елементів  
             $('.menu .menu__item').removeClass('hidden')  
   
             if (items.length) {  
@@ -128,6 +129,16 @@
                     }).addClass('hidden')  
                 })  
             }  
+              
+            // Перевіряємо, чи є хоча б один видимий елемент у кожному списку  
+            $('.menu .menu__list').each(function() {  
+                let visibleItems = $(this).find('.menu__item:not(.hidden)')  
+                  
+                // Якщо всі елементи приховані, показуємо перший  
+                if (visibleItems.length === 0) {  
+                    $(this).find('.menu__item').first().removeClass('hidden')  
+                }  
+            })  
         }  
   
         function save() {  
