@@ -1,10 +1,10 @@
-function() {  
+(function() {  
     'use strict';  
   
     function startPlugin() {  
         let manifest = {  
             type: 'other',  
-            version: '1.0.7',  
+            version: '1.0.8',  
             name: 'Розширений редактор меню',  
             description: 'Редагування всіх пунктів меню з можливістю сортування та приховування',  
         }  
@@ -16,8 +16,9 @@ function() {
         let settings_items_map = []  
         let timer  
         let active_controller = 'menu'  
+        let settings_added = false  
   
-        // Розширена мапа назв для верхнього меню з локалізацією  
+        // Мапа назв для верхнього меню  
         function getHeadMenuNames() {  
             return {  
                 'open--search': Lampa.Lang.translate('search'),  
@@ -30,6 +31,7 @@ function() {
             }  
         }  
   
+        // Функція для видалення стандартного пункту "Редагувати"  
         function removeEditMenuItem() {  
             $('.menu__item[data-action="edit"]').remove()  
         }  
@@ -37,13 +39,16 @@ function() {
         function init() {  
             items_map = []  
               
+            // Збираємо всі пункти з обох секцій лівого меню  
             $('.menu .menu__list').each(function() {  
                 $(this).find('.menu__item').each(function() {  
                     items_map.push($(this))  
                 })  
             })  
   
+            // Видаляємо стандартний пункт "Редагувати"  
             removeEditMenuItem()  
+  
             observe()  
         }  
   
@@ -141,10 +146,14 @@ function() {
                     </div>  
                 </div>`)  
   
-                if(item_icon && item_icon.length > 0) {  
-                    if(type === 'menu') {  
-                        item_sort.find('.menu-edit-list__icon').append(item_icon.html())  
-                    } else {  
+                if(type === 'menu') {  
+                    item_sort.find('.menu-edit-list__icon').append(item_icon.html())  
+                } else if(type === 'head') {  
+                    if(item_icon.length > 0) {  
+                        item_sort.find('.menu-edit-list__icon').append(item_icon.clone())  
+                    }  
+                } else if(type === 'settings') {  
+                    if(item_icon.length > 0) {  
                         item_sort.find('.menu-edit-list__icon').append(item_icon.clone())  
                     }  
                 }  
@@ -320,14 +329,14 @@ function() {
             if(type === 'menu') {  
                 order()  
                 hide()  
+                // Видаляємо стандартний пункт після оновлення  
                 removeEditMenuItem()  
             } else if(type === 'head') {  
                 orderHead()  
                 hideHead()  
             } else if(type === 'settings') {  
                 orderSettings()  
-                hideSettings()  
-            }  
+                hideSettings              }  
         }  
   
         function observe() {  
@@ -352,6 +361,9 @@ function() {
         }  
   
         function addSettingsItem() {  
+            // Перевіряємо, чи вже додано компонент  
+            if(settings_added) return  
+              
             Lampa.SettingsApi.addComponent({  
                 component: 'menu_editor',  
                 name: 'Редагування меню',  
@@ -415,14 +427,20 @@ function() {
                     })  
                 }  
             })  
+              
+            settings_added = true  
         }  
   
         Lampa.Listener.follow('app', function(e) {  
             if (e.type == 'ready') {  
                 init()  
-                addSettingsItem()  
-                removeEditMenuItem()  
-                update('menu')  
+                  
+                // Затримка для гарантії, що Settings API готовий  
+                setTimeout(() => {  
+                    addSettingsItem()  
+                    removeEditMenuItem()  
+                    update('menu')  
+                }, 100)  
             }  
         })  
   
