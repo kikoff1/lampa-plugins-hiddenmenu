@@ -4,7 +4,7 @@
     function startPlugin() {  
         let manifest = {  
             type: 'other',  
-            version: '1.0.2',  
+            version: '1.0.3',  
             name: 'Розширений редактор меню',  
             description: 'Редагування всіх пунктів меню з можливістю сортування та приховування',  
         }  
@@ -12,12 +12,14 @@
         Lampa.Manifest.plugins = manifest  
   
         let items_map = []  
+        let head_items_map = []  
+        let settings_items_map = []  
         let timer  
+        let active_controller = 'menu'  
   
         function init() {  
             items_map = []  
               
-            // Збираємо всі пункти з обох секцій лівого меню  
             $('.menu .menu__list').each(function() {  
                 $(this).find('.menu__item').each(function() {  
                     items_map.push($(this))  
@@ -27,14 +29,46 @@
             observe()  
         }  
   
-        function start() {  
-            let list = $('<div class="menu-edit-list"></div>')  
+        function initHead() {  
+            head_items_map = []  
+              
+            $('.head .head__actions .selector').each(function() {  
+                if(!$(this).hasClass('open--search') && !$(this).hasClass('open--premium')) {  
+                    head_items_map.push($(this))  
+                }  
+            })  
+        }  
   
-            items_map.forEach(function(item_orig) {  
+        function initSettings() {  
+            settings_items_map = []  
+              
+            $('.settings .settings-param.selector').each(function() {  
+                settings_items_map.push($(this))  
+            })  
+        }  
+  
+        function start(type = 'menu') {  
+            active_controller = Lampa.Controller.enabled().name  
+              
+            let list = $('<div class="menu-edit-list"></div>')  
+            let current_items = type === 'head' ? head_items_map : type === 'settings' ? settings_items_map : items_map  
+            let title = type === 'head' ? 'Редагування верхнього меню' : type === 'settings' ? 'Редагування меню налаштувань' : 'Редагування меню'  
+  
+            current_items.forEach(function(item_orig) {  
                 let item_clone = item_orig.clone()  
+                let item_title = ''  
+                  
+                if(type === 'head') {  
+                    item_title = item_clone.attr('title') || item_clone.find('svg').parent().attr('title') || 'Пункт меню'  
+                } else if(type === 'settings') {  
+                    item_title = item_clone.find('.settings-param__name').text() || 'Налаштування'  
+                } else {  
+                    item_title = item_clone.find('.menu__text').text()  
+                }  
+  
                 let item_sort = $(`<div class="menu-edit-list__item">  
                     <div class="menu-edit-list__icon"></div>  
-                    <div class="menu-edit-list__title">${item_clone.find('.menu__text').text()}</div>  
+                    <div class="menu-edit-list__title">${item_title}</div>  
                     <div class="menu-edit-list__move move-up selector">  
                         <svg width="22" height="14" viewBox="0 0 22 14" fill="none" xmlns="http://www.w3.org/2000/svg">  
                             <path d="M2 12L11 3L20 12" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>  
@@ -53,16 +87,20 @@
                     </div>  
                 </div>`)  
   
-                item_sort.find('.menu-edit-list__icon').append(item_clone.find('.menu__ico').html())  
+                if(type === 'menu') {  
+                    item_sort.find('.menu-edit-list__icon').append(item_clone.find('.menu__ico').html())  
+                } else if(type === 'head') {  
+                    item_sort.find('.menu-edit-list__icon').append(item_clone.find('svg').clone())  
+                }  
   
                 item_sort.find('.move-up').on('hover:enter', () => {  
                     let prev = item_sort.prev()  
                     if (prev.length) {  
                         item_sort.insertBefore(prev)  
-                        let idx = items_map.indexOf(item_orig)  
+                        let idx = current_items.indexOf(item_orig)  
                         if (idx > 0) {  
-                            items_map.splice(idx, 1)  
-                            items_map.splice(idx - 1, 0, item_orig)  
+                            current_items.splice(idx, 1)  
+                            current_items.splice(idx - 1, 0, item_orig)  
                         }  
                     }  
                 })  
@@ -71,10 +109,10 @@
                     let next = item_sort.next()  
                     if (next.length) {  
                         item_sort.insertAfter(next)  
-                        let idx = items_map.indexOf(item_orig)  
-                        if (idx < items_map.length - 1) {  
-                            items_map.splice(idx, 1)  
-                            items_map.splice(idx + 1, 0, item_orig)  
+                        let idx = current_items.indexOf(item_orig)  
+                        if (idx < current_items.length - 1) {  
+                            current_items.splice(idx, 1)  
+                            current_items.splice(idx + 1, 0, item_orig)  
                         }  
                     }  
                 })  
@@ -88,14 +126,14 @@
             })  
   
             Lampa.Modal.open({  
-                title: 'Редагування меню',  
+                title: title,  
                 html: list,  
                 size: 'small',  
                 scroll_to_center: true,  
                 onBack: () => {  
                     Lampa.Modal.close()  
-                    save()  
-                    Lampa.Controller.toggle('menu')  
+                    save(type)  
+                    Lampa.Controller.toggle(active_controller)  
                 }  
             })  
         }  
@@ -119,7 +157,6 @@
         function hide() {  
             let items = Lampa.Storage.get('menu_hide_extended', '[]')  
               
-            // Спочатку видаляємо клас hidden з усіх елементів  
             $('.menu .menu__item').removeClass('hidden')  
   
             if (items.length) {  
@@ -130,31 +167,39 @@
                 })  
             }  
               
-            // Перевіряємо, чи є хоча б один видимий елемент у кожному списку  
             $('.menu .menu__list').each(function() {  
                 let visibleItems = $(this).find('.menu__item:not(.hidden)')  
                   
-                // Якщо всі елементи приховані, показуємо перший  
                 if (visibleItems.length === 0) {  
                     $(this).find('.menu__item').first().removeClass('hidden')  
                 }  
             })  
         }  
   
-        function save() {  
+        function save(type = 'menu') {  
             let sort = []  
             let hide_items = []  
+            let current_items = type === 'head' ? head_items_map : type === 'settings' ? settings_items_map : items_map  
+            let storage_prefix = type === 'head' ? 'head' : type === 'settings' ? 'settings' : 'menu'  
   
-            items_map.forEach(function(item) {  
-                let name = item.find('.menu__text').text().trim()  
+            current_items.forEach(function(item) {  
+                let name = ''  
+                if(type === 'menu') {  
+                    name = item.find('.menu__text').text().trim()  
+                } else if(type === 'head') {  
+                    name = item.attr('title') || item.find('svg').parent().attr('title') || 'item_' + current_items.indexOf(item)  
+                } else if(type === 'settings') {  
+                    name = item.find('.settings-param__name').text().trim()  
+                }  
+                  
                 sort.push(name)  
                 if (item.hasClass('hidden')) {  
                     hide_items.push(name)  
                 }  
             })  
   
-            Lampa.Storage.set('menu_sort_extended', sort)  
-            Lampa.Storage.set('menu_hide_extended', hide_items)  
+            Lampa.Storage.set(storage_prefix + '_sort_extended', sort)  
+            Lampa.Storage.set(storage_prefix + '_hide_extended', hide_items)  
               
             update()  
         }  
@@ -202,12 +247,50 @@
                     default: true  
                 },  
                 field: {  
-                    name: 'Редагувати меню',  
-                    description: 'Налаштуйте порядок та видимість пунктів меню'  
+                    name: 'Редагувати ліве меню',  
+                    description: 'Налаштуйте порядок та видимість пунктів лівого меню'  
                 },  
                 onRender: (item) => {  
                     item.on('hover:enter', () => {  
-                        start()  
+                        start('menu')  
+                    })  
+                }  
+            })  
+  
+            Lampa.SettingsApi.addParam({  
+                component: 'menu_editor',  
+                param: {  
+                    name: 'edit_head_button',  
+                    type: 'button',  
+                    default: true  
+                },  
+                field: {  
+                    name: 'Редагувати верхнє меню',  
+                    description: 'Налаштуйте порядок та видимість пунктів верхнього меню'  
+                },  
+                onRender: (item) => {  
+                    item.on('hover:enter', () => {  
+                        initHead()  
+                        start('head')  
+                    })  
+                }  
+            })  
+  
+            Lampa.SettingsApi.addParam({  
+                component: 'menu_editor',  
+                param: {  
+                    name: 'edit_settings_button',  
+                    type: 'button',  
+                    default: true  
+                },  
+                field: {  
+                    name: 'Редагувати меню налаштувань',  
+                    description: 'Налаштуйте порядок та видимість пунктів меню налаштувань'  
+                },  
+                onRender: (item) => {  
+                    item.on('hover:enter', () => {  
+                        initSettings()  
+                        start('settings')  
                     })  
                 }  
             })  
