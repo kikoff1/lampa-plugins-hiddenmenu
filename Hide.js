@@ -1,10 +1,10 @@
-(function() {  
+function() {  
     'use strict';  
   
     function startPlugin() {  
         let manifest = {  
             type: 'other',  
-            version: '1.0.6',  
+            version: '1.0.7',  
             name: 'Розширений редактор меню',  
             description: 'Редагування всіх пунктів меню з можливістю сортування та приховування',  
         }  
@@ -17,16 +17,19 @@
         let timer  
         let active_controller = 'menu'  
   
-        // Мапа назв для верхнього меню  
-        const headMenuNames = {  
-            'open--search': Lampa.Lang.translate ? Lampa.Lang.translate('search') : 'Пошук',  
-            'open--premium': 'Premium',  
-            'full--screen': Lampa.Lang.translate ? Lampa.Lang.translate('player_full_screen') : 'Повний екран',  
-            'open--notice': Lampa.Lang.translate ? Lampa.Lang.translate('title_notice') : 'Сповіщення',  
-            'open--profile': Lampa.Lang.translate ? Lampa.Lang.translate('title_profile') : 'Профіль'  
+        // Розширена мапа назв для верхнього меню з локалізацією  
+        function getHeadMenuNames() {  
+            return {  
+                'open--search': Lampa.Lang.translate('search'),  
+                'open--premium': 'Premium',  
+                'full--screen': Lampa.Lang.translate('player_full_screen'),  
+                'open--notice': Lampa.Lang.translate('title_notice'),  
+                'open--profile': Lampa.Lang.translate('title_profile'),  
+                'open--feed': Lampa.Lang.translate('menu_feed') || 'Feed',  
+                'settings': Lampa.Lang.translate('menu_settings') || 'Settings'  
+            }  
         }  
   
-        // Функція для видалення стандартного пункту "Редагувати"  
         function removeEditMenuItem() {  
             $('.menu__item[data-action="edit"]').remove()  
         }  
@@ -40,9 +43,7 @@
                 })  
             })  
   
-            // Видаляємо стандартний пункт "Редагувати"  
             removeEditMenuItem()  
-  
             observe()  
         }  
   
@@ -61,24 +62,34 @@
         function initSettings() {  
             settings_items_map = []  
               
-            $('.settings-list .settings-list__item').each(function() {  
+            // Збираємо компоненти з основного меню налаштувань  
+            $('.settings-folder.selector').each(function() {  
                 settings_items_map.push($(this))  
             })  
         }  
   
         function getHeadItemName(item) {  
+            const headMenuNames = getHeadMenuNames()  
+              
+            // Перевіряємо всі можливі класи  
             for (let className in headMenuNames) {  
                 if (item.hasClass(className)) {  
                     return headMenuNames[className]  
                 }  
             }  
               
+            // Перевіряємо data-атрибути  
             let name = item.attr('data-title') ||   
                       item.find('[data-title]').attr('data-title') ||  
-                      item.attr('title') ||   
-                      item.text().trim()  
+                      item.attr('title')  
               
-            return name || 'Пункт меню'  
+            if (name) return name  
+              
+            // Перевіряємо текстовий вміст  
+            let text = item.text().trim()  
+            if (text && text.length > 0 && text.length < 50) return text  
+              
+            return 'Пункт меню'  
         }  
   
         function start(type = 'menu') {  
@@ -102,8 +113,8 @@
                     item_title = getHeadItemName(item_orig)  
                     item_icon = item_clone.find('svg').first()  
                 } else if(type === 'settings') {  
-                    item_title = item_clone.find('.settings-list__title').text().trim() || 'Налаштування'  
-                    item_icon = item_clone.find('svg').first()  
+                    item_title = item_clone.find('.settings-folder__name').text().trim() || 'Налаштування'  
+                    item_icon = item_clone.find('.settings-folder__icon svg').first()  
                 } else {  
                     item_title = item_clone.find('.menu__text').text()  
                     item_icon = item_clone.find('.menu__ico')  
@@ -217,10 +228,10 @@
             let items = Lampa.Storage.get('settings_sort_extended', '[]')  
               
             if (items.length) {  
-                let container = $('.settings-list')  
+                let container = $('.settings .settings-list')  
                 items.forEach((item) => {  
-                    let el = container.find('.settings-list__item').filter(function() {  
-                        return $(this).find('.settings-list__title').text().trim() === item  
+                    let el = container.find('.settings-folder').filter(function() {  
+                        return $(this).find('.settings-folder__name').text().trim() === item  
                     })  
                     if (el.length) el.appendTo(container)  
                 })  
@@ -266,12 +277,12 @@
         function hideSettings() {  
             let items = Lampa.Storage.get('settings_hide_extended', '[]')  
               
-            $('.settings-list .settings-list__item').removeClass('hidden')  
+            $('.settings .settings-folder').removeClass('hidden')  
   
             if (items.length) {  
                 items.forEach((item) => {  
-                    $('.settings-list .settings-list__item').filter(function() {  
-                        return $(this).find('.settings-list__title').text().trim() === item  
+                    $('.settings .settings-folder').filter(function() {  
+                        return $(this).find('.settings-folder__name').text().trim() === item  
                     }).addClass('hidden')  
                 })  
             }  
@@ -290,7 +301,7 @@
                 } else if(type === 'head') {  
                     name = getHeadItemName(item)  
                 } else if(type === 'settings') {  
-                    name = item.find('.settings-list__title').text().trim()  
+                    name = item.find('.settings-folder__name').text().trim()  
                 }  
                   
                 sort.push(name)  
@@ -309,7 +320,6 @@
             if(type === 'menu') {  
                 order()  
                 hide()  
-                // Видаляємо стандартний пункт після оновлення  
                 removeEditMenuItem()  
             } else if(type === 'head') {  
                 orderHead()  
