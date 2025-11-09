@@ -4,7 +4,7 @@
     function startPlugin() {
         window.plugin_menu_editor_ready = true;
 
-        // v1  Додаємо переклади
+        // Додаємо переклади
         Lampa.Lang.add({
             menu_editor_title: {
                 ru: 'Редактирование меню',
@@ -34,6 +34,8 @@
         });
 
         const lang = Lampa.Storage.get('language', 'uk'); // отримуємо поточну мову
+
+        // Створюємо об'єкт перекладів для кожного меню
         const headMenuNames = {
             'open--search': Lampa.Lang.translate('title_search') || 'Пошук',
             'open--brodcast': Lampa.Lang.translate('title_broadcast') || 'Трансляції',
