@@ -32,39 +32,6 @@
                 en: 'Hide Navigation Bar'    
             }    
         })    
-  
-        // Перевіряємо версію та додаємо стилі для старіших версій  
-        if(Lampa.Manifest.app_digital < 300) {  
-            Lampa.Template.add('menu_editor_styles', `  
-                <style id="menu_editor_styles">  
-                    .modal .menu-edit-list__icon {  
-                        width: 1.8em !important;  
-                        height: 1.8em !important;  
-                    }  
-                      
-                    .modal .menu-edit-list__icon > svg,  
-                    .modal .menu-edit-list__icon > img {  
-                        width: 1.2em !important;  
-                        height: 1.2em !important;  
-                    }  
-                      
-                    .modal .menu-edit-list__move,  
-                    .modal .menu-edit-list__toggle {  
-                        width: 2.0em !important;  
-                        height: 2.0em !important;  
-                    }  
-                      
-                    /* Приховуємо стрілочки traverse для старих версій */  
-                    .modal .menu-edit-list__move.traverse::before,  
-                    .modal .menu-edit-list__move.traverse::after,  
-                    .modal .menu-edit-list__toggle.traverse::before,  
-                    .modal .menu-edit-list__toggle.traverse::after {  
-                        display: none !important;  
-                    }  
-                </style>  
-            `);  
-            $('body').append(Lampa.Template.get('menu_editor_styles', {}, true));  
-        }  
     
         // Функція для редагування лівого меню (всі пункти)  
         function editLeftMenu() {  
@@ -123,7 +90,7 @@
             })  
   
             Lampa.Modal.open({  
-                title: Lampa.Lang.translate('extensions_edit'),  
+                title: Lampa.Lang.translate('menu_editor_left'),  
                 html: list,  
                 size: 'small',  
                 scroll_to_center: true,  
@@ -133,8 +100,156 @@
                     Lampa.Controller.toggle('settings_component')  
                 }  
             })  
-        }
-                            item_sort.find('.move-down').on('hover:enter', ()=>{  
+        }  
+    
+        // Функція для редагування верхнього меню    
+        function editTopMenu() {  
+            // Мапа для перекладу класів - створюємо всередині функції  
+            const headMenuNames = {  
+                'open--search': 'Пошук',  
+                'open--broadcast': 'Трансляції',   
+                'notice--icon': 'Сповіщення',  
+                'open--settings': 'Налаштування',  
+                'open--profile': 'Профіль',  
+                'full--screen': 'Повний екран'  
+            }  
+              
+            let list = $('<div class="menu-edit-list"></div>')    
+            let head = $('.head')    
+    
+            head.find('.head__action').each(function(){    
+                let item_orig = $(this)    
+                let item_clone = $(this).clone()    
+                  
+                // Розбиваємо класи на масив і шукаємо потрібний  
+                let allClasses = item_clone.attr('class').split(' ')  
+                let mainClass = allClasses.find(c =>   
+                    c.startsWith('open--') ||   
+                    c.startsWith('notice--') ||   
+                    c.startsWith('full--')  
+                ) || ''  
+                  
+                // Визначаємо назву з мапи  
+                let displayName = headMenuNames[mainClass] || mainClass  
+                  
+                let item_sort = $(`<div class="menu-edit-list__item">    
+                    <div class="menu-edit-list__icon"></div>    
+                    <div class="menu-edit-list__title">${displayName}</div>    
+                    <div class="menu-edit-list__move move-up selector">    
+                        <svg width="22" height="14" viewBox="0 0 22 14" fill="none" xmlns="http://www.w3.org/2000/svg">    
+                            <path d="M2 12L11 3L20 12" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>    
+                        </svg>    
+                    </div>    
+                    <div class="menu-edit-list__move move-down selector">    
+                        <svg width="22" height="14" viewBox="0 0 22 14" fill="none" xmlns="http://www.w3.org/2000/svg">    
+                            <path d="M2 2L11 11L20 2" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>    
+                        </svg>    
+                    </div>    
+                    <div class="menu-edit-list__toggle toggle selector">    
+                        <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">    
+                            <rect x="1.89111" y="1.78369" width="21.793" height="21.793" rx="3.5" stroke="currentColor" stroke-width="3"/>    
+                            <path d="M7.44873 12.9658L10.8179 16.3349L18.1269 9.02588" stroke="currentColor" stroke-width="3" class="dot" opacity="0" stroke-linecap="round"/>    
+                        </svg>    
+                    </div>    
+                </div>`)    
+    
+                let svg = item_clone.find('svg')    
+                if(svg.length) {    
+                    item_sort.find('.menu-edit-list__icon').append(svg.clone())    
+                }    
+    
+                item_sort.find('.move-up').on('hover:enter', ()=>{    
+                    let prev = item_sort.prev()    
+                    if(prev.length){    
+                        item_sort.insertBefore(prev)    
+                        item_orig.insertBefore(item_orig.prev())    
+                    }    
+                })    
+    
+                item_sort.find('.move-down').on('hover:enter', ()=>{    
+                    let next = item_sort.next()    
+                    if(next.length){    
+                        item_sort.insertAfter(next)    
+                        item_orig.insertAfter(item_orig.next())    
+                    }    
+                })    
+    
+                item_sort.find('.toggle').on('hover:enter', ()=>{    
+                    item_orig.toggleClass('hide')    
+                    item_sort.find('.dot').attr('opacity', item_orig.hasClass('hide') ? 0 : 1)    
+                }).find('.dot').attr('opacity', item_orig.hasClass('hide') ? 0 : 1)    
+    
+                list.append(item_sort)    
+            })    
+    
+            Lampa.Modal.open({    
+                title: Lampa.Lang.translate('menu_editor_top'),    
+                html: list,    
+                size: 'small',    
+                scroll_to_center: true,    
+                onBack: ()=>{    
+                    saveTopMenu()    
+                    Lampa.Modal.close()    
+                    Lampa.Controller.toggle('settings_component')    
+                }    
+            })    
+        }    
+    
+        // Функція для редагування меню налаштувань    
+        function editSettingsMenu() {  
+            // Спочатку відкриваємо налаштування  
+            Lampa.Controller.toggle('settings')  
+              
+            // Чекаємо, поки меню налаштувань завантажиться  
+            setTimeout(()=>{  
+                let settings = $('.settings')  
+                  
+                if(!settings.length || !settings.find('.settings-folder').length){  
+                    Lampa.Noty.show('Меню налаштувань ще не завантажене')  
+                    return  
+                }  
+                  
+                let list = $('<div class="menu-edit-list"></div>')  
+                  
+                settings.find('.settings-folder').each(function(){  
+                    let item_orig = $(this)  
+                    let item_clone = $(this).clone()  
+                    let item_sort = $(`<div class="menu-edit-list__item">  
+                        <div class="menu-edit-list__icon"></div>  
+                        <div class="menu-edit-list__title">${item_clone.find('.settings-folder__name').text()}</div>  
+                        <div class="menu-edit-list__move move-up selector">  
+                            <svg width="22" height="14" viewBox="0 0 22 14" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                                <path d="M2 12L11 3L20 12" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>  
+                            </svg>  
+                        </div>  
+                        <div class="menu-edit-list__move move-down selector">  
+                            <svg width="22" height="14" viewBox="0 0 22 14" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                                <path d="M2 2L11 11L20 2" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>  
+                            </svg>  
+                        </div>  
+                        <div class="menu-edit-list__toggle toggle selector">  
+                            <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                                <rect x="1.89111" y="1.78369" width="21.793" height="21.793" rx="3.5" stroke="currentColor" stroke-width="3"/>  
+                                <path d="M7.44873 12.9658L10.8179 16.3349L18.1269 9.02588" stroke="currentColor" stroke-width="3" class="dot" opacity="0" stroke-linecap="round"/>  
+                            </svg>  
+                        </div>  
+                    </div>`)  
+  
+                    // Копіюємо іконку (SVG або IMG) - ВИПРАВЛЕНО  
+                    let icon = item_clone.find('.settings-folder__icon svg, .settings-folder__icon img')  
+                    if(icon.length) {  
+                        item_sort.find('.menu-edit-list__icon').append(icon.clone())  
+                    }  
+  
+                    item_sort.find('.move-up').on('hover:enter', ()=>{  
+                        let prev = item_sort.prev()  
+                        if(prev.length){  
+                            item_sort.insertBefore(prev)  
+                            item_orig.insertBefore(item_orig.prev())  
+                        }  
+                    })  
+  
+                    item_sort.find('.move-down').on('hover:enter', ()=>{  
                         let next = item_sort.next()  
                         if(next.length){  
                             item_sort.insertAfter(next)  
@@ -145,124 +260,42 @@
                     item_sort.find('.toggle').on('hover:enter', ()=>{  
                         item_orig.toggleClass('hide')  
                         item_sort.find('.dot').attr('opacity', item_orig.hasClass('hide') ? 0 : 1)  
-                    }).find('.dot').attr('opacity', item_orig.hasClass('hide') ? 0 : 1)  
+                    }).find('.dot').attr('opacity', item_orig.hasClass('hide') ? 0: 1)    
+    
+                    list.append(item_sort)    
+                })    
+    
+                Lampa.Modal.open({    
+                    title: Lampa.Lang.translate('menu_editor_settings'),    
+                    html: list,    
+                    size: 'small',    
+                    scroll_to_center: true,    
+                    onBack: ()=>{    
+                        saveSettingsMenu()    
+                        Lampa.Modal.close()    
+                        Lampa.Controller.toggle('settings_component')    
+                    }    
+                })    
+            }, 300) // Збільшено час очікування до 300мс  
+        }  
   
-                    list.append(item_sort)  
-                })  
+        // Збереження налаштувань лівого меню  
+        function saveLeftMenu() {  
+            let sort = []  
+            let hide = []  
   
-                Lampa.Modal.open({  
-                    title: Lampa.Lang.translate('menu_editor_top'),  
-                    html: list,  
-                    size: 'small',  
-                    scroll_to_center: true,  
-                    onBack: ()=>{  
-                        saveTopMenu()  
-                        Lampa.Modal.close()  
-                        Lampa.Controller.toggle('settings_component')  
-                    }  
-                })  
-            }  
+            $('.menu .menu__item').each(function(){  
+                let name = $(this).find('.menu__text').text().trim()  
+                sort.push(name)  
+                if($(this).hasClass('hidden')){  
+                    hide.push(name)  
+                }  
+            })  
   
-            // Функція для редагування меню налаштувань  
-            function editSettingsMenu() {  
-                // Спочатку відкриваємо налаштування  
-                Lampa.Controller.toggle('settings')  
-                  
-                // Чекаємо, поки меню налаштувань завантажиться  
-                setTimeout(()=>{  
-                    let settings = $('.settings')  
-                      
-                    if(!settings.length || !settings.find('.settings-folder').length){  
-                        Lampa.Noty.show('Меню налаштувань ще не завантажене')  
-                        return  
-                    }  
-                      
-                    let list = $('<div class="menu-edit-list"></div>')  
-  
-                    settings.find('.settings-folder').each(function(){  
-                        let item_orig = $(this)  
-                        let item_clone = $(this).clone()  
-                        let item_sort = $(`<div class="menu-edit-list__item">  
-                            <div class="menu-edit-list__icon"></div>  
-                            <div class="menu-edit-list__title">${item_clone.find('.settings-folder__name').text()}</div>  
-                            <div class="menu-edit-list__move move-up selector">  
-                                <svg width="22" height="14" viewBox="0 0 22 14" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                                    <path d="M2 12L11 3L20 12" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>  
-                                </svg>  
-                            </div>  
-                            <div class="menu-edit-list__move move-down selector">  
-                                <svg width="22" height="14" viewBox="0 0 22 14" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                                    <path d="M2 2L11 11L20 2" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>  
-                                </svg>  
-                            </div>  
-                            <div class="menu-edit-list__toggle toggle selector">  
-                                <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                                    <rect x="1.89111" y="1.78369" width="21.793" height="21.793" rx="3.5" stroke="currentColor" stroke-width="3"/>  
-                                    <path d="M7.44873 12.9658L10.8179 16.3349L18.1269 9.02588" stroke="currentColor" stroke-width="3" class="dot" opacity="0" stroke-linecap="round"/>  
-                                </svg>  
-                            </div>  
-                        </div>`)  
-  
-                        // Копіюємо іконку (SVG або IMG) - ВИПРАВЛЕНО  
-                        let icon = item_clone.find('.settings-folder__icon svg, .settings-folder__icon img')  
-                        if(icon.length) {  
-                            item_sort.find('.menu-edit-list__icon').append(icon.clone())  
-                        }  
-  
-                        item_sort.find('.move-up').on('hover:enter', ()=>{  
-                            let prev = item_sort.prev()  
-                            if(prev.length){  
-                                item_sort.insertBefore(prev)  
-                                item_orig.insertBefore(item_orig.prev())  
-                            }  
-                        })  
-  
-                        item_sort.find('.move-down').on('hover:enter', ()=>{  
-                            let next = item_sort.next()  
-                            if(next.length){  
-                                item_sort.insertAfter(next)  
-                                item_orig.insertAfter(item_orig.next())  
-                            }  
-                        })  
-  
-                        item_sort.find('.toggle').on('hover:enter', ()=>{  
-                            item_orig.toggleClass('hide')  
-                            item_sort.find('.dot').attr('opacity', item_orig.hasClass('hide') ? 0 : 1)  
-                        }).find('.dot').attr('opacity', item_orig.hasClass('hide') ? 0 : 1)  
-  
-                        list.append(item_sort)  
-                    })  
-  
-                    Lampa.Modal.open({  
-                        title: Lampa.Lang.translate('menu_editor_settings'),  
-                        html: list,  
-                        size: 'small',  
-                        scroll_to_center: true,  
-                        onBack: ()=>{  
-                            saveSettingsMenu()  
-                            Lampa.Modal.close()  
-                            Lampa.Controller.toggle('settings_component')  
-                        }  
-                    })  
-                }, 300) // Збільшено час очікування до 300мс  
-            }  
-  
-            // Збереження налаштувань лівого меню  
-            function saveLeftMenu() {  
-                let sort = []  
-                let hide = []  
-  
-                $('.menu .menu__item').each(function(){  
-                    let name = $(this).find('.menu__text').text().trim()  
-                    sort.push(name)  
-                    if($(this).hasClass('hidden')){  
-                        hide.push(name)  
-                    }  
-                })  
-  
-                Lampa.Storage.set('menu_sort', sort)  
-                Lampa.Storage.set('menu_hide', hide)  
-            }
+            Lampa.Storage.set('menu_sort', sort)  
+            Lampa.Storage.set('menu_hide', hide)  
+        }  
+    
         // Збереження налаштувань верхнього меню    
         function saveTopMenu() {    
             let sort = []    
