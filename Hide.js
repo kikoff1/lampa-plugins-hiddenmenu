@@ -4,7 +4,7 @@
     function startPlugin() {    
         window.plugin_menu_editor_ready = true    
     
-        // Додаємо переклади    
+        // V1/1 Додаємо переклади    
         Lampa.Lang.add({    
             menu_editor_title: {    
                 ru: 'Редактирование меню',    
@@ -43,7 +43,7 @@
             // Мапа для перекладу класів - створюємо всередині функції  
             const headMenuNames = {  
                 'open--search': 'Пошук',  
-                'open--brodcast': 'Трансляції',   
+                'open--broadcast': 'Трансляції',   
                 'notice--icon': 'Сповіщення',  
                 'open--settings': 'Налаштування',  
                 'open--profile': 'Профіль',  
