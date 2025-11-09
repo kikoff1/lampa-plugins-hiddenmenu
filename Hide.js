@@ -4,7 +4,7 @@
     function startPlugin() {
         window.plugin_menu_editor_ready = true;
 
-        // Додаємо переклади
+        // v1  Додаємо переклади
         Lampa.Lang.add({
             menu_editor_title: {
                 ru: 'Редактирование меню',
@@ -33,7 +33,6 @@
             }
         });
 
-        // Мапа для перекладу класів меню
         const lang = Lampa.Storage.get('language', 'uk'); // отримуємо поточну мову
         const headMenuNames = {
             'open--search': Lampa.Lang.translate('title_search') || 'Пошук',
@@ -46,8 +45,15 @@
 
         // Функція для редагування верхнього меню
         function editTopMenu() {
+            console.log('editTopMenu triggered');
             let list = $('<div class="menu-edit-list"></div>');
             let head = $('.head');
+
+            // Перевіряємо наявність елементів у меню
+            if (head.find('.head__action').length === 0) {
+                console.log('Немає елементів для редагування в меню.');
+                return; // Якщо елементи меню не знайдені, не продовжуємо
+            }
 
             head.find('.head__action').each(function() {
                 let item_orig = $(this);
@@ -144,7 +150,7 @@
             Lampa.SettingsApi.addComponent({
                 component: 'menu_editor',
                 icon: `<svg width="30" height="29" viewBox="0 0 30 29" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M18.2989 5.27973L2.60834 20.9715C2.52933 21.0507 2.47302 21.1496 2.44528 21.258L0.706081 28.2386C0.680502 28.3422 0.682069 28.4507 0.710632 28.5535C0.739195 28.6563 0.793788 28.75 0.869138 28.8255C0.984875 28.9409 1.14158 29.0057 1.30498 29.0059C1.35539 29.0058 1.4056 28.9996 1.45449 28.9873L8.43509 27.2479C8.54364 27.2206 8.64271 27.1643 8.72172 27.0851L24.4137 11.3944L18.2989 5.27973ZM28.3009 3.14018L26.5543 1.39363C25.3869 0.226285 23.3524 0.227443 22.1863 1.39363L20.0469 3.53318L26.1614 9.64766L28.3009 7.50816C28.884 6.9253 29.2052 6.14945 29.2052 5.32432C29.2052 4.49919 28.884 3.72333 28.3009 3.14018Z" fill="currentColor"/>
+                    <path d="M18.2989 5.27973L2.60834 20.9715C2.52933 21.0507 2.47302 21.1496 2.44528 21.258L0.706081 28.2386C0.680502 28.3422 0.682069 28.4507 0.710632 28.5535C0.739195 28.6563 0.793788 28.75 0.869138 28.8255C0.984875 28.9409 1.14158 29.0057 1.30498 29.0059C1.35539 29.0058 1.4056 28.9996 1.45449 28.9873L8.43509 27.2479C8.54364 27.2206 8.64271 27.1643 8.72172 27.0851L24.4137 11.3944L18.2989 5.27973ZM28.3009 3.14018L26.5543 1.39363C25.3869 0.226285 23.7032 0.258007 22.7483 1.42983L21.0318 3.07463L3.0725 20.033C2.92458 20.1744 2.86745 20.3509 2.91374 20.5256L3.22879 22.3321C3.28217 22.4977 3.374 22.6448 3.48742 22.7406C3.60083 22.8364 3.73502 22.8762 3.86863 22.8589C3.99994 22.8435 4.12248 22.7631 4.19634 22.6372L20.8193 6.68788C20.9882 6.55912 21.1985 6.50029 21.4131 6.50029C21.6278 6.50029 21.8385 6.55912 22.0073 6.68788L28.3009 3.14018Z" fill="currentColor"/>
                 </svg>`,
                 name: Lampa.Lang.translate('menu_editor_title')
             });
@@ -158,31 +164,7 @@
                 field: {
                     name: Lampa.Lang.translate('menu_editor_left'),
                 },
-                onChange: editLeftMenu
-            });
-
-            Lampa.SettingsApi.addParam({
-                component: 'menu_editor',
-                param: {
-                    name: 'edit_top_menu',
-                    type: 'button',
-                },
-                field: {
-                    name: Lampa.Lang.translate('menu_editor_top'),
-                },
                 onChange: editTopMenu
-            });
-
-            Lampa.SettingsApi.addParam({
-                component: 'menu_editor',
-                param: {
-                    name: 'edit_settings_menu',
-                    type: 'button',
-                },
-                field: {
-                    name: Lampa.Lang.translate('menu_editor_settings'),
-                },
-                onChange: editSettingsMenu
             });
         }
 
