@@ -4,7 +4,7 @@
     function startPlugin() {    
         window.plugin_menu_editor_ready = true    
     
-        // V1/1 Додаємо переклади    
+        // Додаємо переклади    
         Lampa.Lang.add({    
             menu_editor_title: {    
                 ru: 'Редактирование меню',    
@@ -34,16 +34,30 @@
         })    
     
         // Функція для редагування лівого меню    
-        function editLeftMenu() {    
-            Lampa.Editor.start()    
-        }    
+        function editLeftMenu() {  
+            // Закриваємо налаштування  
+            Lampa.Controller.toggle('content')  
+              
+            // Відкриваємо меню  
+            setTimeout(() => {  
+                Lampa.Controller.toggle('menu')  
+                  
+                // Знаходимо та натискаємо на пункт "Редагувати"  
+                setTimeout(() => {  
+                    let editButton = $('.menu__item[data-action="edit"]')  
+                    if (editButton.length) {  
+                        editButton.trigger('hover:enter')  
+                    }  
+                }, 100)  
+            }, 100)  
+        }  
     
         // Функція для редагування верхнього меню    
         function editTopMenu() {  
             // Мапа для перекладу класів - створюємо всередині функції  
             const headMenuNames = {  
                 'open--search': 'Пошук',  
-                'open--broadcast': 'Трансляції',   
+                'open--broadcast': 'Трансляції',  // Виправлено  
                 'notice--icon': 'Сповіщення',  
                 'open--settings': 'Налаштування',  
                 'open--profile': 'Профіль',  
@@ -210,8 +224,9 @@
                     }    
                 })    
             }, 100)    
-        }
-           // Збереження налаштувань верхнього меню    
+        }    
+    
+        // Збереження налаштувань верхнього меню    
         function saveTopMenu() {    
             let sort = []    
             let hide = []    
