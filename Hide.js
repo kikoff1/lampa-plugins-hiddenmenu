@@ -165,11 +165,6 @@
                             </div>  
                         </div>`);  
 
-                    let svg = item_clone.find('.settings-folder__icon svg');  
-                    if (svg.length) {  
-                        item_sort.find('.menu-edit-list__icon').append(svg.clone());  
-                    }
-
                     item_sort.find('.move-up').on('hover:enter', () => {  
                         let prev = item_sort.prev();  
                         if (prev.length) {  
@@ -208,7 +203,7 @@
             }, 100);  
         }
 
-        // Збереження налаштувань верхнього меню
+        // Функція для збереження налаштувань верхнього меню
         function saveTopMenu() {  
             let sort = [];  
             let hide = [];  
@@ -225,26 +220,9 @@
             Lampa.Storage.set('head_menu_hide', hide);  
         }
 
-        // Збереження налаштувань меню налаштувань
-        function saveSettingsMenu() {  
-            let sort = [];  
-            let hide = [];  
-
-            $('.settings-folder').each(function() {  
-                let name = $(this).find('.settings-folder__name').text().trim();  
-                sort.push(name);  
-                if ($(this).hasClass('hide')) {  
-                    hide.push(name);  
-                }  
-            });
-
-            Lampa.Storage.set('settings_menu_sort', sort);  
-            Lampa.Storage.set('settings_menu_hide', hide);  
-        }
-
         // Додаємо окремий розділ в налаштування
         function addSettings() {  
-            // Створюємо окремий компонент для редагування меню  
+            // Додаємо компоненти і кнопки
             Lampa.SettingsApi.addComponent({  
                 component: 'menu_editor',  
                 icon: `<svg width="30" height="29" viewBox="0 0 30 29" fill="none" xmlns="http://www.w3.org/2000/svg">  
@@ -326,7 +304,7 @@
                 if (e.type == 'ready') addSettings();  
             });  
         }  
-    }  
+    }
 
     if (!window.plugin_menu_editor_ready) startPlugin();  
 })();
