@@ -32,13 +32,25 @@
                 en: 'Hide Navigation Bar'    
             }    
         })    
-    
-        // Функція для редагування лівого меню (всі пункти)  
+
+        // ✅ Додаємо стилі для приховування стрілочок traverse у редакторі меню (для старих версій Lampa)
+        Lampa.Template.add('menu_editor_styles', `  
+            <style id="menu_editor_styles">  
+                .modal .menu-edit-list__move.traverse::before,  
+                .modal .menu-edit-list__move.traverse::after,  
+                .modal .menu-edit-list__toggle.traverse::before,  
+                .modal .menu-edit-list__toggle.traverse::after {  
+                    display: none !important;  
+                }  
+            </style>  
+        `);  
+        $('body').append(Lampa.Template.get('menu_editor_styles', {}, true));
+
+        // --- Редагування лівого меню ---
         function editLeftMenu() {  
             let list = $('<div class="menu-edit-list"></div>')  
             let menu = $('.menu')  
   
-            // Обробляємо ВСІ пункти меню з обох секцій  
             menu.find('.menu__item').each(function(){  
                 let item_orig = $(this)  
                 let item_clone = $(this).clone()  
@@ -102,9 +114,8 @@
             })  
         }  
     
-        // Функція для редагування верхнього меню    
+        // --- Редагування верхнього меню ---
         function editTopMenu() {  
-            // Мапа для перекладу класів - створюємо всередині функції  
             const headMenuNames = {  
                 'open--search': 'Пошук',  
                 'open--broadcast': 'Трансляції',   
@@ -121,7 +132,6 @@
                 let item_orig = $(this)    
                 let item_clone = $(this).clone()    
                   
-                // Розбиваємо класи на масив і шукаємо потрібний  
                 let allClasses = item_clone.attr('class').split(' ')  
                 let mainClass = allClasses.find(c =>   
                     c.startsWith('open--') ||   
@@ -129,7 +139,6 @@
                     c.startsWith('full--')  
                 ) || ''  
                   
-                // Визначаємо назву з мапи  
                 let displayName = headMenuNames[mainClass] || mainClass  
                   
                 let item_sort = $(`<div class="menu-edit-list__item">    
@@ -195,12 +204,10 @@
             })    
         }    
     
-        // Функція для редагування меню налаштувань    
+        // --- Редагування меню налаштувань ---
         function editSettingsMenu() {  
-            // Спочатку відкриваємо налаштування  
             Lampa.Controller.toggle('settings')  
               
-            // Чекаємо, поки меню налаштувань завантажиться  
             setTimeout(()=>{  
                 let settings = $('.settings')  
                   
@@ -235,7 +242,6 @@
                         </div>  
                     </div>`)  
   
-                    // Копіюємо іконку (SVG або IMG) - ВИПРАВЛЕНО  
                     let icon = item_clone.find('.settings-folder__icon svg, .settings-folder__icon img')  
                     if(icon.length) {  
                         item_sort.find('.menu-edit-list__icon').append(icon.clone())  
@@ -276,10 +282,10 @@
                         Lampa.Controller.toggle('settings_component')    
                     }    
                 })    
-            }, 300) // Збільшено час очікування до 300мс  
+            }, 300)  
         }  
-  
-        // Збереження налаштувань лівого меню  
+
+        // --- Збереження ---
         function saveLeftMenu() {  
             let sort = []  
             let hide = []  
@@ -287,16 +293,13 @@
             $('.menu .menu__item').each(function(){  
                 let name = $(this).find('.menu__text').text().trim()  
                 sort.push(name)  
-                if($(this).hasClass('hidden')){  
-                    hide.push(name)  
-                }  
+                if($(this).hasClass('hidden')) hide.push(name)  
             })  
   
             Lampa.Storage.set('menu_sort', sort)  
             Lampa.Storage.set('menu_hide', hide)  
         }  
     
-        // Збереження налаштувань верхнього меню    
         function saveTopMenu() {    
             let sort = []    
             let hide = []    
@@ -304,16 +307,13 @@
             $('.head__action').each(function(){    
                 let name = $(this).attr('class').replace('head__action', '').trim()    
                 sort.push(name)    
-                if($(this).hasClass('hide')){    
-                    hide.push(name)    
-                }    
+                if($(this).hasClass('hide')) hide.push(name)    
             })    
     
             Lampa.Storage.set('head_menu_sort', sort)    
             Lampa.Storage.set('head_menu_hide', hide)    
         }    
     
-        // Збереження налаштувань меню налаштувань    
         function saveSettingsMenu() {    
             let sort = []    
             let hide = []    
@@ -321,18 +321,15 @@
             $('.settings-folder').each(function(){    
                 let name = $(this).find('.settings-folder__name').text().trim()    
                 sort.push(name)    
-                if($(this).hasClass('hide')){    
-                    hide.push(name)    
-                }    
+                if($(this).hasClass('hide')) hide.push(name)    
             })    
     
             Lampa.Storage.set('settings_menu_sort', sort)    
             Lampa.Storage.set('settings_menu_hide', hide)    
         }    
-    
-        // Додаємо окремий розділ в налаштування    
+
+        // --- Додавання компонентів у налаштування ---
         function addSettings() {    
-            // Створюємо окремий компонент для редагування меню    
             Lampa.SettingsApi.addComponent({    
                 component: 'menu_editor',    
                 icon: `<svg width="30" height="29" viewBox="0 0 30 29" fill="none" xmlns="http://www.w3.org/2000/svg">    
@@ -341,50 +338,30 @@
                 name: Lampa.Lang.translate('menu_editor_title')    
             })    
     
-            // Додаємо кнопки в новий розділ    
             Lampa.SettingsApi.addParam({    
                 component: 'menu_editor',    
-                param: {    
-                    name: 'edit_left_menu',    
-                    type: 'button',    
-                },    
-                field: {    
-                    name: Lampa.Lang.translate('menu_editor_left'),    
-                },    
+                param: { name: 'edit_left_menu', type: 'button' },    
+                field: { name: Lampa.Lang.translate('menu_editor_left') },    
                 onChange: editLeftMenu    
             })    
     
             Lampa.SettingsApi.addParam({    
                 component: 'menu_editor',    
-                param: {    
-                    name: 'edit_top_menu',    
-                    type: 'button',    
-                },    
-                field: {    
-                    name: Lampa.Lang.translate('menu_editor_top'),    
-                },    
+                param: { name: 'edit_top_menu', type: 'button' },    
+                field: { name: Lampa.Lang.translate('menu_editor_top') },    
                 onChange: editTopMenu    
             })    
     
             Lampa.SettingsApi.addParam({    
                 component: 'menu_editor',    
-                param: {    
-                    name: 'edit_settings_menu',    
-                    type: 'button',    
-                },    
-                field: {    
-                    name: Lampa.Lang.translate('menu_editor_settings'),    
-                },    
+                param: { name: 'edit_settings_menu', type: 'button' },    
+                field: { name: Lampa.Lang.translate('menu_editor_settings') },    
                 onChange: editSettingsMenu    
-            })
-                        // Додаємо опцію приховування панелі навігації    
+            })    
+    
             Lampa.SettingsApi.addParam({    
                 component: 'menu_editor',    
-                param: {    
-                    name: 'hide_navigation_bar',    
-                    type: 'trigger',    
-                    default: false    
-                },    
+                param: { name: 'hide_navigation_bar', type: 'trigger', default: false },    
                 field: {    
                     name: Lampa.Lang.translate('menu_editor_hide_nav'),    
                     description: 'Приховує нижню панель навігації'    
@@ -393,14 +370,12 @@
                     if (Lampa.Storage.field('hide_navigation_bar') == true) {    
                         Lampa.Template.add('hide_nav_bar', '<style id="hide_nav_bar">.navigation-bar{display:none!important}</style>');    
                         $('body').append(Lampa.Template.get('hide_nav_bar', {}, true));    
-                    }    
-                    if (Lampa.Storage.field('hide_navigation_bar') == false) {    
+                    } else {    
                         $('#hide_nav_bar').remove();    
                     }    
                 }    
             })    
     
-            // Застосовуємо приховування панелі при запуску    
             if (Lampa.Storage.field('hide_navigation_bar') == true) {    
                 Lampa.Template.add('hide_nav_bar', '<style id="hide_nav_bar">.navigation-bar{display:none!important}</style>');    
                 $('body').append(Lampa.Template.get('hide_nav_bar', {}, true));    
