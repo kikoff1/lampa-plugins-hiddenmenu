@@ -4,7 +4,7 @@
     function startPlugin() {      
         window.plugin_menu_editor_ready = true  
           
-        // Чекаємо на повну ініціалізацію Lampa  
+        // v.1.1 Чекаємо на повну ініціалізацію Lampa  
         function initialize() {  
             // Перевірка версії та додавання стилів  
             try {  
@@ -14,18 +14,69 @@
                 if (needsIconFix) {  
                     const iconStyles = `  
                         <style id="menu-editor-icon-fix">  
+                            /* Основний контейнер списку */  
+                            .menu-edit-list__item {  
+                                display: flex !important;  
+                                padding: 0.3em !important;  
+                                border-radius: 0.3em !important;  
+                                align-items: center !important;  
+                            }  
+                              
+                            .menu-edit-list__item:nth-child(even) {  
+                                background: rgba(255, 255, 255, 0.1) !important;  
+                            }  
+                              
+                            /* Іконка */  
+                            .menu-edit-list__icon {  
+                                width: 2.4em !important;  
+                                height: 2.4em !important;  
+                                margin-right: 1em !important;  
+                                flex-shrink: 0 !important;  
+                                border-radius: 100% !important;  
+                                display: flex !important;  
+                                align-items: center !important;  
+                                justify-content: center !important;  
+                            }  
+                              
                             .menu-edit-list__icon > svg,  
                             .menu-edit-list__icon > img {  
                                 width: 1.4em !important;  
                                 height: 1.4em !important;  
                             }  
+                              
+                            /* Назва пункту */  
+                            .menu-edit-list__title {  
+                                font-size: 1.3em !important;  
+                                font-weight: 300 !important;  
+                                line-height: 1.2 !important;  
+                                flex-grow: 1 !important;  
+                            }  
+                              
+                            /* Кнопки переміщення та перемикач */  
+                            .menu-edit-list__move,  
+                            .menu-edit-list__toggle {  
+                                width: 2.4em !important;  
+                                height: 2.4em !important;  
+                                display: flex !important;  
+                                align-items: center !important;  
+                                justify-content: center !important;  
+                            }  
+                              
                             .menu-edit-list__move svg {  
                                 width: 1em !important;  
                                 height: 1em !important;  
                             }  
+                              
                             .menu-edit-list__toggle svg {  
                                 width: 1.2em !important;  
                                 height: 1.2em !important;  
+                            }  
+                              
+                            .menu-edit-list__move.focus,  
+                            .menu-edit-list__toggle.focus {  
+                                background: rgba(255, 255, 255, 1) !important;  
+                                border-radius: 0.3em !important;  
+                                color: #000 !important;  
                             }  
                         </style>  
                     `  
@@ -62,13 +113,13 @@
                     uk: 'Приховати панель навігації',      
                     en: 'Hide Navigation Bar'      
                 }      
-            })  
-              
-            // Всі функції редагування меню  
+            })
+// Функція для редагування лівого меню (всі пункти)    
             function editLeftMenu() {    
                 let list = $('<div class="menu-edit-list"></div>')    
                 let menu = $('.menu')    
         
+                // Обробляємо ВСІ пункти меню з обох секцій    
                 menu.find('.menu__item').each(function(){    
                     let item_orig = $(this)    
                     let item_clone = $(this).clone()    
@@ -130,9 +181,8 @@
                         Lampa.Controller.toggle('settings_component')    
                     }    
                 })    
-            }  
-              
-            function editTopMenu() {    
+            }
+function editTopMenu() {    
                 const headMenuNames = {    
                     'open--search': 'Пошук',    
                     'open--broadcast': 'Трансляції',     
@@ -253,7 +303,7 @@
                             <div class="menu-edit-list__toggle toggle selector">    
                                 <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">    
                                     <rect x="1.89111" y="1.78369" width="21.793" height="21.793" rx="3.5" stroke="currentColor" stroke-width="3"/>    
-                                    <path d="M7.44873 12.9658L10.8179 16.3349L18.1269 9.02588" stroke  <path d="M7.44873 12.9658L10.8179 16.3349L18.1269 9.02588" stroke="currentColor" stroke-width="3" class="dot" opacity="0" stroke-linecap="round"/>    
+                                    <path d="M7.44873 12.9658L10.8179 16.3349L18.1269 9.02588" stroke="currentColor" stroke-width="3" class="dot" opacity="0" stroke-linecap="round"/>    
                                 </svg>    
                             </div>    
                         </div>`)    
@@ -299,9 +349,8 @@
                         }    
                     })    
                 }, 300)    
-            }  
-              
-            // Збереження налаштувань лівого меню    
+            }
+// Збереження налаштувань лівого меню    
             function saveLeftMenu() {    
                 let sort = []    
                 let hide = []    
