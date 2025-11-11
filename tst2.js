@@ -4,7 +4,7 @@
     function startPlugin() {      
         window.plugin_menu_editor_ready = true      
       
-        // Перевірка версії Lampa та додавання стилів для старих версій  
+        //v1 Перевірка версії Lampa та додавання стилів для старих версій  
         const lampaVersion = Lampa.Manifest ? Lampa.Manifest.app_digital : 0  
         const needsIconFix = lampaVersion < 300 // версія < 3.0.0  
           
