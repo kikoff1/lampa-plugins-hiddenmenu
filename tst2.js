@@ -4,32 +4,6 @@
     function startPlugin() {      
         window.plugin_menu_editor_ready = true      
       
-        //v1 Перевірка версії Lampa та додавання стилів для старих версій  
-        const lampaVersion = Lampa.Manifest ? Lampa.Manifest.app_digital : 0  
-        const needsIconFix = lampaVersion < 300 // версія < 3.0.0  
-          
-        // Якщо версія < 3.0.0, додаємо стилі для іконок  
-        if (needsIconFix) {  
-            const iconStyles = `  
-                <style id="menu-editor-icon-fix">  
-                    .menu-edit-list__icon > svg,  
-                    .menu-edit-list__icon > img {  
-                        width: 1.4em !important;  
-                        height: 1.4em !important;  
-                    }  
-                    .menu-edit-list__move svg {  
-                        width: 1em !important;  
-                        height: 1em !important;  
-                    }  
-                    .menu-edit-list__toggle svg {  
-                        width: 1.2em !important;  
-                        height: 1.2em !important;  
-                    }  
-                </style>  
-            `  
-            $('head').append(iconStyles)  
-        }  
-      
         // Додаємо переклади      
         Lampa.Lang.add({      
             menu_editor_title: {      
@@ -64,7 +38,6 @@
             let list = $('<div class="menu-edit-list"></div>')    
             let menu = $('.menu')    
     
-            // Обробляємо ВСІ пункти меню з обох секцій    
             menu.find('.menu__item').each(function(){    
                 let item_orig = $(this)    
                 let item_clone = $(this).clone()    
@@ -128,9 +101,7 @@
             })    
         }    
       
-        // Функція для редагування верхнього меню      
         function editTopMenu() {    
-            // Мапа для перекладу класів - створюємо всередині функції    
             const headMenuNames = {    
                 'open--search': 'Пошук',    
                 'open--broadcast': 'Трансляції',     
@@ -144,10 +115,9 @@
             let head = $('.head')      
       
             head.find('.head__action').each(function(){      
-                let item_orig = $(this)      
-                let item_clone = $(this).clone()      
+                let item_orig = $(this)    
+                let item_clone = $(this).clone()    
                     
-                // Розбиваємо класи на масив і шукаємо потрібний    
                 let allClasses = item_clone.attr('class').split(' ')    
                 let mainClass = allClasses.find(c =>     
                     c.startsWith('open--') ||     
@@ -155,28 +125,27 @@
                     c.startsWith('full--')    
                 ) || ''    
                     
-                // Визначаємо назву з мапи    
                 let displayName = headMenuNames[mainClass] || mainClass    
                     
                 let item_sort = $(`<div class="menu-edit-list__item">      
                     <div class="menu-edit-list__icon"></div>      
                     <div class="menu-edit-list__title">${displayName}</div>      
-                    <div class="menu-edit-list__move move-up selector">      
-                        <svg width="22" height="14" viewBox="0 0 22 14" fill="none" xmlns="http://www.w3.org/2000/svg">      
-                            <path d="M2 12L11 3L20 12" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>      
-                        </svg>      
-                    </div>      
-                    <div class="menu-edit-list__move move-down selector">      
-                        <svg width="22" height="14" viewBox="0 0 22 14" fill="none" xmlns="http://www.w3.org/2000/svg">      
-                            <path d="M2 2L11 11L20 2" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>      
-                        </svg>      
-                    </div>      
-                    <div class="menu-edit-list__toggle toggle selector">      
-                        <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">      
-                            <rect x="1.89111" y="1.78369" width="21.793" height="21.793" rx="3.5" stroke="currentColor" stroke-width="3"/>      
-                            <path d="M7.44873 12.9658L10.8179 16.3349L18.1269 9.02588" stroke="currentColor" stroke-width="3" class="dot" opacity="0" stroke-linecap="round"/>      
-                        </svg>      
-                    </div>      
+                    <div class="menu-edit-list__move move-up selector">    
+                        <svg width="22" height="14" viewBox="0 0 22 14" fill="none" xmlns="http://www.w3.org/2000/svg">    
+                            <path d="M2 12L11 3L20 12" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>    
+                        </svg>    
+                    </div>    
+                    <div class="menu-edit-list__move move-down selector">    
+                        <svg width="22" height="14" viewBox="0 0 22 14" fill="none" xmlns="http://www.w3.org/2000/svg">    
+                            <path d="M2 2L11 11L20 2" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>    
+                        </svg>    
+                    </div>    
+                    <div class="menu-edit-list__toggle toggle selector">    
+                        <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">    
+                            <rect x="1.89111" y="1.78369" width="21.793" height="21.793" rx="3.5" stroke="currentColor" stroke-width="3"/>    
+                            <path d="M7.44873 12.9658L10.8179 16.3349L18.1269 9.02588" stroke="currentColor" stroke-width="3" class="dot" opacity="0" stroke-linecap="round"/>    
+                        </svg>    
+                    </div>    
                 </div>`)      
       
                 let svg = item_clone.find('svg')      
@@ -185,48 +154,45 @@
                 }      
       
                 item_sort.find('.move-up').on('hover:enter', ()=>{      
-                    let prev = item_sort.prev()      
-                    if(prev.length){      
-                        item_sort.insertBefore(prev)      
-                        item_orig.insertBefore(item_orig.prev())      
-                    }      
+                    let prev = item_sort.prev()    
+                    if(prev.length){    
+                        item_sort.insertBefore(prev)    
+                        item_orig.insertBefore(item_orig.prev())    
+                    }    
                 })      
       
                 item_sort.find('.move-down').on('hover:enter', ()=>{      
-                    let next = item_sort.next()      
-                    if(next.length){      
-                        item_sort.insertAfter(next)      
-                        item_orig.insertAfter(item_orig.next())      
-                    }      
+                    let next = item_sort.next()    
+                    if(next.length){    
+                        item_sort.insertAfter(next)    
+                        item_orig.insertAfter(item_orig.next())    
+                    }    
                 })      
       
                 item_sort.find('.toggle').on('hover:enter', ()=>{      
-                    item_orig.toggleClass('hide')      
-                    item_sort.find('.dot').attr('opacity', item_orig.hasClass('hide') ? 0 : 1)      
+                    item_orig.toggleClass('hide')    
+                    item_sort.find('.dot').attr('opacity', item_orig.hasClass('hide') ? 0 : 1)    
                 }).find('.dot').attr('opacity', item_orig.hasClass('hide') ? 0 : 1)      
       
                 list.append(item_sort)      
             })      
       
             Lampa.Modal.open({      
-                title: Lampa.Lang.translate('menu_editor_top'),      
-                html: list,      
-                size: 'small',      
-                scroll_to_center: true,      
+                title: Lampa.Lang.translate('menu_editor_top'),    
+                html: list,    
+                size: 'small',    
+                scroll_to_center: true,    
                 onBack: ()=>{      
-                    saveTopMenu()      
-                    Lampa.Modal.close()      
-                    Lampa.Controller.toggle('settings_component')      
-                }      
+                    saveTopMenu()    
+                    Lampa.Modal.close()    
+                    Lampa.Controller.toggle('settings_component')    
+                }    
             })      
         }      
       
-        // Функція для редагування меню налаштувань      
         function editSettingsMenu() {    
-            // Спочатку відкриваємо налаштування    
             Lampa.Controller.toggle('settings')    
                 
-            // Чекаємо, поки меню налаштувань завантажиться    
             setTimeout(()=>{    
                 let settings = $('.settings')    
                     
@@ -261,16 +227,12 @@
                         </div>    
                     </div>`)    
     
-                    // Копіюємо іконку (SVG або IMG) - ВИПРАВЛЕНО    
                     let icon = item_clone.find('.settings-folder__icon svg, .settings-folder__icon img')    
                     if(icon.length) {    
                         item_sort.find('.menu-edit-list__icon').append(icon.clone())    
                     }    
     
                     item_sort.find('.move-up').on('hover:enter', ()=>{    
-                        let prev = item_sort.prev()    
-                        if(prev.length){    
-                            item_sort.insertBeforeitem_sort.find('.move-up').on('hover:enter', ()=>{    
                         let prev = item_sort.prev()    
                         if(prev.length){    
                             item_sort.insertBefore(prev)    
@@ -295,6 +257,7 @@
                 })    
     
                 Lampa.Modal.open({    
+                    title: Lampa.Lang.translate('menu_editor_Lampa.Modal.open({    
                     title: Lampa.Lang.translate('menu_editor_settings'),    
                     html: list,    
                     size: 'small',    
@@ -360,7 +323,32 @@
         }      
       
         // Додаємо окремий розділ в налаштування      
-        function addSettings() {      
+        function addSettings() {  
+            // ПЕРЕВІРКА ВЕРСІЇ ТУТ - після того як Lampa вже ініціалізована  
+            const lampaVersion = Lampa.Manifest ? Lampa.Manifest.app_digital : 0  
+            const needsIconFix = lampaVersion < 300  
+              
+            if (needsIconFix) {  
+                const iconStyles = `  
+                    <style id="menu-editor-icon-fix">  
+                        .menu-edit-list__icon > svg,  
+                        .menu-edit-list__icon > img {  
+                            width: 1.4em !important;  
+                            height: 1.4em !important;  
+                        }  
+                        .menu-edit-list__move svg {  
+                            width: 1em !important;  
+                            height: 1em !important;  
+                        }  
+                        .menu-edit-list__toggle svg {  
+                            width: 1.2em !important;  
+                            height: 1.2em !important;  
+                        }  
+                    </style>  
+                `  
+                $('head').append(iconStyles)  
+            }  
+              
             // Створюємо окремий компонент для редагування меню      
             Lampa.SettingsApi.addComponent({      
                 component: 'menu_editor',      
