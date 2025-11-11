@@ -270,7 +270,7 @@
                     item_sort.find('.move-up').on('hover:enter', ()=>{    
                         let prev = item_sort.prev()    
                         if(prev.length){    
-                            item_sort.insertBefore item_sort.find('.move-up').on('hover:enter', ()=>{    
+                            item_sort.insertBeforeitem_sort.find('.move-up').on('hover:enter', ()=>{    
                         let prev = item_sort.prev()    
                         if(prev.length){    
                             item_sort.insertBefore(prev)    
