@@ -4,33 +4,38 @@
     function startPlugin() {      
         window.plugin_menu_editor_ready = true  
           
+        // Чекаємо на повну ініціалізацію Lampa  
         function initialize() {  
-            // v1. Перевірка версії та додавання стилів  
-            const lampaVersion = Lampa.Manifest ? Lampa.Manifest.app_digital : 0  
-            const needsIconFix = lampaVersion < 300  
-              
-            if (needsIconFix) {  
-                const iconStyles = `  
-                    <style id="menu-editor-icon-fix">  
-                        .menu-edit-list__icon > svg,  
-                        .menu-edit-list__icon > img {  
-                            width: 1.4em !important;  
-                            height: 1.4em !important;  
-                        }  
-                        .menu-edit-list__move svg {  
-                            width: 1em !important;  
-                            height: 1em !important;  
-                        }  
-                        .menu-edit-list__toggle svg {  
-                            width: 1.2em !important;  
-                            height: 1.2em !important;  
-                        }  
-                    </style>  
-                `  
-                $('head').append(iconStyles)  
+            // Перевірка версії та додавання стилів  
+            try {  
+                const lampaVersion = Lampa.Manifest ? Lampa.Manifest.app_digital : 0  
+                const needsIconFix = lampaVersion < 300  
+                  
+                if (needsIconFix) {  
+                    const iconStyles = `  
+                        <style id="menu-editor-icon-fix">  
+                            .menu-edit-list__icon > svg,  
+                            .menu-edit-list__icon > img {  
+                                width: 1.4em !important;  
+                                height: 1.4em !important;  
+                            }  
+                            .menu-edit-list__move svg {  
+                                width: 1em !important;  
+                                height: 1em !important;  
+                            }  
+                            .menu-edit-list__toggle svg {  
+                                width: 1.2em !important;  
+                                height: 1.2em !important;  
+                            }  
+                        </style>  
+                    `  
+                    $('head').append(iconStyles)  
+                }  
+            } catch(e) {  
+                console.log('Menu Editor', 'Version check failed:', e)  
             }  
               
-            // Додаємо переклади ПІСЛЯ ініціалізації Lampa  
+            // Додаємо переклади  
             Lampa.Lang.add({      
                 menu_editor_title: {      
                     ru: 'Редактирование меню',      
@@ -59,7 +64,7 @@
                 }      
             })  
               
-            // Функції редагування меню  
+            // Всі функції редагування меню  
             function editLeftMenu() {    
                 let list = $('<div class="menu-edit-list"></div>')    
                 let menu = $('.menu')    
@@ -248,15 +253,12 @@
                             <div class="menu-edit-list__toggle toggle selector">    
                                 <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">    
                                     <rect x="1.89111" y="1.78369" width="21.793" height="21.793" rx="3.5" stroke="currentColor" stroke-width="3"/>    
-                                    <path d="M7.44873 12.9658L10.8179 16.3349L18.1269 9.02588" stroke="currentColor" stroke-width="3" class="dot" opacity="0" stroke-linecap="round"/>    
+                                    <path d="M7.44873 12.9658L10.8179 16.3349L18.1269 9.02588" stroke  <path d="M7.44873 12.9658L10.8179 16.3349L18.1269 9.02588" stroke="currentColor" stroke-width="3" class="dot" opacity="0" stroke-linecap="round"/>    
                                 </svg>    
                             </div>    
                         </div>`)    
         
                         let icon = item_clone.find('.settings-folder__icon svg, .settings-folder__icon img')    
-                        if(icon.length) {    
-                            item_sort.find('.menu-edit-list__icon').append(icon.clone())    
-                        }    let icon = item_clone.find('.settings-folder__icon svg, .settings-folder__icon img')    
                         if(icon.length) {    
                             item_sort.find('.menu-edit-list__icon').append(icon.clone())    
                         }    
