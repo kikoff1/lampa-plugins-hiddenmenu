@@ -1,6 +1,46 @@
 (function () {
     'use strict';
 
+    const plugin = {
+        id: 'menu_editor',
+        name: 'Редактор меню',
+        description: 'Редагування лівого, верхнього та налаштувального меню Lampa',
+        version: '2.3.1',
+        author: 'community + fix by ChatGPT',
+        lang: {
+            en: {
+                menu_editor_title: 'Menu Editor',
+                menu_editor_left: 'Edit left menu',
+                menu_editor_top: 'Edit top menu',
+                menu_editor_settings: 'Edit settings menu',
+                menu_editor_hide_nav: 'Hide navigation bar'
+            },
+            uk: {
+                menu_editor_title: 'Редактор меню',
+                menu_editor_left: 'Редагувати ліве меню',
+                menu_editor_top: 'Редагувати верхнє меню',
+                menu_editor_settings: 'Редагувати меню налаштувань',
+                menu_editor_hide_nav: 'Приховати панель навігації'
+            },
+            ru: {
+                menu_editor_title: 'Редактор меню',
+                menu_editor_left: 'Редактировать левое меню',
+                menu_editor_top: 'Редактировать верхнее меню',
+                menu_editor_settings: 'Редактировать меню настроек',
+                menu_editor_hide_nav: 'Скрыть панель навигации'
+            },
+            zh: {
+                menu_editor_title: '菜单编辑器',
+                menu_editor_left: '编辑左侧菜单',
+                menu_editor_top: '编辑顶部菜单',
+                menu_editor_settings: '编辑设置菜单',
+                menu_editor_hide_nav: '隐藏导航栏'
+            }
+        }
+    };
+
+    // --- ЗБЕРЕЖЕННЯ І ЗАВАНТАЖЕННЯ ---
+
     function saveMenu(type, data) {
         Lampa.Storage.set(type + '_menu_sort', data.sort);
         Lampa.Storage.set(type + '_menu_hide', data.hide);
@@ -29,26 +69,15 @@
             $('.settings-folder').each(function () {
                 let name = $(this).find('.settings-folder__name').text();
                 let found = saved.find(f => f.name === name);
-                if (found) {
-                    if (found.hide) $(this).addClass('hide');
-                }
+                if (found && found.hide) $(this).addClass('hide');
             });
         }
     }
 
-    function editLeftMenu() {
-        let menu = $('.menu__list > .menu__item');
-        buildMenuEditor('menu', menu, 'menu_editor_left');
-    }
-
-    function editTopMenu() {
-        let menu = $('.head__menu > *');
-        buildMenuEditor('head', menu, 'menu_editor_top');
-    }
+    // --- ПОБУДОВА РЕДАКТОРА МЕНЮ ---
 
     function buildMenuEditor(type, elements, title) {
         let list = $('<div class="menu-edit-list"></div>');
-        let menuState = loadMenu(type);
 
         elements.each(function () {
             let item = $(this);
@@ -60,19 +89,19 @@
                     <div class="menu-edit-list__icon"></div>
                     <div class="menu-edit-list__title">${name}</div>
                     <div class="menu-edit-list__move move-up selector">
-                        <svg width="22" height="14" viewBox="0 0 22 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <svg width="22" height="14" viewBox="0 0 22 14">
                             <path d="M2 12L11 3L20 12" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
                         </svg>
                     </div>
                     <div class="menu-edit-list__move move-down selector">
-                        <svg width="22" height="14" viewBox="0 0 22 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <svg width="22" height="14" viewBox="0 0 22 14">
                             <path d="M2 2L11 11L20 2" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
                         </svg>
                     </div>
                     <div class="menu-edit-list__toggle toggle selector">
-                        <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="1.89111" y="1.78369" width="21.793" height="21.793" rx="3.5" stroke="currentColor" stroke-width="3"/>
-                            <path d="M7.44873 12.9658L10.8179 16.3349L18.1269 9.02588" stroke="currentColor" stroke-width="3" class="dot" opacity="0" stroke-linecap="round"/>
+                        <svg width="26" height="26" viewBox="0 0 26 26">
+                            <rect x="1.9" y="1.8" width="21.8" height="21.8" rx="3.5" stroke="currentColor" stroke-width="3"/>
+                            <path d="M7.4 12.9L10.8 16.3L18.1 9" stroke="currentColor" stroke-width="3" class="dot" opacity="0" stroke-linecap="round"/>
                         </svg>
                     </div>
                 </div>`);
@@ -122,6 +151,18 @@
         });
     }
 
+    // --- РЕДАГУВАННЯ КОНКРЕТНИХ МЕНЮ ---
+
+    function editLeftMenu() {
+        let menu = $('.menu__list > .menu__item');
+        buildMenuEditor('menu', menu, 'menu_editor_left');
+    }
+
+    function editTopMenu() {
+        let menu = $('.head__menu > *');
+        buildMenuEditor('head', menu, 'menu_editor_top');
+    }
+
     function editSettingsMenu() {
         Lampa.Settings.listener.follow('open', (e) => {
             if (e.name === 'main') {
@@ -153,19 +194,19 @@
                     <div class="menu-edit-list__icon"></div>
                     <div class="menu-edit-list__title">${item_clone.find('.settings-folder__name').text()}</div>
                     <div class="menu-edit-list__move move-up selector">
-                        <svg width="22" height="14" viewBox="0 0 22 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <svg width="22" height="14" viewBox="0 0 22 14">
                             <path d="M2 12L11 3L20 12" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
                         </svg>
                     </div>
                     <div class="menu-edit-list__move move-down selector">
-                        <svg width="22" height="14" viewBox="0 0 22 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <svg width="22" height="14" viewBox="0 0 22 14">
                             <path d="M2 2L11 11L20 2" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
                         </svg>
                     </div>
                     <div class="menu-edit-list__toggle toggle selector">
-                        <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="1.89111" y="1.78369" width="21.793" height="21.793" rx="3.5" stroke="currentColor" stroke-width="3"/>
-                            <path d="M7.44873 12.9658L10.8179 16.3349L18.1269 9.02588" stroke="currentColor" stroke-width="3" class="dot" opacity="0" stroke-linecap="round"/>
+                        <svg width="26" height="26" viewBox="0 0 26 26">
+                            <rect x="1.9" y="1.8" width="21.8" height="21.8" rx="3.5" stroke="currentColor" stroke-width="3"/>
+                            <path d="M7.4 12.9L10.8 16.3L18.1 9" stroke="currentColor" stroke-width="3" class="dot" opacity="0" stroke-linecap="round"/>
                         </svg>
                     </div>
                 </div>`);
@@ -210,26 +251,31 @@
         });
     }
 
+    // --- ПАНЕЛЬ НАВІГАЦІЇ ---
+
     function hideNavigationBar(enabled) {
         if (enabled) $('body').addClass('hide-navigation-bar');
         else $('body').removeClass('hide-navigation-bar');
         Lampa.Storage.set('hide_navigation_bar', enabled);
     }
 
+    // --- ІНІЦІАЛІЗАЦІЯ ---
+
     function init() {
+        // реєстрація у налаштуваннях
         Lampa.SettingsApi.addComponent({
-            component: 'menu_editor',
-            name: Lampa.Lang.translate('menu_editor_title') || 'Редактор меню',
+            component: plugin.id,
+            name: Lampa.Lang.translate('menu_editor_title'),
             type: 'button',
             onSelect: () => {
                 let modal = $('<div class="menu-editor-modal"></div>');
-                modal.append('<div class="menu-editor-btn selector" data-type="left">Редагувати ліве меню</div>');
-                modal.append('<div class="menu-editor-btn selector" data-type="top">Редагувати верхнє меню</div>');
-                modal.append('<div class="menu-editor-btn selector" data-type="settings">Редагувати меню налаштувань</div>');
-                modal.append('<div class="menu-editor-btn selector" data-type="hide_nav">Приховати панель навігації</div>');
+                modal.append(`<div class="menu-editor-btn selector" data-type="left">${Lampa.Lang.translate('menu_editor_left')}</div>`);
+                modal.append(`<div class="menu-editor-btn selector" data-type="top">${Lampa.Lang.translate('menu_editor_top')}</div>`);
+                modal.append(`<div class="menu-editor-btn selector" data-type="settings">${Lampa.Lang.translate('menu_editor_settings')}</div>`);
+                modal.append(`<div class="menu-editor-btn selector" data-type="hide_nav">${Lampa.Lang.translate('menu_editor_hide_nav')}</div>`);
 
                 Lampa.Modal.open({
-                    title: 'Редактор меню',
+                    title: Lampa.Lang.translate('menu_editor_title'),
                     html: modal,
                     onBack: () => Lampa.Modal.close()
                 });
@@ -249,9 +295,14 @@
         });
 
         if (Lampa.Storage.get('hide_navigation_bar', false)) hideNavigationBar(true);
+
+        console.log('%c[Menu Editor] Plugin loaded successfully', 'color: #00ff99');
     }
 
     Lampa.Listener.follow('app', (e) => {
         if (e.type === 'ready') init();
     });
+
+    Lampa.Lang.add(plugin.lang);
+    Lampa.Plugins.add(plugin);
 })();
