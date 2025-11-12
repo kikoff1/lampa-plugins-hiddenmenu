@@ -267,16 +267,20 @@
                 })      
             }  
   
+            // ВИПРАВЛЕНО: Функція для редагування верхнього меню з розширеним словником  
             function editTopMenu() {      
+                // ВИПРАВЛЕНО: Використовуємо Lampa.Lang для отримання перекладів  
                 const headMenuNames = {      
-                    'open--search': 'Пошук',      
-                    'open--broadcast': 'Трансляції',       
-                    'notice--icon': 'Сповіщення',      
-                    'open--settings': 'Налаштування',      
-                    'open--profile': 'Профіль',      
-                    'full--screen': 'Повний екран'      
-                }      
-                      
+                    'open--search': Lampa.Lang.translate('title_search') || 'Пошук',      
+                    'open--broadcast': Lampa.Lang.translate('title_broadcast') || 'Трансляції',       
+                    'notice--icon': Lampa.Lang.translate('title_notice') || 'Сповіщення',  
+                    'open--notice': Lampa.Lang.translate('title_notice') || 'Сповіщення',  
+                    'open--settings': Lampa.Lang.translate('menu_settings') || 'Налаштування',      
+                    'open--profile': Lampa.Lang.translate('title_profile') || 'Профіль',      
+                    'full--screen': Lampa.Lang.translate('player_full_screen') || 'Повний екран',  
+                    'open--feed': Lampa.Lang.translate('menu_feed') || 'Лента'  
+                }  
+                  
                 let list = $('<div class="menu-edit-list"></div>')        
                 let head = $('.head')        
             
@@ -290,8 +294,21 @@
                         c.startsWith('notice--') ||       
                         c.startsWith('full--')      
                     ) || ''      
-                          
-                    let displayName = headMenuNames[mainClass] || mainClass      
+                      
+                    // ВИПРАВЛЕНО: Покращена логіка визначення назви  
+                    let displayName = headMenuNames[mainClass]  
+                      
+                    if(!displayName) {  
+                        // Спробуємо взяти текст з елемента, якщо він є  
+                        let textElement = item_clone.find('.head__action-text, .head__action-title')  
+                        if(textElement.length && textElement.text().trim()) {  
+                            displayName = textElement.text().trim()  
+                        } else {  
+                            // Якщо нічого не знайдено, показуємо клас у читабельному вигляді  
+                            displayName = mainClass.replace(/^(open--|notice--|full--)/, '')  
+                            displayName = displayName.charAt(0).toUpperCase() + displayName.slice(1)  
+                        }  
+                    }  
                           
                     let item_sort = $(`<div class="menu-edit-list__item">        
                         <div class="menu-edit-list__icon"></div>        
@@ -310,15 +327,23 @@
                             <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">        
                                 <rect x="1.89111" y="1.78369" width="21.793" height="21.793" rx="3.5" stroke="currentColor" stroke-width="3"/>        
                                 <path d="M7.44873 12.9658L10.8179 16.3349L18.1269 9.02588" stroke="currentColor" stroke-width="3" class="dot" opacity="0" stroke-linecap="round"/>        
-                            </svg>        
+                        </svg>        
                         </div>        
                     </div>`)        
-            
-                    let svg = item_clone.find('svg')        
-                    if(svg.length) {        
-                        item_sort.find('.menu-edit-list__icon').append(svg.clone())        
-                    }        
-            
+  
+                    // ВИПРАВЛЕНО: Покращене клонування іконок з підтримкою різних структур  
+                    let iconContainer = item_clone.find('.head__action-icon, .head__icon')  
+                    if(iconContainer.length) {  
+                        // Клонуємо весь контейнер іконки  
+                        item_sort.find('.menu-edit-list__icon').append(iconContainer.html())  
+                    } else {  
+                        // Fallback: шукаємо SVG або IMG безпосередньо  
+                        let icon = item_clone.find('svg, img').first()  
+                        if(icon.length) {        
+                            item_sort.find('.menu-edit-list__icon').append(icon.clone())        
+                        }  
+                    }  
+  
                     item_sort.find('.move-up').on('hover:enter', ()=>{        
                         let prev = item_sort.prev()      
                         if(prev.length){      
@@ -417,7 +442,8 @@
                         item_sort.find('.toggle').on('hover:enter', ()=>{      
                             item_orig.toggleClass('hide')      
                             item_sort.find('.dot').attr('opacity', item_orig.hasClass('hide') ? 0 : 1)      
-                        }).find('.dot').attr('opacity', item_orig.hasClass('hide') ? 0 : 1)      
+                          
+  }).find('.dot').attr('opacity', item_orig.hasClass('hide') ? 0 : 1)      
           
                         list.append(item_sort)      
                     })      
