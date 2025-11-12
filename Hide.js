@@ -4,7 +4,7 @@
     function startPlugin() {        
         window.plugin_menu_editor_ready = true    
             
-        // v.1.1 Чекаємо на повну ініціалізацію Lampa    
+        // v.1.2 Чекаємо на повну ініціалізацію Lampa    
         function initialize() {    
             // Перевірка версії та додавання стилів    
             try {    
@@ -66,73 +66,114 @@
                                 width: 1em !important;    
                                 height: 1em !important;    
                             }    
-                                
-                            .menu-edit-list__toggle svg {    
-                                width: 1.2em !important;    
-                                height: 1.2em !important;    
-                            }    
-                                
-                            .menu-edit-list__move.focus,    
-                            .menu-edit-list__toggle.focus {    
-                                background: rgba(255, 255, 255, 1) !important;    
-                                border-radius: 0.3em !important;    
-                                color: #000 !important;    
-                            }    
                         </style>    
                     `    
                     $('head').append(iconStyles)    
                 }    
             } catch(e) {    
-                console.log('Menu Editor', 'Version check failed:', e)    
+                console.error('Menu Editor: Error adding styles', e)    
             }    
                 
             // Додаємо переклади    
-            Lampa.Lang.add({        
-                menu_editor_title: {        
-                    ru: 'Редактирование меню',        
-                    uk: 'Редагування меню',        
-                    en: 'Menu Editor'        
-                },        
-                menu_editor_left: {        
-                    ru: 'Левое меню',        
-                    uk: 'Ліве меню',        
-                    en: 'Left Menu'        
-                },        
-                menu_editor_top: {        
-                    ru: 'Верхнее меню',        
-                    uk: 'Верхнє меню',        
-                    en: 'Top Menu'        
-                },        
-                menu_editor_settings: {        
-                    ru: 'Меню настроек',        
-                    uk: 'Меню налаштувань',        
-                    en: 'Settings Menu'        
-                },        
-                menu_editor_hide_nav: {        
-                    ru: 'Скрыть панель навигации',        
-                    uk: 'Приховати панель навігації',        
-                    en: 'Hide Navigation Bar'        
-                }        
-            })  
-  
-            // ВИПРАВЛЕНІ ФУНКЦІЇ: Застосування збережених налаштувань  
-              
-            // Застосування налаштувань лівого меню  
+            Lampa.Lang.add({    
+                menu_editor_title: {    
+                    ru: 'Редактор меню',    
+                    en: 'Menu Editor',    
+                    uk: 'Редактор меню',    
+                    zh: '菜单编辑器'    
+                },    
+                menu_editor_left: {    
+                    ru: 'Редактировать левое меню',    
+                    en: 'Edit left menu',    
+                    uk: 'Редагувати ліве меню',    
+                    zh: '编辑左侧菜单'    
+                },    
+                menu_editor_top: {    
+                    ru: 'Редактировать верхнее меню',    
+                    en: 'Edit top menu',    
+                    uk: 'Редагувати верхнє меню',    
+                    zh: '编辑顶部菜单'    
+                },    
+                menu_editor_settings: {    
+                    ru: 'Редактировать меню настроек',    
+                    en: 'Edit settings menu',    
+                    uk: 'Редагувати меню налаштувань',    
+                    zh: '编辑设置菜单'    
+                },    
+                menu_editor_hide_nav: {    
+                    ru: 'Скрыть панель навигации',    
+                    en: 'Hide navigation bar',    
+                    uk: 'Приховати панель навігації',    
+                    zh: '隐藏导航栏'    
+                },  
+                // ДОДАНО: Переклади для пунктів верхнього меню  
+                head_action_search: {  
+                    ru: 'Поиск',  
+                    en: 'Search',  
+                    uk: 'Пошук',  
+                    zh: '搜索'  
+                },  
+                head_action_settings: {  
+                    ru: 'Настройки',  
+                    en: 'Settings',  
+                    uk: 'Налаштування',  
+                    zh: '设置'  
+                },  
+                head_action_feed: {  
+                    ru: 'Лента',  
+                    en: 'Feed',  
+                    uk: 'Стрічка',  
+                    zh: '动态'  
+                },  
+                head_action_notice: {  
+                    ru: 'Уведомления',  
+                    en: 'Notifications',  
+                    uk: 'Сповіщення',  
+                    zh: '通知'  
+                },  
+                head_action_profile: {  
+                    ru: 'Профиль',  
+                    en: 'Profile',  
+                    uk: 'Профіль',  
+                    zh: '个人资料'  
+                },  
+                head_action_fullscreen: {  
+                    ru: 'Полный экран',  
+                    en: 'Fullscreen',  
+                    uk: 'Повний екран',  
+                    zh: '全屏'  
+                },  
+                head_action_broadcast: {  
+                    ru: 'Трансляции',  
+                    en: 'Broadcast',  
+                    uk: 'Трансляції',  
+                    zh: '直播'  
+                },  
+                no_name: {  
+                    ru: 'Элемент без названия',  
+                    en: 'Unnamed element',  
+                    uk: 'Елемент без назви',  
+                    zh: '未命名元素'  
+                }  
+            })    
+    
+            // ВИПРАВЛЕНО: Застосування налаштувань лівого меню  
             function applyLeftMenu() {  
                 let sort = Lampa.Storage.get('menu_sort', [])  
                 let hide = Lampa.Storage.get('menu_hide', [])  
                   
-                // Застосовуємо порядок  
+                let menu = $('.menu .menu__list').eq(0)  
+                if(!menu.length) return  
+                  
                 if(sort.length) {  
                     sort.forEach((name) => {  
                         let item = $('.menu .menu__item').filter(function() {  
                             return $(this).find('.menu__text').text().trim() === name  
                         })  
-                        if(item.length) item.appendTo($('.menu .menu__list:eq(0)'))  
+                        if(item.length) item.appendTo(menu)  
                     })  
                 }  
                   
-                // Застосовуємо приховування  
                 $('.menu .menu__item').removeClass('hidden')  
                 if(hide.length) {  
                     hide.forEach((name) => {  
@@ -144,27 +185,48 @@
                 }  
             }  
   
-            // ПОВНІСТЮ ВИПРАВЛЕНО: Застосування налаштувань верхнього меню  
+            // ВИПРАВЛЕНО: Застосування налаштувань верхнього меню з підходом на основі класів  
             function applyTopMenu() {  
                 let sort = Lampa.Storage.get('head_menu_sort', [])  
                 let hide = Lampa.Storage.get('head_menu_hide', [])  
                   
-                // ВИПРАВЛЕНО: Шукаємо правильний контейнер .head__actions  
                 let actionsContainer = $('.head__actions')  
                 if(!actionsContainer.length) return  
                   
                 if(sort.length) {  
-                    sort.forEach((uniqueClass) => {  
-                        // ВИПРАВЛЕНО: Шукаємо за конкретним унікальним класом  
-                        let item = $('.head__action.' + uniqueClass)  
+                    sort.forEach((id) => {  
+                        // Шукаємо елемент за ID (який є класом або комбінацією класів)  
+                        let item = $('.head__action').filter(function() {  
+                            let classes = $(this).attr('class').split(' ')  
+                            let idParts = []  
+                            for (let i = 0; i < classes.length; i++) {  
+                                if (classes[i].indexOf('open--') === 0 ||   
+                                    classes[i].indexOf('notice--') === 0 ||   
+                                    classes[i] === 'full-screen') {  
+                                    idParts.push(classes[i])  
+                                }  
+                            }  
+                            return idParts.join('_') === id  
+                        })  
                         if(item.length) item.appendTo(actionsContainer)  
                     })  
                 }  
                   
                 $('.head__action').removeClass('hide')  
                 if(hide.length) {  
-                    hide.forEach((uniqueClass) => {  
-                        let item = $('.head__action.' + uniqueClass)  
+                    hide.forEach((id) => {  
+                        let item = $('.head__action').filter(function() {  
+                            let classes = $(this).attr('class').split(' ')  
+                            let idParts = []  
+                            for (let i = 0; i < classes.length; i++) {  
+                                if (classes[i].indexOf('open--') === 0 ||   
+                                    classes[i].indexOf('notice--') === 0 ||   
+                                    classes[i] === 'full-screen') {  
+                                    idParts.push(classes[i])  
+                                }  
+                            }  
+                            return idParts.join('_') === id  
+                        })  
                         if(item.length) item.addClass('hide')  
                     })  
                 }  
@@ -175,7 +237,6 @@
                 let sort = Lampa.Storage.get('settings_menu_sort', [])  
                 let hide = Lampa.Storage.get('settings_menu_hide', [])  
                   
-                // ВИПРАВЛЕНО: Шукаємо правильний контейнер  
                 let settingsContainer = $('.settings .scroll__body > div')  
                 if(!settingsContainer.length) return  
                   
@@ -265,54 +326,57 @@
                         Lampa.Controller.toggle('settings_component')      
                     }      
                 })      
-            }  
-  
-            // ВИПРАВЛЕНО: Функція для редагування верхнього меню з розширеним словником  
+            }      
+            
+            // ВИПРАВЛЕНО: Функція для редагування верхнього меню з новим підходом  
             function editTopMenu() {      
-                // ВИПРАВЛЕНО: Використовуємо Lampa.Lang для отримання перекладів  
-                const headMenuNames = {      
-                    'open--search': Lampa.Lang.translate('title_search') || 'Пошук',      
-                    'open--broadcast': Lampa.Lang.translate('title_broadcast') || 'Трансляції',       
-                    'notice--icon': Lampa.Lang.translate('title_notice') || 'Сповіщення',  
-                    'open--notice': Lampa.Lang.translate('title_notice') || 'Сповіщення',  
-                    'open--settings': Lampa.Lang.translate('menu_settings') || 'Налаштування',      
-                    'open--profile': Lampa.Lang.translate('title_profile') || 'Профіль',      
-                    'full--screen': Lampa.Lang.translate('player_full_screen') || 'Повний екран',  
-                    'open--feed': Lampa.Lang.translate('menu_feed') || 'Лента'  
-                }  
-                  
                 let list = $('<div class="menu-edit-list"></div>')        
                 let head = $('.head')        
-            
+  
                 head.find('.head__action').each(function(){        
                     let item_orig = $(this)      
                     let item_clone = $(this).clone()      
-                          
-                    let allClasses = item_clone.attr('class').split(' ')      
-                    let mainClass = allClasses.find(c =>       
-                        c.startsWith('open--') ||       
-                        c.startsWith('notice--') ||       
-                        c.startsWith('full--')      
-                    ) || ''      
                       
-                    // ВИПРАВЛЕНО: Покращена логіка визначення назви  
-                    let displayName = headMenuNames[mainClass]  
+                    // ВИПРАВЛЕНО: Генеруємо ID на основі класів (як у плагіні приховування)  
+                    let classes = item_clone.attr('class').split(' ')  
+                    let idParts = []  
                       
-                    if(!displayName) {  
-                        // Спробуємо взяти текст з елемента, якщо він є  
-                        let textElement = item_clone.find('.head__action-text, .head__action-title')  
-                        if(textElement.length && textElement.text().trim()) {  
-                            displayName = textElement.text().trim()  
-                        } else {  
-                            // Якщо нічого не знайдено, показуємо клас у читабельному вигляді  
-                            displayName = mainClass.replace(/^(open--|notice--|full--)/, '')  
-                            displayName = displayName.charAt(0).toUpperCase() + displayName.slice(1)  
+                    for (let i = 0; i < classes.length; i++) {  
+                        if (classes[i].indexOf('open--') === 0 ||   
+                            classes[i].indexOf('notice--') === 0 ||   
+                            classes[i] === 'full-screen') {  
+                            idParts.push(classes[i])  
                         }  
                     }  
-                          
+                      
+                    let id = idParts.join('_')  
+                      
+                    // ВИПРАВЛЕНО: Визначаємо ключ перекладу на основі класу  
+                    let titleKey = ''  
+                    if (id.includes('open--search')) {  
+                        titleKey = 'head_action_search'  
+                    } else if (id.includes('open--settings')) {  
+                        titleKey = 'head_action_settings'  
+                    } else if (id.includes('open--feed')) {  
+                        titleKey = 'head_action_feed'  
+                    } else if (id.includes('open--notice') || id.includes('notice--icon')) {  
+                        titleKey = 'head_action_notice'  
+                    } else if (id.includes('open--profile')) {  
+                        titleKey = 'head_action_profile'  
+                    } else if (id.includes('full-screen')) {  
+                        titleKey = 'head_action_fullscreen'  
+                    } else if (id.includes('open--broadcast')) {  
+                        titleKey = 'head_action_broadcast'  
+                    } else {  
+                        titleKey = 'no_name'  
+                    }  
+                      
+                    // Отримуємо переклад  
+                    let title = Lampa.Lang.translate(titleKey)  
+                      
                     let item_sort = $(`<div class="menu-edit-list__item">        
                         <div class="menu-edit-list__icon"></div>        
-                        <div class="menu-edit-list__title">${displayName}</div>        
+                        <div class="menu-edit-list__title">${title}</div>        
                         <div class="menu-edit-list__move move-up selector">        
                             <svg width="22" height="14" viewBox="0 0 22 14" fill="none" xmlns="http://www.w3.org/2000/svg">        
                                 <path d="M2 12L11 3L20 12" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>        
@@ -327,22 +391,21 @@
                             <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">        
                                 <rect x="1.89111" y="1.78369" width="21.793" height="21.793" rx="3.5" stroke="currentColor" stroke-width="3"/>        
                                 <path d="M7.44873 12.9658L10.8179 16.3349L18.1269 9.02588" stroke="currentColor" stroke-width="3" class="dot" opacity="0" stroke-linecap="round"/>        
-                        </svg>        
+                            </svg>        
                         </div>        
                     </div>`)        
   
-                    // ВИПРАВЛЕНО: Покращене клонування іконок з підтримкою різних структур  
-                    let iconContainer = item_clone.find('.head__action-icon, .head__icon')  
-                    if(iconContainer.length) {  
-                        // Клонуємо весь контейнер іконки  
-                        item_sort.find('.menu-edit-list__icon').append(iconContainer.html())  
+                    // ВИПРАВЛЕНО: Клонуємо весь HTML іконки (як у плагіні приховування)  
+                    let icon = ''  
+                    if (item_clone.find('svg').length) {  
+                        icon = item_clone.html()  
+                    } else if (item_clone.find('img').length) {  
+                        icon = '<img src="' + item_clone.find('img').attr('src') + '" width="30" height="30" style="display:block;">'  
                     } else {  
-                        // Fallback: шукаємо SVG або IMG безпосередньо  
-                        let icon = item_clone.find('svg, img').first()  
-                        if(icon.length) {        
-                            item_sort.find('.menu-edit-list__icon').append(icon.clone())        
-                        }  
+                        icon = '•'  
                     }  
+                      
+                    item_sort.find('.menu-edit-list__icon').html(icon)  
   
                     item_sort.find('.move-up').on('hover:enter', ()=>{        
                         let prev = item_sort.prev()      
@@ -351,7 +414,7 @@
                             item_orig.insertBefore(item_orig.prev())      
                         }      
                     })        
-            
+  
                     item_sort.find('.move-down').on('hover:enter', ()=>{        
                         let next = item_sort.next()      
                         if(next.length){      
@@ -359,15 +422,15 @@
                             item_orig.insertAfter(item_orig.next())      
                         }      
                     })        
-            
+  
                     item_sort.find('.toggle').on('hover:enter', ()=>{        
                         item_orig.toggleClass('hide')      
                         item_sort.find('.dot').attr('opacity', item_orig.hasClass('hide') ? 0 : 1)      
                     }).find('.dot').attr('opacity', item_orig.hasClass('hide') ? 0 : 1)        
-            
+  
                     list.append(item_sort)        
                 })        
-            
+  
                 Lampa.Modal.open({        
                     title: Lampa.Lang.translate('menu_editor_top'),      
                     html: list,      
@@ -379,21 +442,14 @@
                         Lampa.Controller.toggle('settings_component')      
                     }      
                 })        
-            }    
-                
+            }      
+            
+            // Функція для редагування меню налаштувань      
             function editSettingsMenu() {      
-                Lampa.Controller.toggle('settings')      
-                      
                 setTimeout(()=>{      
-                    let settings = $('.settings')      
-                          
-                    if(!settings.length || !settings.find('.settings-folder').length){      
-                        Lampa.Noty.show('Меню налаштувань ще не завантажене')      
-                        return      
-                    }      
-                          
                     let list = $('<div class="menu-edit-list"></div>')      
-                          
+                    let settings = $('.settings')      
+          
                     settings.find('.settings-folder').each(function(){      
                         let item_orig = $(this)      
                         let item_clone = $(this).clone()      
@@ -442,8 +498,7 @@
                         item_sort.find('.toggle').on('hover:enter', ()=>{      
                             item_orig.toggleClass('hide')      
                             item_sort.find('.dot').attr('opacity', item_orig.hasClass('hide') ? 0 : 1)      
-                          
-  }).find('.dot').attr('opacity', item_orig.hasClass('hide') ? 0 : 1)      
+                        }).find('.dot').attr('opacity', item_orig.hasClass('hide') ? 0 : 1)      
           
                         list.append(item_sort)      
                     })      
@@ -478,24 +533,30 @@
                 Lampa.Storage.set('menu_hide', hide)      
             }      
             
-            // ВИПРАВЛЕНО: Збереження налаштувань верхнього меню        
+            // ВИПРАВЛЕНО: Збереження налаштувань верхнього меню з генерацією ID  
             function saveTopMenu() {        
                 let sort = []        
                 let hide = []        
             
                 $('.head__action').each(function(){  
-                    // ВИПРАВЛЕНО: Зберігаємо унікальний клас замість всіх класів  
+                    // ВИПРАВЛЕНО: Генеруємо ID на основі класів (як у плагіні приховування)  
                     let classes = $(this).attr('class').split(' ')  
-                    let uniqueClass = classes.find(c =>   
-                        c.startsWith('open--') ||   
-                        c.startsWith('notice--') ||   
-                        c.startsWith('full--')  
-                    )  
+                    let idParts = []  
                       
-                    if(uniqueClass) {  
-                        sort.push(uniqueClass)  
+                    for (let i = 0; i < classes.length; i++) {  
+                        if (classes[i].indexOf('open--') === 0 ||   
+                            classes[i].indexOf('notice--') === 0 ||   
+                            classes[i] === 'full-screen') {  
+                            idParts.push(classes[i])  
+                        }  
+                    }  
+                      
+                    let id = idParts.join('_')  
+                      
+                    if(id) {  
+                        sort.push(id)  
                         if($(this).hasClass('hide')){  
-                            hide.push(uniqueClass)  
+                            hide.push(id)  
                         }  
                     }  
                 })        
@@ -527,12 +588,11 @@
                 Lampa.SettingsApi.addComponent({        
                     component: 'menu_editor',        
                     icon: `<svg width="30" height="29" viewBox="0 0 30 29" fill="none" xmlns="http://www.w3.org/2000/svg">        
-                        <path d="M18.2989 5.27973L2.60834 20.9715C2.52933 21.0507 2.47302 21.1496 2.44528 21.258L0.706081 28.2386C0.680502 28.3422 0.682069 28.4507 0.710632 28.5535C0.739195 28.6563 0.793788 28.75 0.869138 28.8255C0.984875 28.9409 1.14158 29.0057 1.30498 29.0059C1.35539 29.0058 1.4056 28.9996 1.45449 28.9873L8.43509 27.2479C8.54364 27.2206 8.64271 27.1643 8.72172 27.0851L24.4137 11.3944L18.2989 5.27973ZM28.3009 3.14018L26.5543 1.39363C25.3869 0.226285 23.3524 0.227443 22.1863 1.39363L20.0469 3.53318L26.1614 9.64766L28.3009 7.50816C28.884 6.9253 29.2052 6.14945 29.2052 5.32432C29.2052 4.49919 28.884 3.72333 28.3009 3.14018Z" fill="currentColor"/>        
+                        <path d="M18.2989 5.27973L2.60834 20.9715C2.52933 21.0507 2.47302 21.1496 2.44528 21.258L0.706081 28.2386C0.680502 28.3422 0.682069 28.4507 0.710632 28.5535C0.739195 28.6563 0.793788 28.75 0.869138 28.8255C0.984875 28.9409 1.14158 29.0057 1.30498 29.0059C1.35539 29.0058 1.4056 28.9996 1.45449 28.9873L8.43509 27.2479C8.54364 27.2206 8.64271 27.1643 8.72172 27.0851L24.4137 11.3944L18.2989 5.27973ZM28.3009 3.39827L25.2948 0.392181C24.4065 -0.496125 22.9569 -0.496125 22.0686 0.392181L19.6609 2.79991L25.7757 8.91458L28.3009 6.38929C29.2331 5.45708 29.2331 3.93048 28.3009 3.39827Z" fill="currentColor"/>        
                     </svg>`,        
                     name: Lampa.Lang.translate('menu_editor_title')        
                 })        
             
-                // Додаємо кнопки в новий розділ        
                 Lampa.SettingsApi.addParam({        
                     component: 'menu_editor',        
                     param: {        
@@ -623,6 +683,19 @@
                     setTimeout(applySettingsMenu, 300)  
                 })  
             }  
+        }    
+            
+        // Чекаємо на повну ініціалізацію Lampa    
+        if(window.appready) initialize()        
+        else {        
+            Lampa.Listener.follow('app', function (e) {        
+                if (e.type == 'ready') initialize()        
+            })        
+        }        
+    }        
+        
+    if(!window.plugin_menu_editor_ready) startPlugin()        
+})();
         }    
             
         // Чекаємо на повну ініціалізацію Lampa    
