@@ -696,16 +696,4 @@
         
     if(!window.plugin_menu_editor_ready) startPlugin()        
 })();
-        }    
-            
-        // Чекаємо на повну ініціалізацію Lampa    
-        if(window.appready) initialize()        
-        else {        
-            Lampa.Listener.follow('app', function (e) {        
-                if (e.type == 'ready') initialize()        
-            })        
-        }        
-    }        
-        
-    if(!window.plugin_menu_editor_ready) startPlugin()        
-})();
+ 
