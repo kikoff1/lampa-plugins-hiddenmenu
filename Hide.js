@@ -4,7 +4,7 @@
     function startPlugin() {        
         window.plugin_menu_editor_ready = true    
             
-        // v.1.1 Чекаємо на повну ініціалізацію Lampa    
+        // v.1.2 Чекаємо на повну ініціалізацію Lampa    
         function initialize() {    
             // Перевірка версії та додавання стилів    
             try {    
@@ -115,7 +115,7 @@
                 }        
             })  
   
-            // НОВІ ФУНКЦІЇ: Застосування збережених налаштувань  
+            // ВИПРАВЛЕНІ ФУНКЦІЇ: Застосування збережених налаштувань  
             // Застосування налаштувань лівого меню  
             function applyLeftMenu() {  
                 let sort = Lampa.Storage.get('menu_sort', [])  
@@ -143,17 +143,23 @@
                 }  
             }  
   
-            // Застосування налаштувань верхнього меню  
+            // ВИПРАВЛЕНО: Застосування налаштувань верхнього меню  
             function applyTopMenu() {  
                 let sort = Lampa.Storage.get('head_menu_sort', [])  
                 let hide = Lampa.Storage.get('head_menu_hide', [])  
                   
+                // Чекаємо поки head завантажиться  
+                let head = $('.head')  
+                if(!head.length) return  
+                  
                 if(sort.length) {  
                     sort.forEach((className) => {  
                         let item = $('.head__action').filter(function() {  
-                            return $(this).attr('class').includes(className)  
+                            let classes = $(this).attr('class') || ''  
+                            return classes.includes(className)  
                         })  
-                        if(item.length) item.appendTo($('.head__actions'))  
+                        // ВИПРАВЛЕНО: Додаємо безпосередньо до .head, а не .head__actions  
+                        if(item.length) item.appendTo(head)  
                     })  
                 }  
                   
@@ -161,24 +167,30 @@
                 if(hide.length) {  
                     hide.forEach((className) => {  
                         let item = $('.head__action').filter(function() {  
-                            return $(this).attr('class').includes(className)  
+                            let classes = $(this).attr('class') || ''  
+                            return classes.includes(className)  
                         })  
                         if(item.length) item.addClass('hide')  
                     })  
                 }  
             }  
   
-            // Застосування налаштувань меню налаштувань  
+            // ВИПРАВЛЕНО: Застосування налаштувань меню налаштувань  
             function applySettingsMenu() {  
                 let sort = Lampa.Storage.get('settings_menu_sort', [])  
                 let hide = Lampa.Storage.get('settings_menu_hide', [])  
+                  
+                // ВИПРАВЛЕНО: Чекаємо поки settings завантажиться і шукаємо правильний контейнер  
+                let settingsContainer = $('.settings .scroll__body > div')  
+                if(!settingsContainer.length) return  
                   
                 if(sort.length) {  
                     sort.forEach((name) => {  
                         let item = $('.settings-folder').filter(function() {  
                             return $(this).find('.settings-folder__name').text().trim() === name  
                         })  
-                        if(item.length) item.appendTo($('.settings'))  
+                        // ВИПРАВЛЕНО: Додаємо до правильного контейнера  
+                        if(item.length) item.appendTo(settingsContainer)  
                     })  
                 }  
                   
@@ -564,15 +576,24 @@
             // КРИТИЧНО ВАЖЛИВО: Застосовуємо збережені налаштування при запуску  
             setTimeout(() => {  
                 applyLeftMenu()  
-                applyTopMenu()  
+                // ВИПРАВЛЕНО: Верхнє меню завантажується пізніше, додаємо окрему затримку  
+                setTimeout(applyTopMenu, 300)  
             }, 500)  
               
-            // Застосовуємо налаштування меню налаштувань при його відкритті  
+            // ВИПРАВЛЕНО: Застосовуємо налаштування меню налаштувань при його відкритті  
             Lampa.Listener.follow('activity', (e) => {  
                 if(e.type === 'start' && e.component === 'settings') {  
-                    setTimeout(applySettingsMenu, 300)  
+                    // Збільшена затримка для впевненості що DOM завантажився  
+                    setTimeout(applySettingsMenu, 500)  
                 }  
             })  
+              
+            // ДОДАНО: Додатковий listener для Settings  
+            if(Lampa.Settings && Lampa.Settings.listener) {  
+                Lampa.Settings.listener.follow('open', (e) => {  
+                    setTimeout(applySettingsMenu, 300)  
+                })  
+            }  
         }    
             
         // Чекаємо на повну ініціалізацію Lampa    
