@@ -4,7 +4,7 @@
     function startPlugin() {        
         window.plugin_menu_editor_ready = true    
             
-        // v.1.2 Чекаємо на повну ініціалізацію Lampa    
+        // v.1.1 Чекаємо на повну ініціалізацію Lampa    
         function initialize() {    
             // Перевірка версії та додавання стилів    
             try {    
@@ -116,6 +116,7 @@
             })  
   
             // ВИПРАВЛЕНІ ФУНКЦІЇ: Застосування збережених налаштувань  
+              
             // Застосування налаштувань лівого меню  
             function applyLeftMenu() {  
                 let sort = Lampa.Storage.get('menu_sort', [])  
@@ -143,33 +144,27 @@
                 }  
             }  
   
-            // ВИПРАВЛЕНО: Застосування налаштувань верхнього меню  
+            // ПОВНІСТЮ ВИПРАВЛЕНО: Застосування налаштувань верхнього меню  
             function applyTopMenu() {  
                 let sort = Lampa.Storage.get('head_menu_sort', [])  
                 let hide = Lampa.Storage.get('head_menu_hide', [])  
                   
-                // Чекаємо поки head завантажиться  
-                let head = $('.head')  
-                if(!head.length) return  
+                // ВИПРАВЛЕНО: Шукаємо правильний контейнер .head__actions  
+                let actionsContainer = $('.head__actions')  
+                if(!actionsContainer.length) return  
                   
                 if(sort.length) {  
-                    sort.forEach((className) => {  
-                        let item = $('.head__action').filter(function() {  
-                            let classes = $(this).attr('class') || ''  
-                            return classes.includes(className)  
-                        })  
-                        // ВИПРАВЛЕНО: Додаємо безпосередньо до .head, а не .head__actions  
-                        if(item.length) item.appendTo(head)  
+                    sort.forEach((uniqueClass) => {  
+                        // ВИПРАВЛЕНО: Шукаємо за конкретним унікальним класом  
+                        let item = $('.head__action.' + uniqueClass)  
+                        if(item.length) item.appendTo(actionsContainer)  
                     })  
                 }  
                   
                 $('.head__action').removeClass('hide')  
                 if(hide.length) {  
-                    hide.forEach((className) => {  
-                        let item = $('.head__action').filter(function() {  
-                            let classes = $(this).attr('class') || ''  
-                            return classes.includes(className)  
-                        })  
+                    hide.forEach((uniqueClass) => {  
+                        let item = $('.head__action.' + uniqueClass)  
                         if(item.length) item.addClass('hide')  
                     })  
                 }  
@@ -180,7 +175,7 @@
                 let sort = Lampa.Storage.get('settings_menu_sort', [])  
                 let hide = Lampa.Storage.get('settings_menu_hide', [])  
                   
-                // ВИПРАВЛЕНО: Чекаємо поки settings завантажиться і шукаємо правильний контейнер  
+                // ВИПРАВЛЕНО: Шукаємо правильний контейнер  
                 let settingsContainer = $('.settings .scroll__body > div')  
                 if(!settingsContainer.length) return  
                   
@@ -189,7 +184,6 @@
                         let item = $('.settings-folder').filter(function() {  
                             return $(this).find('.settings-folder__name').text().trim() === name  
                         })  
-                        // ВИПРАВЛЕНО: Додаємо до правильного контейнера  
                         if(item.length) item.appendTo(settingsContainer)  
                     })  
                 }  
@@ -458,17 +452,26 @@
                 Lampa.Storage.set('menu_hide', hide)      
             }      
             
-            // Збереження налаштувань верхнього меню        
+            // ВИПРАВЛЕНО: Збереження налаштувань верхнього меню        
             function saveTopMenu() {        
                 let sort = []        
                 let hide = []        
             
-                $('.head__action').each(function(){        
-                    let name = $(this).attr('class').replace('head__action', '').trim()        
-                    sort.push(name)        
-                    if($(this).hasClass('hide')){        
-                        hide.push(name)        
-                    }        
+                $('.head__action').each(function(){  
+                    // ВИПРАВЛЕНО: Зберігаємо унікальний клас замість всіх класів  
+                    let classes = $(this).attr('class').split(' ')  
+                    let uniqueClass = classes.find(c =>   
+                        c.startsWith('open--') ||   
+                        c.startsWith('notice--') ||   
+                        c.startsWith('full--')  
+                    )  
+                      
+                    if(uniqueClass) {  
+                        sort.push(uniqueClass)  
+                        if($(this).hasClass('hide')){  
+                            hide.push(uniqueClass)  
+                        }  
+                    }  
                 })        
             
                 Lampa.Storage.set('head_menu_sort', sort)        
