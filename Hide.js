@@ -1,77 +1,12 @@
-(function() {          
-    'use strict';          
-          
-    function startPlugin() {          
-        window.plugin_menu_editor_ready = true      
-              
-        function initialize() {      
-            // v1.0 Перевірка версії та додавання стилів      
-            try {      
-                const lampaVersion = Lampa.Manifest ? Lampa.Manifest.app_digital : 0      
-                const needsIconFix = lampaVersion < 300      
-                      
-                if (needsIconFix) {      
-                    const iconStyles = `      
-                        <style id="menu-editor-icon-fix">      
-                            .menu-edit-list__item {      
-                                display: flex !important;      
-                                padding: 0.3em !important;      
-                                border-radius: 0.3em !important;      
-                                align-items: center !important;      
-                            }      
-                                  
-                            .menu-edit-list__item:nth-child(even) {      
-                                background: rgba(255, 255, 255, 0.1) !important;      
-                            }      
-                                  
-                            .menu-edit-list__icon {      
-                                width: 2.4em !important;      
-                                height: 2.4em !important;      
-                                margin-right: 1em !important;      
-                                flex-shrink: 0 !important;      
-                                border-radius: 100% !important;      
-                                display: flex !important;      
-                                align-items: center !important;      
-                                justify-content: center !important;      
-                            }      
-                                  
-                            .menu-edit-list__icon > svg,      
-                            .menu-edit-list__icon > img {      
-                                width: 1.4em !important;      
-                                height: 1.4em !important;      
-                            }      
-                                  
-                            .menu-edit-list__title {      
-                                font-size: 1.3em !important;      
-                                font-weight: 300 !important;      
-                                line-height: 1.2 !important;      
-                                flex-grow: 1 !important;      
-                            }      
-                                  
-                            .menu-edit-list__move,      
-                            .menu-edit-list__toggle {      
-                                width: 2.4em !important;      
-                                height: 2.4em !important;      
-                                display: flex !important;      
-                                align-items: center !important;      
-                                justify-content: center !important;      
-                            }      
-                                  
-                            .menu-edit-list__move svg {      
-                                width: 1em !important;      
-                                height: 1em !important;      
-                            }      
-                                  
-                            .menu-edit-list__toggle svg {      
-                                width: 1.2em !important;      
-                                height: 1.2em !important;      
-                            }      
-                                  
-                            .menu-edit-list__move.focus,      
-                            .menu-edit-list__toggle.focus {      
-                                background: rgba(255, 255, 255, 1) !important;      
-                                border-radius: 0.3em !important;      
+!important;      
                                 color: #000 !important;      
+                            }  
+                              
+                            /* Стилі для вимкнених кнопок */  
+                            .menu-edit-list__move.disabled {  
+                                opacity: 0.3 !important;  
+                                pointer-events: none !important;  
+                                cursor: not-allowed !important;  
                             }      
                         </style>      
                     `      
@@ -157,21 +92,24 @@
                     uk: 'Елемент без назви',  
                     zh: '未命名元素'  
                 }  
-            })
             // Застосування налаштувань лівого меню    
             function applyLeftMenu() {    
                 let sort = Lampa.Storage.get('menu_sort', [])    
                 let hide = Lampa.Storage.get('menu_hide', [])    
-                    
+                  
+                // Застосовуємо порядок тільки до першої секції  
+                let firstList = $('.menu .menu__list:eq(0)')  
+                  
                 if(sort.length) {    
                     sort.forEach((name) => {    
-                        let item = $('.menu .menu__item').filter(function() {    
+                        let item = firstList.find('.menu__item').filter(function() {    
                             return $(this).find('.menu__text').text().trim() === name    
                         })    
-                        if(item.length) item.appendTo($('.menu .menu__list:eq(0)'))    
+                        if(item.length) item.appendTo(firstList)    
                     })    
                 }    
-                    
+                  
+                // Застосовуємо приховування до ВСІХ пунктів меню (обидві секції)  
                 $('.menu .menu__item').removeClass('hidden')    
                 if(hide.length) {    
                     hide.forEach((name) => {    
@@ -257,27 +195,30 @@
                   
                 return titleKey ? Lampa.Lang.translate(titleKey) : Lampa.Lang.translate('no_name');  
             }
-            // Функція для редагування лівого меню  
+            // Функція для редагування лівого меню (ВИПРАВЛЕНО: підтримка обох секцій)  
             function editLeftMenu() {        
                 let list = $('<div class="menu-edit-list"></div>')        
                 let menu = $('.menu')        
-            
+                  
+                // Обробляємо ВСІ пункти меню з обох секцій  
                 menu.find('.menu__item').each(function(){        
                     let item_orig = $(this)        
                     let item_clone = $(this).clone()  
                       
-                    // Отримуємо текст як у плагіна приховання  
                     let text = item_clone.find('.menu__text').text().trim()  
+                      
+                    // Перевіряємо, чи пункт з першої секції (можна переміщувати)  
+                    let isFirstSection = item_orig.closest('.menu__list').is('.menu__list:eq(0)')  
                       
                     let item_sort = $(`<div class="menu-edit-list__item">        
                         <div class="menu-edit-list__icon"></div>        
                         <div class="menu-edit-list__title">${text}</div>        
-                        <div class="menu-edit-list__move move-up selector">        
+                        <div class="menu-edit-list__move move-up selector ${!isFirstSection ? 'disabled' : ''}">        
                             <svg width="22" height="14" viewBox="0 0 22 14" fill="none" xmlns="http://www.w3.org/2000/svg">        
                                 <path d="M2 12L11 3L20 12" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>        
                             </svg>        
                         </div>        
-                        <div class="menu-edit-list__move move-down selector">        
+                        <div class="menu-edit-list__move move-down selector ${!isFirstSection ? 'disabled' : ''}">        
                             <svg width="22" height="14" viewBox="0 0 22 14" fill="none" xmlns="http://www.w3.org/2000/svg">        
                                 <path d="M2 2L11 11L20 2" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>        
                             </svg>        
@@ -291,23 +232,38 @@
                     </div>`)        
             
                     item_sort.find('.menu-edit-list__icon').append(item_clone.find('.menu__ico').html())        
-            
-                    item_sort.find('.move-up').on('hover:enter', ()=>{        
-                        let prev = item_sort.prev()        
-                        if(prev.length){        
-                            item_sort.insertBefore(prev)        
-                            item_orig.insertBefore(item_orig.prev())        
-                        }        
-                    })        
-            
-                    item_sort.find('.move-down').on('hover:enter', ()=>{        
-                        let next = item_sort.next()        
-                        if(next.length){        
-                            item_sort.insertAfter(next)        
-                            item_orig.insertAfter(item_orig.next())        
-                        }        
-                    })        
-            
+  
+                    // Кнопки переміщення працюють тільки для першої секції  
+                    if(isFirstSection) {  
+                        item_sort.find('.move-up').on('hover:enter', ()=>{        
+                            let prev = item_sort.prev()        
+                            // Шукаємо попередній елемент з першої секції  
+                            while(prev.length && prev.data('isSecondSection')) {  
+                                prev = prev.prev()  
+                            }  
+                            if(prev.length){        
+                                item_sort.insertBefore(prev)        
+                                item_orig.insertBefore(item_orig.prev())        
+                            }        
+                        })        
+  
+                        item_sort.find('.move-down').on('hover:enter', ()=>{        
+                            let next = item_sort.next()  
+                            // Шукаємо наступний елемент з першої секції        
+                            while(next.length && next.data('isSecondSection')) {  
+                                next = next.next()  
+                            }  
+                            if(next.length){        
+                                item_sort.insertAfter(next)        
+                                item_orig.insertAfter(item_orig.next())        
+                            }        
+                        })  
+                    } else {  
+                        // Позначаємо елементи з другої секції  
+                        item_sort.data('isSecondSection', true)  
+                    }  
+  
+                    // Приховування працює для ВСІХ пунктів  
                     item_sort.find('.toggle').on('hover:enter', ()=>{        
                         item_orig.toggleClass('hidden')        
                         item_sort.find('.dot').attr('opacity', item_orig.hasClass('hidden') ? 0 : 1)        
@@ -329,7 +285,7 @@
                 })        
             }  
   
-            // Функція для редагування верхнього меню (ВИПРАВЛЕНО: використовує getHeadActionName)  
+            // Функція для редагування верхнього меню (використовує getHeadActionName)  
             function editTopMenu() {        
                 let list = $('<div class="menu-edit-list"></div>')          
                 let head = $('.head')          
@@ -345,7 +301,7 @@
                         c.startsWith('full--')        
                     ) || ''        
                       
-                    // ВИПРАВЛЕНО: Використовуємо функцію getHeadActionName  
+                    // Використовуємо функцію getHeadActionName  
                     let displayName = getHeadActionName(mainClass)  
                             
                     let item_sort = $(`<div class="menu-edit-list__item">          
@@ -429,7 +385,6 @@
                         let item_orig = $(this)        
                         let item_clone = $(this).clone()  
                           
-                        // Отримуємо назву як у плагіна приховання  
                         let name = item_clone.find('.settings-folder__name').text().trim()  
                           
                         let item_sort = $(`<div class="menu-edit-list__item">        
@@ -499,15 +454,21 @@
             function saveLeftMenu() {        
                 let sort = []        
                 let hide = []        
-            
-                $('.menu .menu__item').each(function(){        
+  
+                // Зберігаємо порядок тільки для першої секції  
+                $('.menu .menu__list:eq(0) .menu__item').each(function(){        
                     let name = $(this).find('.menu__text').text().trim()        
                     sort.push(name)        
-                    if($(this).hasClass('hidden')){        
+                })  
+  
+                // Зберігаємо приховані пункти з ОБОХ секцій  
+                $('.menu .menu__item').each(function(){  
+                    if($(this).hasClass('hidden')){  
+                        let name = $(this).find('.menu__text').text().trim()  
                         hide.push(name)        
                     }        
                 })        
-            
+  
                 Lampa.Storage.set('menu_sort', sort)        
                 Lampa.Storage.set('menu_hide', hide)        
             }        
