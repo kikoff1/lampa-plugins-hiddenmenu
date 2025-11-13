@@ -1,4 +1,76 @@
-!important;      
+(function() {          
+    'use strict';          
+          
+    function startPlugin() {          
+        window.plugin_menu_editor_ready = true      
+              
+        function initialize() {      
+            // Перевірка версії та додавання стилів      
+            try {      
+                const lampaVersion = Lampa.Manifest ? Lampa.Manifest.app_digital : 0      
+                const needsIconFix = lampaVersion < 300      
+                      
+                if (needsIconFix) {      
+                    const iconStyles = `      
+                        <style id="menu-editor-icon-fix">      
+                            .menu-edit-list__item {      
+                                display: flex !important;      
+                                padding: 0.3em !important;      
+                                border-radius: 0.3em !important;      
+                                align-items: center !important;      
+                            }      
+                                  
+                            .menu-edit-list__item:nth-child(even) {      
+                                background: rgba(255, 255, 255, 0.1) !important;      
+                            }      
+                                  
+                            .menu-edit-list__icon {      
+                                width: 2.4em !important;      
+                                height: 2.4em !important;      
+                                margin-right: 1em !important;      
+                                flex-shrink: 0 !important;      
+                                border-radius: 100% !important;      
+                                display: flex !important;      
+                                align-items: center !important;      
+                                justify-content: center !important;      
+                            }      
+                                  
+                            .menu-edit-list__icon > svg,      
+                            .menu-edit-list__icon > img {      
+                                width: 1.4em !important;      
+                                height: 1.4em !important;      
+                            }      
+                                  
+                            .menu-edit-list__title {      
+                                font-size: 1.3em !important;      
+                                font-weight: 300 !important;      
+                                line-height: 1.2 !important;      
+                                flex-grow: 1 !important;      
+                            }      
+                                  
+                            .menu-edit-list__move,      
+                            .menu-edit-list__toggle {      
+                                width: 2.4em !important;      
+                                height: 2.4em !important;      
+                                display: flex !important;      
+                                align-items: center !important;      
+                                justify-content: center !important;      
+                            }      
+                                  
+                            .menu-edit-list__move svg {      
+                                width: 1em !important;      
+                                height: 1em !important;      
+                            }      
+                                  
+                            .menu-edit-list__toggle svg {      
+                                width: 1.2em !important;      
+                                height: 1.2em !important;      
+                            }      
+                                  
+                            .menu-edit-list__move.focus,      
+                            .menu-edit-list__toggle.focus {      
+                                background: rgba(255, 255, 255, 1) !important;      
+                                border-radius: 0.3em !important;      
                                 color: #000 !important;      
                             }  
                               
@@ -92,6 +164,7 @@
                     uk: 'Елемент без назви',  
                     zh: '未命名元素'  
                 }  
+            })
             // Застосування налаштувань лівого меню    
             function applyLeftMenu() {    
                 let sort = Lampa.Storage.get('menu_sort', [])    
