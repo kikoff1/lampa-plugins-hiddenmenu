@@ -5,7 +5,7 @@
         window.plugin_menu_editor_ready = true        
                 
         function initialize() {        
-            // Перевірка версії та додавання стилів        
+            // v.3 Перевірка версії та додавання стилів        
             try {        
                 const lampaVersion = Lampa.Manifest ? Lampa.Manifest.app_digital : 0        
                 const needsIconFix = lampaVersion < 300        
@@ -158,7 +158,7 @@
                 }    
             })  
   
-            // Застосування налаштувань лівого меню      
+            // ВИПРАВЛЕНО: Застосування налаштувань лівого меню з покращеною підтримкою версій < 3.0.0  
             function applyLeftMenu() {      
                 let sort = Lampa.Storage.get('menu_sort', [])      
                 let hide = Lampa.Storage.get('menu_hide', [])      
@@ -175,16 +175,37 @@
                     })      
                 }      
                     
-                // Застосовуємо приховування до ВСІХ пунктів меню (обидві секції)    
+                // ВИПРАВЛЕННЯ: Застосовуємо приховування до ВСІХ пунктів меню з обох секцій  
+                // Спочатку знімаємо всі приховування  
                 $('.menu .menu__item').removeClass('hidden')      
+                  
                 if(hide.length) {      
                     hide.forEach((name) => {      
-                        let item = $('.menu .menu__item').filter(function() {      
+                        // Шукаємо в обох секціях окремо  
+                        let item = $('.menu .menu__list').find('.menu__item').filter(function() {      
                             return $(this).find('.menu__text').text().trim() === name      
                         })      
-                        if(item.length) item.addClass('hidden')      
+                        if(item.length) {  
+                            item.addClass('hidden')  
+                            console.log('Menu Editor: Hidden item:', name, item.length)  
+                        }  
                     })      
-                }      
+                }  
+                  
+                // Додаткова перевірка через невеликий таймаут для впевненості  
+                setTimeout(() => {  
+                    if(hide.length) {      
+                        hide.forEach((name) => {      
+                            let item = $('.menu .menu__list').find('.menu__item').filter(function() {      
+                                return $(this).find('.menu__text').text().trim() === name      
+                            })      
+                            if(item.length && !item.hasClass('hidden')) {  
+                                item.addClass('hidden')  
+                                console.log('Menu Editor: Re-applied hidden to:', name)  
+                            }  
+                        })      
+                    }  
+                }, 100)  
             }      
       
             // Застосування налаштувань верхнього меню      
@@ -519,7 +540,7 @@
                     })          
                 }, 300)          
             }
-            // Збереження налаштувань лівого меню          
+            // ВИПРАВЛЕНО: Збереження налаштувань лівого меню з логуванням  
             function saveLeftMenu() {          
                 let sort = []          
                 let hide = []          
@@ -534,10 +555,12 @@
                 $('.menu .menu__item').each(function(){    
                     if($(this).hasClass('hidden')){    
                         let name = $(this).find('.menu__text').text().trim()    
-                        hide.push(name)          
+                        hide.push(name)  
+                        console.log('Menu Editor: Saving hidden item:', name)  
                     }          
                 })          
     
+                console.log('Menu Editor: Saved hide list:', hide)  
                 Lampa.Storage.set('menu_sort', sort)          
                 Lampa.Storage.set('menu_hide', hide)          
             }          
@@ -659,11 +682,19 @@
             }        
                     
             addSettings()      
-                  
+              
+            // ВИПРАВЛЕНО: Збільшено таймаут для версій < 3.0.0 та додано слухач події меню  
             setTimeout(() => {      
                 applyLeftMenu()      
                 setTimeout(applyTopMenu, 300)      
-            }, 500)      
+            }, 1000)  // Збільшено з 500 до 1000 для версій < 3.0.0  
+              
+            // Додатковий слухач події завершення ініціалізації меню  
+            Lampa.Listener.follow('menu', (e) => {  
+                if(e.type === 'end') {  
+                    setTimeout(applyLeftMenu, 200)  
+                }  
+            })  
                   
             Lampa.Listener.follow('activity', (e) => {      
                 if(e.type === 'start' && e.component === 'settings') {      
