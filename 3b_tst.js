@@ -1,4 +1,4 @@
-// Версія плагіну: 2.4 - Точне приховування тільки кнопки "Джерела"  
+// Версія плагіну: 2.5 - Остаточне видалення кнопки "Джерело"  
 // Розділяє кнопки окремо: Онлайн, Торренти, Трейлери  
   
 (function() {  
@@ -53,8 +53,10 @@
                 console.log(`${PLUGIN_NAME}: Додано кнопку Трейлерів`);  
             }  
               
-            // Видаляємо ТІЛЬКИ порожню кнопку "Джерела"  
-            removeSourcesButton(mainContainer);  
+            // Видаляємо кнопку "Джерела" - покращена логіка  
+            setTimeout(() => {  
+                removeSourcesButton(mainContainer);  
+            }, 100);  
               
             // Сортуємо через CSS order  
             reorderButtons(mainContainer);  
@@ -63,7 +65,7 @@
             if (Lampa.Controller) {  
                 setTimeout(() => {  
                     Lampa.Controller.collectionSet(mainContainer.parent());  
-                }, 100);  
+                }, 150);  
             }  
               
         } catch (error) {  
@@ -72,20 +74,40 @@
     }  
       
     function removeSourcesButton(container) {  
-        // Шукаємо кнопку "Джерела" за текстом  
-        container.find('.full-start__button').each(function() {  
+        // Шукаємо всі кнопки  
+        const allButtons = container.find('.full-start__button');  
+          
+        console.log(`${PLUGIN_NAME}: Всього кнопок для перевірки: ${allButtons.length}`);  
+          
+        allButtons.each(function() {  
             const button = $(this);  
             const text = button.text().toLowerCase().trim();  
             const classes = button.attr('class') || '';  
               
-            // Видаляємо ТІЛЬКИ якщо це кнопка "Джерела" за текстом  
-            if ((text.includes('джерела') || text.includes('sources') || text.includes('источники')) &&  
-                !classes.includes('view--online') &&  
-                !classes.includes('view--torrent') &&  
-                !classes.includes('view--trailer')) {  
+            // Виводимо інформацію про кожну кнопку для діагностики  
+            console.log(`${PLUGIN_NAME}: Перевірка кнопки: "${text}", класи: "${classes}"`);  
+              
+            // Перевіряємо чи це НЕ важлива кнопка  
+            const isImportantButton = classes.includes('view--online') ||   
+                                     classes.includes('view--torrent') ||   
+                                     classes.includes('view--trailer') ||  
+                                     classes.includes('button--play') ||  
+                                     classes.includes('button--book') ||  
+                                     classes.includes('button--reaction') ||  
+                                     classes.includes('button--subscribe') ||  
+                                     classes.includes('button--options');  
+              
+            // Якщо це не важлива кнопка і вона містить "джерела" або порожня  
+            if (!isImportantButton) {  
+                const isSourcesButton = text.includes('джерела') ||   
+                                       text.includes('sources') ||   
+                                       text.includes('источники') ||  
+                                       text === '';  
                   
-                console.log(`${PLUGIN_NAME}: Видаляємо кнопку "Джерела": "${text}"`);  
-                button.css('display', 'none');  
+                if (isSourcesButton) {  
+                    console.log(`${PLUGIN_NAME}: Видаляємо кнопку: "${text}"`);  
+                    button.remove();  
+                }  
             }  
         });  
     }  
