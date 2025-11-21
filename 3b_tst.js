@@ -1,5 +1,5 @@
-// Версия плагина: 0.4 Alpha - Оптимизированная
-// Правильно разделяет кнопки: Онлайн, Торренты, Трейлеры отдельно
+// Версія плагіну: 0.4 Alpha - Оптимізована
+// Розділяє кнопки окремо: Онлайн, Торренти, Трейлери
 
 Lampa.Platform.tv();
 
@@ -10,54 +10,126 @@ Lampa.Platform.tv();
     
     function rearrangeButtons() {
         try {
-            // Очищаем параметр приоритета (как в оригинальном плагине)
+            // Очищаємо параметр пріоритету (як в оригінальному плагіні)
             if (Lampa.Storage.get('full_btn_priority')) {
                 Lampa.Storage.set('full_btn_priority', '{}');
             }
             
-            // Подписываемся на событие создания кнопок
+            // Слухаємо події створення кнопок
             Lampa.Listener.follow('view_button_create', function(event) {
                 if (!event || !event.buttons || !event.buttons.length) return;
                 
                 setTimeout(() => {
-                    const buttons = event.buttons;
-                    const container = findButtonContainer();
-                    
-                    if (!container) return;
-                    
-                    // Сортируем кнопки по категориям
-                    const sortedButtons = sortButtonsByCategory(buttons);
-                    
-                    // Перестраиваем порядок в контейнере
-                    rebuildButtonLayout(container, sortedButtons);
-                    
-                }, 100);
+                    processAllButtons();
+                }, 300);
             });
             
+            // Також обробляємо кнопки при завантаженні
+            setTimeout(processAllButtons, 1000);
+            
         } catch (error) {
-            console.warn(`${PLUGIN_NAME}: Error`, error);
+            console.warn(`${PLUGIN_NAME}: Помилка`, error);
         }
     }
     
-    // Поиск контейнера кнопок
-    function findButtonContainer() {
-        // Ищем различные возможные контейнеры кнопок
+    // Головна функція обробки всіх кнопок
+    function processAllButtons() {
+        const containers = findButtonContainers();
+        
+        containers.forEach(container => {
+            if (container && container.children.length > 0) {
+                flattenButtonContainer(container);
+            }
+        });
+    }
+    
+    // Знаходимо всі контейнери з кнопками
+    function findButtonContainers() {
         const selectors = [
             '.selector--buttons',
             '.view-buttons',
+            '.full-buttons',
             '[class*="button"]',
-            '.full-buttons'
+            '.buttons-group',
+            '.selector--filters'
         ];
         
-        for (let selector of selectors) {
-            const container = document.querySelector(selector);
-            if (container) return container;
-        }
+        const containers = [];
+        selectors.forEach(selector => {
+            const found = document.querySelectorAll(selector);
+            found.forEach(container => {
+                if (container.children.length > 0) {
+                    containers.push(container);
+                }
+            });
+        });
         
-        return null;
+        return containers;
     }
     
-    // Сортировка кнопок по категориям
+    // Розгортаємо контейнер з кнопками
+    function flattenButtonContainer(container) {
+        // Знаходимо всі кнопки в контейнері (включаючи вкладені)
+        const allButtons = findAllButtons(container);
+        
+        if (allButtons.length <= 1) return;
+        
+        // Сортуємо кнопки по категоріях
+        const sortedButtons = sortButtonsByCategory(allButtons);
+        
+        // Очищаємо контейнер
+        container.innerHTML = '';
+        
+        // Додаємо кнопки в правильному порядку
+        addButtonsInOrder(container, sortedButtons);
+    }
+    
+    // Знаходимо всі кнопки (рекурсивно)
+    function findAllButtons(element) {
+        const buttons = [];
+        
+        function collectButtons(el) {
+            // Перевіряємо, чи це кнопка
+            if (isButtonElement(el)) {
+                buttons.push(el);
+                return;
+            }
+            
+            // Якщо це контейнер, перевіряємо дітей
+            if (el.children && el.children.length > 0) {
+                Array.from(el.children).forEach(child => {
+                    collectButtons(child);
+                });
+            }
+        }
+        
+        collectButtons(element);
+        return buttons;
+    }
+    
+    // Перевіряємо, чи елемент є кнопкою
+    function isButtonElement(element) {
+        if (!element || !element.tagName) return false;
+        
+        const tag = element.tagName.toLowerCase();
+        const role = element.getAttribute('role');
+        const className = (element.className || '').toLowerCase();
+        const text = (element.textContent || '').toLowerCase();
+        
+        // Якщо це явно кнопка або має текст джерела
+        return tag === 'button' || 
+               role === 'button' ||
+               className.includes('button') ||
+               className.includes('btn') ||
+               text.includes('онлайн') ||
+               text.includes('торрент') ||
+               text.includes('трейлер') ||
+               text.includes('дивитись') ||
+               text.includes('дивитися') ||
+               element.querySelector('.button') !== null;
+    }
+    
+    // Сортуємо кнопки по категоріях
     function sortButtonsByCategory(buttons) {
         const categories = {
             online: [],
@@ -67,203 +139,149 @@ Lampa.Platform.tv();
         };
         
         buttons.forEach(button => {
-            const buttonInfo = extractButtonInfo(button);
-            categories[buttonInfo.category].push(button);
+            const category = detectButtonCategory(button);
+            categories[category].push(button);
         });
         
         return categories;
     }
     
-    // Извлечение информации о кнопке
-    function extractButtonInfo(button) {
-        if (!button) return { category: 'other' };
+    // Визначаємо категорію кнопки
+    function detectButtonCategory(button) {
+        if (!button) return 'other';
         
-        // Анализируем различные свойства кнопки
-        const title = (button.title || '').toLowerCase();
-        const html = (button.innerHTML || '').toLowerCase();
+        // Отримуємо весь текст кнопки
         const text = (button.textContent || '').toLowerCase();
+        const html = (button.innerHTML || '').toLowerCase();
+        const title = (button.title || '').toLowerCase();
         const className = (button.className || '').toLowerCase();
         
-        // Определяем категорию по содержимому
-        if (title.includes('онлайн') || title.includes('online') ||
-            html.includes('онлайн') || html.includes('online') ||
-            text.includes('онлайн') || text.includes('online') ||
-            className.includes('online')) {
-            return { category: 'online', element: button };
+        const allText = text + ' ' + html + ' ' + title + ' ' + className;
+        
+        // Онлайн провайдери
+        if (allText.includes('онлайн') || 
+            allText.includes('online') ||
+            allText.includes('hdrezk') ||
+            allText.includes('voidboost') ||
+            allText.includes('ashdi') ||
+            allText.includes('collaps') ||
+            allText.includes('bazon')) {
+            return 'online';
         }
         
-        if (title.includes('торрент') || title.includes('torrent') ||
-            html.includes('торрент') || html.includes('torrent') ||
-            text.includes('торрент') || text.includes('torrent') ||
-            className.includes('torrent')) {
-            return { category: 'torrent', element: button };
+        // Торренти
+        if (allText.includes('торрент') ||
+            allText.includes('torrent') ||
+            allText.includes('трекер') ||
+            allText.includes('rutracker') ||
+            allText.includes('rutor') ||
+            allText.includes('kinozal')) {
+            return 'torrent';
         }
         
-        if (title.includes('трейлер') || title.includes('trailer') ||
-            html.includes('трейлер') || html.includes('trailer') ||
-            text.includes('трейлер') || text.includes('trailer') ||
-            className.includes('trailer')) {
-            return { category: 'trailer', element: button };
+        // Трейлери
+        if (allText.includes('трейлер') ||
+            allText.includes('trailer') ||
+            allText.includes('youtube') ||
+            allText.includes('відео') ||
+            allText.includes('video')) {
+            return 'trailer';
         }
         
-        return { category: 'other', element: button };
+        return 'other';
     }
     
-    // Перестройка layout кнопок
-    function rebuildButtonLayout(container, categories) {
-        // Сохраняем оригинальные стили
-        const originalDisplay = container.style.display;
-        container.style.display = 'none';
-        
-        // Очищаем контейнер
-        while (container.firstChild) {
-            container.removeChild(container.firstChild);
-        }
-        
-        // Добавляем кнопки в правильном порядке
+    // Додаємо кнопки в правильному порядку
+    function addButtonsInOrder(container, categories) {
         const order = ['online', 'torrent', 'trailer', 'other'];
         
         order.forEach(category => {
-            categories[category].forEach(button => {
-                if (button && button.parentNode !== container) {
-                    // Убеждаемся, что кнопка отображается как отдельный элемент
-                    ensureButtonVisibility(button);
+            if (categories[category] && categories[category].length > 0) {
+                categories[category].forEach(button => {
+                    // Відновлюємо стилі для коректного відображення
+                    resetButtonStyles(button);
                     container.appendChild(button);
-                }
-            });
-        });
-        
-        // Восстанавливаем отображение
-        container.style.display = originalDisplay || '';
-    }
-    
-    // Гарантируем видимость кнопки как отдельного элемента
-    function ensureButtonVisibility(button) {
-        if (!button) return;
-        
-        // Убираем возможные группирующие стили
-        button.style.display = '';
-        button.style.flex = '';
-        button.style.width = '';
-        button.style.margin = '2px 5px';
-        
-        // Убираем классы, которые могут группировать кнопки
-        const groupClasses = ['dropdown', 'group', 'nested', 'submenu'];
-        groupClasses.forEach(cls => {
-            if (button.classList.contains(cls)) {
-                button.classList.remove(cls);
-            }
-        });
-    }
-    
-    // Альтернативный подход - модификация через Observer
-    function observeButtonChanges() {
-        const observer = new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
-                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                    mutation.addedNodes.forEach(function(node) {
-                        if (node.nodeType === 1 && 
-                            (node.classList.contains('button') || 
-                             node.querySelector('.button'))) {
-                            setTimeout(processButtonGroup, 50);
-                        }
-                    });
-                }
-            });
-        });
-        
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-    }
-    
-    // Обработка группы кнопок
-    function processButtonGroup() {
-        const buttonContainers = document.querySelectorAll('[class*="button"], [class*="btn"]');
-        
-        buttonContainers.forEach(container => {
-            if (container.children.length > 1) {
-                const buttons = Array.from(container.children);
-                const hasDropdown = buttons.some(btn => 
-                    btn.classList.contains('dropdown') || 
-                    btn.querySelector('.dropdown')
-                );
-                
-                if (hasDropdown) {
-                    flattenButtonGroups(container);
-                }
-            }
-        });
-    }
-    
-    // Разворачиваем группы кнопок
-    function flattenButtonGroups(container) {
-        const allButtons = [];
-        
-        // Рекурсивно собираем все кнопки
-        function collectButtons(element) {
-            if (element.classList.contains('button') || 
-                element.getAttribute('role') === 'button') {
-                allButtons.push(element);
-            } else {
-                Array.from(element.children).forEach(collectButtons);
-            }
-        }
-        
-        collectButtons(container);
-        
-        // Сортируем по категориям
-        const categorized = {};
-        allButtons.forEach(btn => {
-            const category = detectButtonCategory(btn);
-            if (!categorized[category]) categorized[category] = [];
-            categorized[category].push(btn);
-        });
-        
-        // Очищаем и перестраиваем
-        container.innerHTML = '';
-        
-        ['online', 'torrent', 'trailer', 'other'].forEach(category => {
-            if (categorized[category]) {
-                categorized[category].forEach(btn => {
-                    btn.style.display = '';
-                    btn.style.visibility = 'visible';
-                    container.appendChild(btn);
                 });
             }
         });
     }
     
-    // Детектор категории кнопки
-    function detectButtonCategory(button) {
-        const content = (button.textContent + ' ' + button.innerHTML).toLowerCase();
+    // Скидаємо стилі кнопки для коректного відображення
+    function resetButtonStyles(button) {
+        if (!button) return;
         
-        if (content.includes('онлайн') || content.includes('online')) return 'online';
-        if (content.includes('торрент') || content.includes('torrent')) return 'torrent';
-        if (content.includes('трейлер') || content.includes('trailer')) return 'trailer';
+        // Скидаємо стилі, які можуть ховати кнопку
+        button.style.display = '';
+        button.style.visibility = 'visible';
+        button.style.opacity = '';
+        button.style.width = '';
+        button.style.height = '';
+        button.style.margin = '2px 4px';
+        button.style.flex = 'none';
         
-        return 'other';
+        // Видаляємо класи, які можуть групувати кнопки
+        const groupClasses = ['dropdown', 'submenu', 'hidden', 'collapsed'];
+        groupClasses.forEach(cls => {
+            if (button.classList.contains(cls)) {
+                button.classList.remove(cls);
+            }
+        });
+        
+        // Додаємо клас для окремого відображення
+        button.classList.add('single-button');
     }
     
-    // Инициализация
+    // Спостерігач для динамічних змін
+    function setupMutationObserver() {
+        const observer = new MutationObserver(function(mutations) {
+            let shouldProcess = false;
+            
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                    mutation.addedNodes.forEach(function(node) {
+                        if (node.nodeType === 1 && 
+                            (node.classList && 
+                             (node.classList.contains('button') || 
+                              node.querySelector('.button')))) {
+                            shouldProcess = true;
+                        }
+                    });
+                }
+            });
+            
+            if (shouldProcess) {
+                setTimeout(processAllButtons, 200);
+            }
+        });
+        
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['class', 'style']
+        });
+    }
+    
+    // Ініціалізація плагіна
     function initPlugin() {
         if (typeof Lampa === 'undefined') {
             setTimeout(initPlugin, 100);
             return;
         }
         
-        // Запускаем оба метода для надежности
+        // Запускаємо основну логіку
         rearrangeButtons();
-        observeButtonChanges();
         
-        // Дополнительная обработка через 2 секунды
-        setTimeout(processButtonGroup, 2000);
+        // Запускаємо спостерігач
+        setupMutationObserver();
         
-        console.log(`${PLUGIN_NAME}: Initialized`);
+        // Додаткова обробка через 3 секунди
+        setTimeout(processAllButtons, 3000);
+        
+        console.log(`${PLUGIN_NAME}: Плагін успішно ініціалізовано`);
     }
     
-    // Запуск
+    // Запускаємо плагін
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initPlugin);
     } else {
