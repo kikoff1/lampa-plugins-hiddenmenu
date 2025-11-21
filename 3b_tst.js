@@ -1,10 +1,10 @@
-// Версія плагіну: 0.7 - Запобігання групуванню  
-// Розділяє кнопки окремо: Онлайн, Торренти, Трейлери  
+// Версія плагіну: 1.0 - Повністю нова логіка  
+// Не чіпає події кнопок, працює тільки з CSS та порядком  
   
 (function() {  
     'use strict';  
       
-    const PLUGIN_NAME = 'ButtonSeparatorPlugin';  
+    const PLUGIN_NAME = 'ButtonSeparator';  
       
     function initPlugin() {  
         if (typeof Lampa === 'undefined') {  
@@ -12,47 +12,38 @@
             return;  
         }  
           
-        console.log(`${PLUGIN_NAME}: Ініціалізація плагіна`);  
+        console.log(`${PLUGIN_NAME}: Запуск плагіна`);  
           
-        // Перехоплюємо подію ПЕРЕД групуванням кнопок  
+        // Слухаємо подію завершення рендерингу full-сторінки  
         Lampa.Listener.follow('full', function(event) {  
-            if (event.type === 'init') {  
-                // Відключаємо модуль Buttons, який групує кнопки  
-                if (event.object && event.object.buttons) {  
-                    event.object.buttons = null;  
-                }  
-            }  
-              
             if (event.type === 'complite') {  
                 setTimeout(() => {  
                     processButtons(event);  
-                }, 200);  
+                }, 300);  
             }  
         });  
     }  
       
     function processButtons(event) {  
         try {  
-            const activity = event.object.activity;  
-            const render = activity.render();  
+            const render = event.object.activity.render();  
+            const container = render.find('.full-start-new__buttons');  
               
-            const buttonsContainer = render.find('.full-start-new__buttons');  
-              
-            if (!buttonsContainer.length) {  
-                console.warn(`${PLUGIN_NAME}: Контейнер кнопок не знайдено`);  
+            if (!container.length) {  
+                console.warn(`${PLUGIN_NAME}: Контейнер не знайдено`);  
                 return;  
             }  
               
-            separateButtons(buttonsContainer);  
+            reorderButtons(container);  
               
         } catch (error) {  
-            console.error(`${PLUGIN_NAME}: Помилка обробки кнопок`, error);  
+            console.error(`${PLUGIN_NAME}: Помилка`, error);  
         }  
     }  
       
-    function separateButtons(container) {  
-        // Знаходимо ВСІ кнопки, включаючи приховані  
-        const allButtons = container.find('.full-start__button, .view--torrent, .view--trailer, .view--online');  
+    function reorderButtons(container) {  
+        // Знаходимо всі кнопки  
+        const allButtons = container.find('.full-start__button');  
           
         if (allButtons.length === 0) {  
             console.warn(`${PLUGIN_NAME}: Кнопки не знайдено`);  
@@ -61,97 +52,95 @@
           
         console.log(`${PLUGIN_NAME}: Знайдено ${allButtons.length} кнопок`);  
           
-        // Категоризуємо  
-        const categorized = {  
-            online: [],  
-            torrent: [],  
-            trailer: [],  
-            other: []  
-        };  
+        // Створюємо масив кнопок з їх категоріями та порядком  
+        const buttonData = [];  
           
-        allButtons.each(function() {  
+        allButtons.each(function(index) {  
             const button = $(this);  
-            const category = detectCategory(button);  
+            const category = getCategory(button);  
+            const order = getCategoryOrder(category);  
               
-            console.log(`${PLUGIN_NAME}: Кнопка "${button.text().trim()}" -> категорія: ${category}`);  
-              
-            categorized[category].push(button);  
-        });  
-          
-        // Очищаємо контейнер  
-        container.empty();  
-          
-        // Додаємо кнопки в правильному порядку  
-        const order = ['online', 'torrent', 'trailer', 'other'];  
-          
-        order.forEach(category => {  
-            categorized[category].forEach(button => {  
-                // Робимо кнопку видимою та активною  
-                button.removeClass('hide');  
-                button.addClass('selector');  
-                button.css({  
-                    'display': 'inline-block',  
-                    'visibility': 'visible',  
-                    'opacity': '1'  
-                });  
-                  
-                container.append(button);  
+            buttonData.push({  
+                element: button,  
+                category: category,  
+                order: order,  
+                originalIndex: index  
             });  
+              
+            console.log(`${PLUGIN_NAME}: "${button.text().trim()}" -> ${category} (order: ${order})`);  
         });  
           
-        console.log(`${PLUGIN_NAME}: Розподіл: Онлайн=${categorized.online.length}, Торренти=${categorized.torrent.length}, Трейлери=${categorized.trailer.length}, Інші=${categorized.other.length}`);  
+        // Сортуємо за порядком категорій  
+        buttonData.sort((a, b) => {  
+            if (a.order !== b.order) {  
+                return a.order - b.order;  
+            }  
+            return a.originalIndex - b.originalIndex;  
+        });  
           
-        // Оновлюємо навігацію  
-        if (Lampa.Controller) {  
-            setTimeout(() => {  
-                Lampa.Controller.collectionSet(container.parent());  
-                Lampa.Controller.collectionFocus(false, container.parent());  
-            }, 100);  
-        }  
+        // Застосовуємо CSS order для зміни порядку БЕЗ переміщення в DOM  
+        buttonData.forEach((data, index) => {  
+            data.element.css('order', index);  
+        });  
+          
+        // Переконуємося, що контейнер використовує flexbox  
+        container.css('display', 'flex');  
+          
+        console.log(`${PLUGIN_NAME}: Порядок кнопок змінено через CSS order`);  
     }  
       
-    function detectCategory(button) {  
+    function getCategory(button) {  
         const text = button.text().toLowerCase();  
         const classes = button.attr('class') || '';  
         const html = button.html().toLowerCase();  
           
-        const allText = text + ' ' + classes + ' ' + html;  
+        const combined = text + ' ' + classes + ' ' + html;  
           
-        // Торренти - перевіряємо спочатку клас  
-        if (classes.includes('view--torrent') ||   
-            allText.includes('торрент') ||  
-            allText.includes('torrent')) {  
+        // Онлайн  
+        if (classes.includes('view--online') ||   
+            combined.includes('онлайн') ||  
+            combined.includes('online') ||  
+            combined.includes('prestige')) {  
+            return 'online';  
+        }  
+          
+        // Торренти  
+        if (classes.includes('view--torrent') ||  
+            combined.includes('торрент') ||  
+            combined.includes('torrent')) {  
             return 'torrent';  
         }  
           
         // Трейлери  
         if (classes.includes('view--trailer') ||  
-            allText.includes('трейлер') ||  
-            allText.includes('trailer')) {  
+            combined.includes('трейлер') ||  
+            combined.includes('trailer')) {  
             return 'trailer';  
         }  
           
-        // Онлайн  
-        if (classes.includes('view--online') ||  
-            allText.includes('онлайн') ||   
-            allText.includes('online') ||  
-            allText.includes('hdrezk') ||  
-            allText.includes('voidboost') ||  
-            allText.includes('ashdi') ||  
-            allText.includes('collaps') ||  
-            allText.includes('bazon') ||  
-            allText.includes('filmix') ||  
-            allText.includes('videocdn') ||  
-            allText.includes('rezka') ||  
-            allText.includes('kinobase') ||  
-            allText.includes('prestige')) {  
-            return 'online';  
+        // Джерела (групова кнопка)  
+        if (combined.includes('джерела') ||  
+            combined.includes('sources') ||  
+            combined.includes('источники')) {  
+            return 'sources';  
         }  
           
         return 'other';  
     }  
       
-    // Запускаємо плагін  
+    function getCategoryOrder(category) {  
+        const orderMap = {  
+            'online': 1,  
+            'torrent': 2,  
+            'trailer': 3,  
+            'sources': 4,  
+            'other': 5  
+        };  
+          
+        return orderMap[category] || 999;  
+    }  
+      
+    // Запуск  
     if (document.readyState === 'loading') {  
         document.addEventListener('DOMContentLoaded', initPlugin);  
     } else {  
