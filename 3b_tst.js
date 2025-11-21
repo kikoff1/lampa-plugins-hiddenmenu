@@ -122,19 +122,15 @@
                 torrentBtn.removeClass('hide').addClass('selector');  
                 mainContainer.append(torrentBtn);  
                 showDebug('✓ Додано кнопку Торрентів');  
-            } else {  
-                showDebug('⚠ Кнопка Торрентів не знайдена');  
             }  
               
             if (trailerBtn.length > 0) {  
                 trailerBtn.removeClass('hide').addClass('selector');  
                 mainContainer.append(trailerBtn);  
                 showDebug('✓ Додано кнопку Трейлерів');  
-            } else {  
-                showDebug('⚠ Кнопка Трейлерів не знайдена');  
             }  
               
-            // Видаляємо порожню кнопку "Джерела"  
+            // Видаляємо порожню кнопку "Джерела" з затримкою  
             setTimeout(() => {  
                 removeSourcesButton(mainContainer);  
             }, 150);  
@@ -150,12 +146,12 @@
             }  
               
         } catch (error) {  
-            showDebug('❌ Помилка: ' + error.message, true);  
+            showDebug(`❌ Помилка: ${error.message}`, true);  
         }  
     }  
       
-    function removeSourcesButton(container) {  
-        const allButtons = container.find('.full-start__button');  
+    function removeSourcesButton(mainContainer) {  
+        const allButtons = mainContainer.find('.full-start__button');  
           
         showDebug(`Перевірка ${allButtons.length} кнопок`);  
           
@@ -166,7 +162,7 @@
             const text = button.text().toLowerCase().trim();  
             const classes = button.attr('class') || '';  
               
-            // Список важливих кнопок  
+            // Список важливих кнопок, які НЕ треба видаляти  
             const isImportantButton = classes.includes('view--online') ||   
                                      classes.includes('view--torrent') ||   
                                      classes.includes('view--trailer') ||  
@@ -174,13 +170,13 @@
                                      classes.includes('button--book') ||  
                                      classes.includes('button--reaction') ||  
                                      classes.includes('button--subscribe') ||  
+                                     classes.includes('button--subs') ||  
                                      classes.includes('button--options');  
               
             // Перевіряємо чи це кнопка "Джерела"  
             const isSourcesButton = text.includes('джерела') ||   
                                    text.includes('джерело') ||  
                                    text.includes('sources') ||   
-                                   text.includes('source') ||  
                                    text.includes('источники') ||  
                                    text.includes('источник');  
               
@@ -189,20 +185,18 @@
               
             // Видаляємо якщо це кнопка джерел або порожня кнопка без важливих класів  
             if (!isImportantButton && (isSourcesButton || isEmpty)) {  
-                showDebug(`🗑 Видаляємо: "${text}" (класи: ${classes.substring(0, 40)})`);  
+                showDebug(`🗑 Видаляємо кнопку: "${text}" (класи: ${classes})`);  
                 button.remove();  
                 removedCount++;  
             }  
         });  
           
+        // Якщо нічого не видалено, виводимо список всіх кнопок  
         if (removedCount === 0) {  
-            showDebug('⚠ Жодної кнопки не видалено. Список всіх кнопок:');  
-              
-            allButtons.each(function() {  
-                const button = $(this);  
-                const text = button.text().toLowerCase().trim();  
-                const classes = button.attr('class') || '';  
-                showDebug(`📋 Кнопка: "${text.substring(0, 20)}" | Класи: ${classes.substring(0, 40)}`);  
+            showDebug(`⚠ Жодної кнопки не видалено. Список всіх кнопок:`);  
+            mainContainer.find('.full-start__button').each(function() {  
+                const btn = $(this);  
+                showDebug(`📋 Кнопка: "${btn.text().toLowerCase().trim()}" | Класи: ${btn.attr('class')}`);  
             });  
         } else {  
             showDebug(`✓ Видалено ${removedCount} кнопок`);  
@@ -241,8 +235,6 @@
           
         if (!mainContainer) return;  
           
-        stopObserver();  
-          
         observer = new MutationObserver(function(mutations) {  
             mutations.forEach(function(mutation) {  
                 if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {  
@@ -258,6 +250,7 @@
                                                      classes.includes('button--book') ||  
                                                      classes.includes('button--reaction') ||  
                                                      classes.includes('button--subscribe') ||  
+                                                     classes.includes('button--subs') ||  
                                                      classes.includes('button--options');  
                               
                             const isSourcesButton = text.includes('джерела') ||   
@@ -270,7 +263,7 @@
                             const isEmpty = text === '' || text.length <= 2;  
                               
                             if (!isImportantButton && (isSourcesButton || isEmpty)) {  
-                                showDebug(`🔍 Observer видаляє: "${text}"`);  
+                                showDebug(`🔍 Observer видаляє кнопку: "${text}"`);  
                                 $(node).remove();  
                             }  
                         }  
