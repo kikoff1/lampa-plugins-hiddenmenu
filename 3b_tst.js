@@ -1,4 +1,4 @@
-// Версія плагіну: 1.2 - Виправлення порожньої кнопки "Джерело"  
+// Версія плагіну: 1.3 - Остаточне виправлення  
 // Розділяє кнопки окремо: Онлайн, Торренти, Трейлери  
   
 (function() {  
@@ -72,29 +72,31 @@
     }  
       
     function removeSourcesButtons(container) {  
-        // Шукаємо всі можливі варіанти кнопки "Джерела"  
+        // Шукаємо всі кнопки  
         const allButtons = container.find('.full-start__button');  
           
         allButtons.each(function() {  
             const button = $(this);  
             const text = button.text().toLowerCase().trim();  
             const classes = button.attr('class') || '';  
+            const hasViewClass = classes.includes('view--online') ||   
+                                classes.includes('view--torrent') ||   
+                                classes.includes('view--trailer');  
               
-            // Перевіряємо чи це кнопка "Джерела"  
-            if (text.includes('джерела') ||   
-                text.includes('sources') ||   
-                text.includes('источники') ||  
-                text === '' || // Порожня кнопка  
-                classes.includes('full-start__button--sources')) {  
-                  
-                // Додаткова перевірка: чи не є це онлайн/торрент/трейлер кнопка  
-                if (!classes.includes('view--online') &&   
-                    !classes.includes('view--torrent') &&   
-                    !classes.includes('view--trailer')) {  
-                      
-                    console.log(`${PLUGIN_NAME}: Видаляємо кнопку: "${text}" (класи: ${classes})`);  
-                    button.remove();  
-                }  
+            // Видаляємо кнопку якщо:  
+            // 1. Вона містить текст "джерела/sources/источники"  
+            // 2. Вона порожня  
+            // 3. Вона НЕ має класів view--*  
+            const isSourcesButton = text.includes('джерела') ||   
+                                   text.includes('sources') ||   
+                                   text.includes('источники');  
+              
+            const isEmpty = text === '' || text.length === 0;  
+              
+            // Видаляємо якщо це кнопка джерел АБО порожня кнопка без view класів  
+            if ((isSourcesButton || isEmpty) && !hasViewClass) {  
+                console.log(`${PLUGIN_NAME}: Видаляємо кнопку: "${text}" (класи: ${classes})`);  
+                button.remove();  
             }  
         });  
     }  
@@ -119,6 +121,8 @@
                 order: order,  
                 originalIndex: index  
             });  
+              
+            console.log(`${PLUGIN_NAME}: "${button.text().trim()}" -> ${category} (order: ${order})`);  
         });  
           
         buttonData.sort((a, b) => {  
