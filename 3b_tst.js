@@ -1,4 +1,4 @@
-// Версія плагіну: 3.1 - З візуальним логуванням для телефону  
+// Версія плагіну: 3.2 - Фінальна версія з копіюванням звіту  
 // Розділяє кнопки окремо: Онлайн, Торренти, Трейлери  
   
 (function() {  
@@ -22,15 +22,32 @@
         }  
     }  
       
-    // Функція для показу детального звіту  
+    // Функція для показу детального звіту з можливістю копіювання  
     function showDetailedReport() {  
         if (typeof Lampa !== 'undefined' && Lampa.Modal) {  
-            const report = debugLogs.join('<br>');  
+            const report = debugLogs.join('\n');  
+            const reportHtml = debugLogs.join('<br>');  
+              
+            const content = $('<div class="about"><div style="max-height: 400px; overflow-y: auto; user-select: text; -webkit-user-select: text;">' + reportHtml + '</div></div>');  
+              
             Lampa.Modal.open({  
                 title: 'Звіт плагіна ButtonSeparator',  
-                html: $('<div class="about"><div style="max-height: 400px; overflow-y: auto;">' + report + '</div></div>'),  
+                html: content,  
                 size: 'medium',  
-                onBack: () => Lampa.Modal.close()  
+                buttons: [{  
+                    name: 'Копіювати звіт',  
+                    onSelect: () => {  
+                        Lampa.Utils.copyTextToClipboard(report, () => {  
+                            Lampa.Noty.show('✓ Звіт скопійовано в буфер обміну');  
+                        }, () => {  
+                            Lampa.Noty.show('❌ Помилка копіювання');  
+                        });  
+                    }  
+                }],  
+                onBack: () => {  
+                    Lampa.Modal.close();  
+                    Lampa.Controller.toggle('settings_component');  
+                }  
             });  
         }  
     }  
@@ -167,19 +184,20 @@
                                    text.includes('источники') ||  
                                    text.includes('источник');  
               
+            // Перевіряємо чи кнопка порожня або майже порожня  
             const isEmpty = text === '' || text.length <= 2;  
               
+            // Видаляємо якщо це кнопка джерел або порожня кнопка без важливих класів  
             if (!isImportantButton && (isSourcesButton || isEmpty)) {  
-                showDebug(`🗑 Видаляємо: "${text}" (класи: ${classes.substring(0, 50)})`);  
+                showDebug(`🗑 Видаляємо: "${text}" (класи: ${classes.substring(0, 40)})`);  
                 button.remove();  
                 removedCount++;  
             }  
         });  
           
         if (removedCount === 0) {  
-            showDebug('⚠ Жодної кнопки "Джерела" не видалено');  
+            showDebug('⚠ Жодної кнопки не видалено. Список всіх кнопок:');  
               
-            // Виводимо список всіх кнопок для діагностики  
             allButtons.each(function() {  
                 const button = $(this);  
                 const text = button.text().toLowerCase().trim();  
