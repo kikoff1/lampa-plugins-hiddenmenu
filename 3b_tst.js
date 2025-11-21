@@ -1,4 +1,4 @@
-// Версія плагіну: 2.6 - Фінальна версія  
+// Версія плагіну: 2.5 - Остаточне видалення кнопки "Джерело"  
 // Розділяє кнопки окремо: Онлайн, Торренти, Трейлери  
   
 (function() {  
@@ -12,7 +12,7 @@
             return;  
         }  
           
-        console.log(`${PLUGIN_NAME}: Запуск плагіна`);  
+        console.log(`${PLUGIN_NAME}: Запуск`);  
           
         Lampa.Listener.follow('full', function(event) {  
             if (event.type === 'complite') {  
@@ -53,10 +53,10 @@
                 console.log(`${PLUGIN_NAME}: Додано кнопку Трейлерів`);  
             }  
               
-            // Видаляємо порожню кнопку "Джерела" з затримкою  
+            // Видаляємо кнопку "Джерела" - покращена логіка  
             setTimeout(() => {  
                 removeSourcesButton(mainContainer);  
-            }, 150);  
+            }, 100);  
               
             // Сортуємо через CSS order  
             reorderButtons(mainContainer);  
@@ -65,7 +65,7 @@
             if (Lampa.Controller) {  
                 setTimeout(() => {  
                     Lampa.Controller.collectionSet(mainContainer.parent());  
-                }, 200);  
+                }, 150);  
             }  
               
         } catch (error) {  
@@ -74,16 +74,20 @@
     }  
       
     function removeSourcesButton(container) {  
+        // Шукаємо всі кнопки  
         const allButtons = container.find('.full-start__button');  
           
-        console.log(`${PLUGIN_NAME}: Перевірка ${allButtons.length} кнопок`);  
+        console.log(`${PLUGIN_NAME}: Всього кнопок для перевірки: ${allButtons.length}`);  
           
         allButtons.each(function() {  
             const button = $(this);  
             const text = button.text().toLowerCase().trim();  
             const classes = button.attr('class') || '';  
               
-            // Список важливих кнопок, які НЕ треба видаляти  
+            // Виводимо інформацію про кожну кнопку для діагностики  
+            console.log(`${PLUGIN_NAME}: Перевірка кнопки: "${text}", класи: "${classes}"`);  
+              
+            // Перевіряємо чи це НЕ важлива кнопка  
             const isImportantButton = classes.includes('view--online') ||   
                                      classes.includes('view--torrent') ||   
                                      classes.includes('view--trailer') ||  
@@ -93,20 +97,17 @@
                                      classes.includes('button--subscribe') ||  
                                      classes.includes('button--options');  
               
-            // Перевіряємо чи це кнопка "Джерела"  
-            const isSourcesButton = text.includes('джерела') ||   
-                                   text.includes('джерело') ||  
-                                   text.includes('sources') ||   
-                                   text.includes('источники') ||  
-                                   text.includes('источник');  
-              
-            // Перевіряємо чи кнопка порожня або майже порожня  
-            const isEmpty = text === '' || text.length <= 2;  
-              
-            // Видаляємо якщо це кнопка джерел або порожня кнопка без важливих класів  
-            if (!isImportantButton && (isSourcesButton || isEmpty)) {  
-                console.log(`${PLUGIN_NAME}: Видаляємо кнопку: "${text}" (класи: ${classes})`);  
-                button.remove();  
+            // Якщо це не важлива кнопка і вона містить "джерела" або порожня  
+            if (!isImportantButton) {  
+                const isSourcesButton = text.includes('джерела') ||   
+                                       text.includes('sources') ||   
+                                       text.includes('источники') ||  
+                                       text === '';  
+                  
+                if (isSourcesButton) {  
+                    console.log(`${PLUGIN_NAME}: Видаляємо кнопку: "${text}"`);  
+                    button.remove();  
+                }  
             }  
         });  
     }  
@@ -114,9 +115,7 @@
     function reorderButtons(container) {  
         container.css('display', 'flex');  
           
-        const buttons = container.find('.full-start__button');  
-          
-        buttons.each(function() {  
+        container.find('.full-start__button').each(function() {  
             const button = $(this);  
             const classes = button.attr('class') || '';  
             const text = button.text().toLowerCase();  
