@@ -1,4 +1,4 @@
-// Версія плагіну: 0.5 - Виправлена версія  
+// Версія плагіну: 0.6 - Розгрупування кнопок  
 // Розділяє кнопки окремо: Онлайн, Торренти, Трейлери  
   
 (function() {  
@@ -37,24 +37,63 @@
               
             // Затримка для завершення рендерингу всіх кнопок  
             setTimeout(() => {  
-                separateButtons(buttonsContainer);  
-            }, 100);  
+                ungroupAndSeparateButtons(buttonsContainer);  
+            }, 150);  
               
         } catch (error) {  
             console.error(`${PLUGIN_NAME}: Помилка обробки кнопок`, error);  
         }  
     }  
       
+    function ungroupAndSeparateButtons(container) {  
+        // Знаходимо кнопку "Джерела" (sources)  
+        const sourcesButton = container.find('.full-start__button').filter(function() {  
+            const text = $(this).text().toLowerCase();  
+            return text.includes('джерела') || text.includes('sources') || text.includes('источники');  
+        });  
+          
+        if (sourcesButton.length > 0) {  
+            console.log(`${PLUGIN_NAME}: Знайдено кнопку "Джерела", розгруповуємо`);  
+              
+            // Знаходимо всі згруповані кнопки всередині  
+            const groupedButtons = sourcesButton.find('.full-start__button');  
+              
+            if (groupedButtons.length > 0) {  
+                // Витягуємо згруповані кнопки  
+                groupedButtons.each(function() {  
+                    const button = $(this);  
+                    // Видаляємо кнопку з групи і додаємо безпосередньо в контейнер  
+                    button.detach();  
+                    button.removeClass('hide');  
+                    button.addClass('selector');  
+                    container.append(button);  
+                });  
+                  
+                // Видаляємо порожню кнопку "Джерела"  
+                sourcesButton.remove();  
+                  
+                console.log(`${PLUGIN_NAME}: Розгруповано ${groupedButtons.length} кнопок`);  
+            }  
+        }  
+          
+        // Тепер сортуємо всі кнопки  
+        separateButtons(container);  
+    }  
+      
     function separateButtons(container) {  
         // Знаходимо всі кнопки в контейнері  
-        const buttons = container.find('.full-start__button, .selector');  
+        const buttons = container.find('.full-start__button, .selector').filter(function() {  
+            // Виключаємо вкладені кнопки  
+            return $(this).parent().hasClass('full-start-new__buttons') ||   
+                   $(this).parent().parent().hasClass('full-start-new__buttons');  
+        });  
           
         if (buttons.length === 0) {  
             console.warn(`${PLUGIN_NAME}: Кнопки не знайдено`);  
             return;  
         }  
           
-        console.log(`${PLUGIN_NAME}: Знайдено ${buttons.length} кнопок`);  
+        console.log(`${PLUGIN_NAME}: Знайдено ${buttons.length} кнопок для сортування`);  
           
         // Категоризуємо кнопки  
         const categorized = {  
@@ -70,7 +109,7 @@
             categorized[category].push(button);  
         });  
           
-        // Видаляємо всі кнопки з контейнера (але зберігаємо їх)  
+        // Видаляємо всі кнопки з контейнера  
         buttons.detach();  
           
         // Додаємо кнопки назад у правильному порядку  
@@ -78,8 +117,9 @@
           
         order.forEach(category => {  
             categorized[category].forEach(button => {  
-                // Переконуємося, що кнопка видима  
+                // Переконуємося, що кнопка видима і має правильні класи  
                 button.removeClass('hide');  
+                button.addClass('selector');  
                 button.css({  
                     'display': '',  
                     'visibility': 'visible',  
@@ -90,7 +130,8 @@
             });  
         });  
           
-        console.log(`${PLUGIN_NAME}: Кнопки успішно розділено`);  
+        console.log(`${PLUGIN_NAME}: Кнопки успішно розділено та відсортовано`);  
+        console.log(`${PLUGIN_NAME}: Онлайн: ${categorized.online.length}, Торренти: ${categorized.torrent.length}, Трейлери: ${categorized.trailer.length}, Інші: ${categorized.other.length}`);  
           
         // Оновлюємо Controller для нових позицій кнопок  
         if (Lampa.Controller) {  
