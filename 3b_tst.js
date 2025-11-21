@@ -1,5 +1,5 @@
-// Версія плагіну: 1.0 - Повністю нова логіка  
-// Не чіпає події кнопок, працює тільки з CSS та порядком  
+// Версія плагіну: 1.1 - Розгрупування через приховані кнопки  
+// Розділяє кнопки окремо: Онлайн, Торренти, Трейлери  
   
 (function() {  
     'use strict';  
@@ -14,7 +14,6 @@
           
         console.log(`${PLUGIN_NAME}: Запуск плагіна`);  
           
-        // Слухаємо подію завершення рендерингу full-сторінки  
         Lampa.Listener.follow('full', function(event) {  
             if (event.type === 'complite') {  
                 setTimeout(() => {  
@@ -27,14 +26,53 @@
     function processButtons(event) {  
         try {  
             const render = event.object.activity.render();  
-            const container = render.find('.full-start-new__buttons');  
+            const mainContainer = render.find('.full-start-new__buttons');  
+            const hiddenContainer = render.find('.buttons--container');  
               
-            if (!container.length) {  
-                console.warn(`${PLUGIN_NAME}: Контейнер не знайдено`);  
+            if (!mainContainer.length) {  
+                console.warn(`${PLUGIN_NAME}: Основний контейнер не знайдено`);  
                 return;  
             }  
               
-            reorderButtons(container);  
+            // Знаходимо приховані оригінальні кнопки  
+            const torrentBtn = hiddenContainer.find('.view--torrent');  
+            const trailerBtn = hiddenContainer.find('.view--trailer');  
+              
+            console.log(`${PLUGIN_NAME}: Торрент кнопка: ${torrentBtn.length}, Трейлер кнопка: ${trailerBtn.length}`);  
+              
+            // Видаляємо групову кнопку "Джерела" якщо вона є  
+            const sourcesBtn = mainContainer.find('.full-start__button').filter(function() {  
+                const text = $(this).text().toLowerCase();  
+                return text.includes('джерела') || text.includes('sources') || text.includes('источники');  
+            });  
+              
+            if (sourcesBtn.length > 0) {  
+                console.log(`${PLUGIN_NAME}: Видаляємо групову кнопку "Джерела"`);  
+                sourcesBtn.remove();  
+            }  
+              
+            // Переміщуємо приховані кнопки в основний контейнер  
+            if (torrentBtn.length > 0) {  
+                torrentBtn.removeClass('hide').addClass('selector');  
+                mainContainer.append(torrentBtn);  
+                console.log(`${PLUGIN_NAME}: Додано кнопку Торрентів`);  
+            }  
+              
+            if (trailerBtn.length > 0) {  
+                trailerBtn.removeClass('hide').addClass('selector');  
+                mainContainer.append(trailerBtn);  
+                console.log(`${PLUGIN_NAME}: Додано кнопку Трейлерів`);  
+            }  
+              
+            // Сортуємо всі кнопки через CSS order  
+            reorderButtons(mainContainer);  
+              
+            // Оновлюємо навігацію  
+            if (Lampa.Controller) {  
+                setTimeout(() => {  
+                    Lampa.Controller.collectionSet(mainContainer.parent());  
+                }, 100);  
+            }  
               
         } catch (error) {  
             console.error(`${PLUGIN_NAME}: Помилка`, error);  
@@ -42,17 +80,12 @@
     }  
       
     function reorderButtons(container) {  
-        // Знаходимо всі кнопки  
         const allButtons = container.find('.full-start__button');  
           
-        if (allButtons.length === 0) {  
-            console.warn(`${PLUGIN_NAME}: Кнопки не знайдено`);  
-            return;  
-        }  
+        if (allButtons.length === 0) return;  
           
-        console.log(`${PLUGIN_NAME}: Знайдено ${allButtons.length} кнопок`);  
+        console.log(`${PLUGIN_NAME}: Сортування ${allButtons.length} кнопок`);  
           
-        // Створюємо масив кнопок з їх категоріями та порядком  
         const buttonData = [];  
           
         allButtons.each(function(index) {  
@@ -66,11 +99,8 @@
                 order: order,  
                 originalIndex: index  
             });  
-              
-            console.log(`${PLUGIN_NAME}: "${button.text().trim()}" -> ${category} (order: ${order})`);  
         });  
           
-        // Сортуємо за порядком категорій  
         buttonData.sort((a, b) => {  
             if (a.order !== b.order) {  
                 return a.order - b.order;  
@@ -78,51 +108,31 @@
             return a.originalIndex - b.originalIndex;  
         });  
           
-        // Застосовуємо CSS order для зміни порядку БЕЗ переміщення в DOM  
         buttonData.forEach((data, index) => {  
             data.element.css('order', index);  
         });  
           
-        // Переконуємося, що контейнер використовує flexbox  
         container.css('display', 'flex');  
           
-        console.log(`${PLUGIN_NAME}: Порядок кнопок змінено через CSS order`);  
+        console.log(`${PLUGIN_NAME}: Порядок кнопок оновлено`);  
     }  
       
     function getCategory(button) {  
         const text = button.text().toLowerCase();  
         const classes = button.attr('class') || '';  
-        const html = button.html().toLowerCase();  
           
-        const combined = text + ' ' + classes + ' ' + html;  
+        const combined = text + ' ' + classes;  
           
-        // Онлайн  
-        if (classes.includes('view--online') ||   
-            combined.includes('онлайн') ||  
-            combined.includes('online') ||  
-            combined.includes('prestige')) {  
+        if (classes.includes('view--online') || combined.includes('онлайн') || combined.includes('online')) {  
             return 'online';  
         }  
           
-        // Торренти  
-        if (classes.includes('view--torrent') ||  
-            combined.includes('торрент') ||  
-            combined.includes('torrent')) {  
+        if (classes.includes('view--torrent') || combined.includes('торрент') || combined.includes('torrent')) {  
             return 'torrent';  
         }  
           
-        // Трейлери  
-        if (classes.includes('view--trailer') ||  
-            combined.includes('трейлер') ||  
-            combined.includes('trailer')) {  
+        if (classes.includes('view--trailer') || combined.includes('трейлер') || combined.includes('trailer')) {  
             return 'trailer';  
-        }  
-          
-        // Джерела (групова кнопка)  
-        if (combined.includes('джерела') ||  
-            combined.includes('sources') ||  
-            combined.includes('источники')) {  
-            return 'sources';  
         }  
           
         return 'other';  
@@ -133,14 +143,12 @@
             'online': 1,  
             'torrent': 2,  
             'trailer': 3,  
-            'sources': 4,  
-            'other': 5  
+            'other': 4  
         };  
           
         return orderMap[category] || 999;  
     }  
       
-    // Запуск  
     if (document.readyState === 'loading') {  
         document.addEventListener('DOMContentLoaded', initPlugin);  
     } else {  
