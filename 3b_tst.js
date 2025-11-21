@@ -1,4 +1,4 @@
-// Версія плагіну: 2.2 - Приховування порожньої кнопки "Джерело"  
+// Версія плагіну: 2.3 - Приховування через CSS  
 // Розділяє кнопки окремо: Онлайн, Торренти, Трейлери  
   
 (function() {  
@@ -14,6 +14,9 @@
           
         console.log(`${PLUGIN_NAME}: Запуск`);  
           
+        // Додаємо CSS правило для приховування порожніх кнопок  
+        addHideEmptyButtonsCSS();  
+          
         Lampa.Listener.follow('full', function(event) {  
             if (event.type === 'complite') {  
                 setTimeout(() => {  
@@ -21,6 +24,23 @@
                 }, 300);  
             }  
         });  
+    }  
+      
+    function addHideEmptyButtonsCSS() {  
+        const style = document.createElement('style');  
+        style.textContent = `  
+            /* Приховуємо порожні кнопки джерел */  
+            .full-start__button:not(.view--online):not(.view--torrent):not(.view--trailer) {  
+                display: none !important;  
+            }  
+              
+            /* Альтернативно: приховуємо кнопки без тексту */  
+            .full-start__button:empty {  
+                display: none !important;  
+            }  
+        `;  
+        document.head.appendChild(style);  
+        console.log(`${PLUGIN_NAME}: CSS правила додано`);  
     }  
       
     function processButtons(event) {  
@@ -44,15 +64,14 @@
             if (torrentBtn.length > 0) {  
                 torrentBtn.removeClass('hide').addClass('selector');  
                 mainContainer.append(torrentBtn);  
+                console.log(`${PLUGIN_NAME}: Додано кнопку Торрентів`);  
             }  
               
             if (trailerBtn.length > 0) {  
                 trailerBtn.removeClass('hide').addClass('selector');  
                 mainContainer.append(trailerBtn);  
+                console.log(`${PLUGIN_NAME}: Додано кнопку Трейлерів`);  
             }  
-              
-            // Видаляємо порожню кнопку "Джерела"  
-            removeEmptySourcesButton(mainContainer);  
               
             // Сортуємо через CSS order  
             reorderButtons(mainContainer);  
@@ -67,33 +86,6 @@
         } catch (error) {  
             console.error(`${PLUGIN_NAME}: Помилка`, error);  
         }  
-    }  
-      
-    function removeEmptySourcesButton(container) {  
-        // Знаходимо всі кнопки в контейнері  
-        container.find('.full-start__button').each(function() {  
-            const button = $(this);  
-            const text = button.text().toLowerCase().trim();  
-            const classes = button.attr('class') || '';  
-              
-            // Перевіряємо чи це кнопка "Джерела" або порожня кнопка  
-            const isSourcesButton = text.includes('джерела') ||   
-                                   text.includes('sources') ||   
-                                   text.includes('источники');  
-              
-            const isEmpty = text === '' || text.length === 0;  
-              
-            // Перевіряємо що це НЕ важлива кнопка (онлайн/торрент/трейлер)  
-            const hasViewClass = classes.includes('view--online') ||   
-                                classes.includes('view--torrent') ||   
-                                classes.includes('view--trailer');  
-              
-            // Видаляємо якщо це кнопка джерел або порожня кнопка без view класів  
-            if ((isSourcesButton || isEmpty) && !hasViewClass) {  
-                console.log(`${PLUGIN_NAME}: Видаляємо кнопку: "${text}" (класи: ${classes})`);  
-                button.remove();  
-            }  
-        });  
     }  
       
     function reorderButtons(container) {  
@@ -115,6 +107,8 @@
             }  
               
             button.css('order', order);  
+              
+            console.log(`${PLUGIN_NAME}: "${text.trim()}" -> order: ${order}, classes: ${classes}`);  
         });  
           
         console.log(`${PLUGIN_NAME}: Сортування завершено`);  
