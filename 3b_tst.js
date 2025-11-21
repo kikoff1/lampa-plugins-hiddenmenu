@@ -1,4 +1,4 @@
-// Версія плагіну: 3.3 - З логуванням натискань на кнопки  
+// Версія плагіну: 3.4 - Видалення кнопки "Дивитись"  
 // Розділяє кнопки окремо: Онлайн, Торренти, Трейлери  
   
 (function() {  
@@ -13,7 +13,6 @@
         debugLogs.push(message);  
         console.log(`${PLUGIN_NAME}: ${message}`);  
           
-        // Показуємо повідомлення через Noty  
         if (typeof Lampa !== 'undefined' && Lampa.Noty) {  
             Lampa.Noty.show(message, {  
                 time: isError ? 5000 : 3000,  
@@ -73,26 +72,24 @@
             }  
         });  
           
-        // Додаємо кнопку для показу детального звіту  
         setTimeout(() => {  
             addDebugButton();  
         }, 2000);  
     }  
       
     function addDebugButton() {  
-        // Додаємо кнопку в меню для показу звіту  
         if (typeof Lampa !== 'undefined' && Lampa.SettingsApi) {  
             Lampa.SettingsApi.addParam({  
                 component: 'more',  
                 param: {  
-                    name: 'button_separator_debug',  
+                    name: 'button_separator_report',  
                     type: 'button',  
+                    label: 'Звіт ButtonSeparator'  
                 },  
-                field: {  
-                    name: 'Звіт ButtonSeparator',  
-                },  
-                onChange: () => {  
-                    showDetailedReport();  
+                onRender: (item) => {  
+                    item.on('hover:enter', () => {  
+                        showDetailedReport();  
+                    });  
                 }  
             });  
         }  
@@ -105,19 +102,17 @@
             const hiddenContainer = render.find('.buttons--container');  
               
             if (!mainContainer.length) {  
-                showDebug('❌ Контейнер не знайдено', true);  
+                showDebug('⚠ Контейнер не знайдено', true);  
                 return;  
             }  
               
             showDebug('✓ Контейнер знайдено');  
               
-            // Знаходимо приховані оригінальні кнопки  
             const torrentBtn = hiddenContainer.find('.view--torrent');  
             const trailerBtn = hiddenContainer.find('.view--trailer');  
               
             showDebug(`Торрент: ${torrentBtn.length}, Трейлер: ${trailerBtn.length}`);  
               
-            // Переміщуємо приховані кнопки в основний контейнер  
             if (torrentBtn.length > 0) {  
                 torrentBtn.removeClass('hide').addClass('selector');  
                 mainContainer.append(torrentBtn);  
@@ -130,18 +125,14 @@
                 showDebug('✓ Додано кнопку Трейлерів');  
             }  
               
-            // Видаляємо порожню кнопку "Джерела"  
+            addButtonClickLogging(mainContainer);  
+              
+            reorderButtons(mainContainer);  
+              
             setTimeout(() => {  
                 removeSourcesButton(mainContainer);  
             }, 150);  
               
-            // Додаємо логування натискань на всі кнопки  
-            addButtonClickLogging(mainContainer);  
-              
-            // Сортуємо через CSS order  
-            reorderButtons(mainContainer);  
-              
-            // Оновлюємо навігацію  
             if (Lampa.Controller) {  
                 setTimeout(() => {  
                     Lampa.Controller.collectionSet(mainContainer.parent());  
@@ -149,45 +140,37 @@
             }  
               
         } catch (error) {  
-            showDebug(`❌ Помилка: ${error.message}`, true);  
+            showDebug('❌ Помилка: ' + error.message, true);  
         }  
     }  
       
-    // НОВА ФУНКЦІЯ: Додавання логування натискань на кнопки  
-    function addButtonClickLogging(container) {  
-        const allButtons = container.find('.full-start__button');  
+    function addButtonClickLogging(mainContainer) {  
+        const buttons = mainContainer.find('.full-start__button');  
           
-        allButtons.each(function() {  
+        showDebug(`✓ Додано логування для ${buttons.length} кнопок`);  
+          
+        buttons.each(function() {  
             const button = $(this);  
-            const text = button.text().trim() || '(порожня)';  
-            const classes = button.attr('class') || '';  
               
-            // Додаємо обробник події hover:enter  
-            button.on('hover:enter', function(e) {  
+            button.on('hover:enter', function() {  
+                const text = button.text().trim();  
+                const classes = button.attr('class') || '';  
+                  
                 showDebug(`🖱 НАТИСНУТО: "${text}" | Класи: ${classes}`);  
                   
-                // Відстежуємо, що відкривається після натискання  
                 setTimeout(() => {  
                     const activeController = Lampa.Controller.enabled();  
+                    if (activeController && activeController.name) {  
+                        showDebug(`📂 Відкрито контролер: ${activeController.name}`);  
+                    }  
+                      
                     const activeActivity = Lampa.Activity.active();  
-                      
-                    if (activeController) {  
-                        showDebug(`📂 Відкрито контролер: ${activeController.name || 'невідомо'}`);  
-                    }  
-                      
                     if (activeActivity && activeActivity.component) {  
-                        showDebug(`📄 Відкрито компонент: ${activeActivity.component || 'невідомо'}`);  
+                        showDebug(`📄 Відкрито компонент: ${activeActivity.component}`);  
                     }  
-                }, 500);  
-            });  
-              
-            // Також логуємо hover:hover для відстеження фокусу  
-            button.on('hover:hover', function(e) {  
-                showDebug(`👆 Фокус на: "${text}"`);  
+                }, 100);  
             });  
         });  
-          
-        showDebug(`✓ Додано логування для ${allButtons.length} кнопок`);  
     }  
       
     function removeSourcesButton(mainContainer) {  
@@ -195,23 +178,24 @@
           
         showDebug(`Перевірка ${allButtons.length} кнопок`);  
           
+        let removedCount = 0;  
+          
         allButtons.each(function() {  
             const button = $(this);  
             const text = button.text().toLowerCase().trim();  
             const classes = button.attr('class') || '';  
               
-            // Список важливих кнопок  
+            // Список важливих кнопок (БЕЗ button--play)  
             const isImportantButton = classes.includes('view--online') ||   
                                      classes.includes('view--torrent') ||   
                                      classes.includes('view--trailer') ||  
-                                     classes.includes('button--play') ||  
                                      classes.includes('button--book') ||  
                                      classes.includes('button--reaction') ||  
                                      classes.includes('button--subscribe') ||  
                                      classes.includes('button--subs');  
               
-            // ВИКЛЮЧЕННЯ: button--options тільки якщо вона НЕ порожня  
-            const isOptionsButton = classes.includes('button--options');  
+            // Перевіряємо чи це кнопка "Дивитись"  
+            const isPlayButton = classes.includes('button--play');  
               
             // Перевіряємо чи це кнопка "Джерела"  
             const isSourcesButton = text.includes('джерела') ||   
@@ -221,22 +205,23 @@
                                    text.includes('источники') ||  
                                    text.includes('источник');  
               
-            // Перевіряємо чи кнопка порожня  
+            // Перевіряємо чи це порожня кнопка options  
+            const isOptionsButton = classes.includes('button--options');  
             const isEmpty = text === '' || text.length <= 2;  
               
             // Видаляємо якщо:  
-            // 1. Це кнопка джерел АБО  
-            // 2. Це порожня кнопка без важливих класів АБО  
+            // 1. Це кнопка "Дивитись" АБО  
+            // 2. Це кнопка джерел АБО  
             // 3. Це порожня кнопка options  
-            if (!isImportantButton && (isSourcesButton || isEmpty || (isOptionsButton && isEmpty))) {  
+            if (!isImportantButton && (isPlayButton || isSourcesButton || (isOptionsButton && isEmpty))) {  
                 showDebug(`🗑 Видаляємо кнопку: "${text}" (класи: ${classes})`);  
                 button.remove();  
+                removedCount++;  
             }  
         });  
           
-        // Якщо нічого не видалено, виводимо список  
-        const remainingButtons = mainContainer.find('.full-start__button');  
-        if (remainingButtons.length === allButtons.length) {  
+        if (removedCount === 0) {  
+            const remainingButtons = mainContainer.find('.full-start__button');  
             showDebug(`⚠ Жодної кнопки не видалено. Список всіх кнопок:`);  
             remainingButtons.each(function() {  
                 const btn = $(this);  
@@ -288,12 +273,12 @@
                             const isImportantButton = classes.includes('view--online') ||   
                                                      classes.includes('view--torrent') ||   
                                                      classes.includes('view--trailer') ||  
-                                                     classes.includes('button--play') ||  
                                                      classes.includes('button--book') ||  
                                                      classes.includes('button--reaction') ||  
                                                      classes.includes('button--subscribe') ||  
-                                                     classes.includes('button--subs') ||  
-                                                     classes.includes('button--options');  
+                                                     classes.includes('button--subs');  
+                              
+                            const isPlayButton = classes.includes('button--play');  
                               
                             const isSourcesButton = text.includes('джерела') ||   
                                                    text.includes('джерело') ||  
@@ -302,9 +287,10 @@
                                                    text.includes('источники') ||  
                                                    text.includes('источник');  
                               
+                            const isOptionsButton = classes.includes('button--options');  
                             const isEmpty = text === '' || text.length <= 2;  
                               
-                            if (!isImportantButton && (isSourcesButton || isEmpty)) {  
+                            if (!isImportantButton && (isPlayButton || isSourcesButton || (isOptionsButton && isEmpty))) {  
                                 showDebug(`🔍 Observer видаляє кнопку: "${text}"`);  
                                 $(node).remove();  
                             }  
