@@ -1,4 +1,4 @@
-// Версія плагіну: 3.2 - Фінальна версія з копіюванням звіту  
+// Версія плагіну: 3.3 - З логуванням натискань на кнопки  
 // Розділяє кнопки окремо: Онлайн, Торренти, Трейлери  
   
 (function() {  
@@ -130,10 +130,13 @@
                 showDebug('✓ Додано кнопку Трейлерів');  
             }  
               
-            // Видаляємо порожню кнопку "Джерела" з затримкою  
+            // Видаляємо порожню кнопку "Джерела"  
             setTimeout(() => {  
                 removeSourcesButton(mainContainer);  
             }, 150);  
+              
+            // Додаємо логування натискань на всі кнопки  
+            addButtonClickLogging(mainContainer);  
               
             // Сортуємо через CSS order  
             reorderButtons(mainContainer);  
@@ -150,19 +153,54 @@
         }  
     }  
       
+    // НОВА ФУНКЦІЯ: Додавання логування натискань на кнопки  
+    function addButtonClickLogging(container) {  
+        const allButtons = container.find('.full-start__button');  
+          
+        allButtons.each(function() {  
+            const button = $(this);  
+            const text = button.text().trim() || '(порожня)';  
+            const classes = button.attr('class') || '';  
+              
+            // Додаємо обробник події hover:enter  
+            button.on('hover:enter', function(e) {  
+                showDebug(`🖱 НАТИСНУТО: "${text}" | Класи: ${classes}`);  
+                  
+                // Відстежуємо, що відкривається після натискання  
+                setTimeout(() => {  
+                    const activeController = Lampa.Controller.enabled();  
+                    const activeActivity = Lampa.Activity.active();  
+                      
+                    if (activeController) {  
+                        showDebug(`📂 Відкрито контролер: ${activeController.name || 'невідомо'}`);  
+                    }  
+                      
+                    if (activeActivity && activeActivity.component) {  
+                        showDebug(`📄 Відкрито компонент: ${activeActivity.component || 'невідомо'}`);  
+                    }  
+                }, 500);  
+            });  
+              
+            // Також логуємо hover:hover для відстеження фокусу  
+            button.on('hover:hover', function(e) {  
+                showDebug(`👆 Фокус на: "${text}"`);  
+            });  
+        });  
+          
+        showDebug(`✓ Додано логування для ${allButtons.length} кнопок`);  
+    }  
+      
     function removeSourcesButton(mainContainer) {  
         const allButtons = mainContainer.find('.full-start__button');  
           
         showDebug(`Перевірка ${allButtons.length} кнопок`);  
-          
-        let removedCount = 0;  
           
         allButtons.each(function() {  
             const button = $(this);  
             const text = button.text().toLowerCase().trim();  
             const classes = button.attr('class') || '';  
               
-            // Список важливих кнопок, які НЕ треба видаляти  
+            // Список важливих кнопок  
             const isImportantButton = classes.includes('view--online') ||   
                                      classes.includes('view--torrent') ||   
                                      classes.includes('view--trailer') ||  
@@ -170,36 +208,40 @@
                                      classes.includes('button--book') ||  
                                      classes.includes('button--reaction') ||  
                                      classes.includes('button--subscribe') ||  
-                                     classes.includes('button--subs') ||  
-                                     classes.includes('button--options');  
+                                     classes.includes('button--subs');  
+              
+            // ВИКЛЮЧЕННЯ: button--options тільки якщо вона НЕ порожня  
+            const isOptionsButton = classes.includes('button--options');  
               
             // Перевіряємо чи це кнопка "Джерела"  
             const isSourcesButton = text.includes('джерела') ||   
                                    text.includes('джерело') ||  
                                    text.includes('sources') ||   
+                                   text.includes('source') ||  
                                    text.includes('источники') ||  
                                    text.includes('источник');  
               
-            // Перевіряємо чи кнопка порожня або майже порожня  
+            // Перевіряємо чи кнопка порожня  
             const isEmpty = text === '' || text.length <= 2;  
               
-            // Видаляємо якщо це кнопка джерел або порожня кнопка без важливих класів  
-            if (!isImportantButton && (isSourcesButton || isEmpty)) {  
+            // Видаляємо якщо:  
+            // 1. Це кнопка джерел АБО  
+            // 2. Це порожня кнопка без важливих класів АБО  
+            // 3. Це порожня кнопка options  
+            if (!isImportantButton && (isSourcesButton || isEmpty || (isOptionsButton && isEmpty))) {  
                 showDebug(`🗑 Видаляємо кнопку: "${text}" (класи: ${classes})`);  
                 button.remove();  
-                removedCount++;  
             }  
         });  
           
-        // Якщо нічого не видалено, виводимо список всіх кнопок  
-        if (removedCount === 0) {  
+        // Якщо нічого не видалено, виводимо список  
+        const remainingButtons = mainContainer.find('.full-start__button');  
+        if (remainingButtons.length === allButtons.length) {  
             showDebug(`⚠ Жодної кнопки не видалено. Список всіх кнопок:`);  
-            mainContainer.find('.full-start__button').each(function() {  
+            remainingButtons.each(function() {  
                 const btn = $(this);  
                 showDebug(`📋 Кнопка: "${btn.text().toLowerCase().trim()}" | Класи: ${btn.attr('class')}`);  
             });  
-        } else {  
-            showDebug(`✓ Видалено ${removedCount} кнопок`);  
         }  
     }  
       
@@ -235,11 +277,11 @@
           
         if (!mainContainer) return;  
           
-        observer = new MutationObserver(function(mutations) {  
-            mutations.forEach(function(mutation) {  
+        observer = new MutationObserver((mutations) => {  
+            mutations.forEach((mutation) => {  
                 if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {  
-                    mutation.addedNodes.forEach(function(node) {  
-                        if (node.nodeType === 1 && $(node).hasClass('full-start__button')) {  
+                    mutation.addedNodes.forEach((node) => {  
+                        if (node.nodeType === 1 && node.classList && node.classList.contains('full-start__button')) {  
                             const text = $(node).text().toLowerCase().trim();  
                             const classes = $(node).attr('class') || '';  
                               
