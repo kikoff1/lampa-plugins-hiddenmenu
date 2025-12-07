@@ -1,5 +1,5 @@
-// Версія плагіну: 4.2 - Фінальна версія з посиленим захистом кнопки "Онлайн"  
-// Поєднує розділення кнопок та оптимізовані SVG/стилі з адаптацією під Lampa 3.0.0+  
+// Версія плагіну: 4.3 - Фінальна версія з адаптацією під Lampa 3.0.0+  
+// Поєднує розділення кнопок та оптимізовані SVG/стилі  
   
 (function() {  
     'use strict';  
@@ -29,12 +29,6 @@
                     processButtons(event);  
                     updateButtonSVGs();  
                     startObserver(event);  
-                      
-                    // Додаткова перевірка через 500мс для онлайн кнопки  
-                    setTimeout(() => {  
-                        processButtons(event);  
-                        updateButtonSVGs();  
-                    }, 500);  
                 }, 300);  
             }  
               
@@ -188,6 +182,9 @@
     function removeSourcesButton(mainContainer) {  
         const allButtons = mainContainer.find('.full-start__button');  
           
+        // Перевіряємо версію Lampa  
+        const isLampa3Plus = Lampa.Manifest && Lampa.Manifest.app_digital >= 300;  
+          
         allButtons.each(function() {  
             const button = $(this);  
             const text = button.text().toLowerCase().trim();  
@@ -226,6 +223,12 @@
             const isOptionsButton = classes.includes('button--options');  
             const isEmpty = text === '' || text.length <= 2;  
               
+            // У Lampa 3.0.0+ НЕ видаляємо кнопку "Дивитись"  
+            if (isLampa3Plus && isPlayButton) {  
+                console.log('Lampa 3.0.0+: залишаємо кнопку Дивитись', classes);  
+                return;  
+            }  
+              
             // Видаляємо тільки неважливі кнопки  
             if (!isImportantButton && (isPlayButton || isSourcesButton || (isOptionsButton && isEmpty))) {  
                 console.log('Видаляємо кнопку:', classes, text);  
@@ -254,12 +257,16 @@
               
             button.css('order', order);  
         });  
-    }
+    }  
+      
     function startObserver(event) {  
         const render = event.object.activity.render();  
         const mainContainer = render.find('.full-start-new__buttons')[0];  
           
         if (!mainContainer) return;  
+          
+        // Перевіряємо версію Lampa  
+        const isLampa3Plus = Lampa.Manifest && Lampa.Manifest.app_digital >= 300;  
           
         observer = new MutationObserver((mutations) => {  
             mutations.forEach((mutation) => {  
@@ -303,6 +310,12 @@
                             const isOptionsButton = classes.includes('button--options');  
                             const isEmpty = text === '' || text.length <= 2;  
                               
+                            // У Lampa 3.0.0+ НЕ видаляємо кнопку "Дивитись"  
+                            if (isLampa3Plus && isPlayButton) {  
+                                console.log('Observer: Lampa 3.0.0+: залишаємо кнопку Дивитись', classes);  
+                                return;  
+                            }  
+                              
                             // Видаляємо тільки неважливі кнопки  
                             if (!isImportantButton && (isPlayButton || isSourcesButton || (isOptionsButton && isEmpty))) {  
                                 console.log('Observer: видаляємо кнопку:', classes, text);  
@@ -329,15 +342,16 @@
             observer = null;  
         }  
     }  
+         
       
     // Реєстрація плагіна  
     if (typeof Lampa !== 'undefined') {  
         const manifest = {  
             type: 'component',  
             name: 'Enhanced Button Separator',  
-            version: '4.2.0',  
+            version: '4.3.0',  
             author: 'Merged Plugin',  
-            description: 'Об\'єднаний плагін: розділення кнопок + оптимізовані SVG/стилі з посиленим захистом кнопки Онлайн для Lampa 3.0.0+'  
+            description: 'Об\'єднаний плагін: розділення кнопок + оптимізовані SVG/стилі з адаптацією під Lampa 3.0.0+'  
         };  
           
         if (window.plugin) {  
