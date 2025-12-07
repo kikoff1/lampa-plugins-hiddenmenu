@@ -1,138 +1,214 @@
-// Unified Buttons + Settings
-// Version: 5.1 — повністю виправлена (Script Error Fix)
+// Обʼєднаний плагін: ButtonSeparator + OptimizedButtons
+// Версія: 4.0 (2-in-1)
 
 (function () {
+    'use strict';
 
-    const PLUGIN_ID = 'unified_buttons_settings';
-    const PLUGIN_NAME = 'Розширені кнопки';
+    const PLUGIN_NAME = 'ButtonSeparatorOptimized';
     let observer = null;
 
-    /* ================================
-       0. Налаштування
-    ================================= */
-    const DEFAULT_SETTINGS = {
-        enableSeparator: true,
-        enableSVG: true,
-        removeSources: true,
-        removePlay: true,
-        reorderButtons: true,
-        colorize: true
-    };
+    function initPlugin() {
+        if (typeof Lampa === 'undefined') {
+            setTimeout(initPlugin, 100);
+            return;
+        }
 
-    function loadSettings() {
+        injectStyles();
+
+        Lampa.Listener.follow('full', function (event) {
+
+            if (event.type === 'complite') {
+                setTimeout(() => {
+                    processButtons(event);
+                    updateButtonSVGs();
+                    startObserver(event);
+                }, 300);
+            }
+
+            if (event.type === 'destroy') {
+                stopObserver();
+            }
+        });
+
+        registerPlugin();
+    }
+
+    /* ========================
+       1. ОБРОБКА КНОПОК
+    ==========================*/
+
+    function processButtons(event) {
         try {
-            return Object.assign(
-                {},
-                DEFAULT_SETTINGS,
-                JSON.parse(localStorage.getItem(PLUGIN_ID) || '{}')
-            );
-        } catch {
-            return DEFAULT_SETTINGS;
+            const render = event.object.activity.render();
+            const mainContainer = render.find('.full-start-new__buttons');
+            const hiddenContainer = render.find('.buttons--container');
+
+            if (!mainContainer.length) return;
+
+            const torrentBtn = hiddenContainer.find('.view--torrent');
+            const trailerBtn = hiddenContainer.find('.view--trailer');
+
+            if (torrentBtn.length > 0) {
+                torrentBtn.removeClass('hide').addClass('selector');
+                mainContainer.append(torrentBtn);
+            }
+
+            if (trailerBtn.length > 0) {
+                trailerBtn.removeClass('hide').addClass('selector');
+                mainContainer.append(trailerBtn);
+            }
+
+            setTimeout(() => removeSourcesButton(mainContainer), 150);
+
+            reorderButtons(mainContainer);
+
+            if (Lampa.Controller) {
+                setTimeout(() => {
+                    Lampa.Controller.collectionSet(mainContainer.parent());
+                }, 200);
+            }
+
+        } catch (error) {
+            console.error(`${PLUGIN_NAME}: Error`, error);
         }
     }
 
-    function saveSettings(data) {
-        localStorage.setItem(PLUGIN_ID, JSON.stringify(data));
-    }
+    function removeSourcesButton(mainContainer) {
+        const allButtons = mainContainer.find('.full-start__button');
 
-    let SETTINGS = loadSettings();
+        allButtons.each(function () {
+            const button = $(this);
+            const text = button.text().toLowerCase().trim();
+            const classes = button.attr('class') || '';
 
-    /* ================================
-       1. MENU
-    ================================= */
-    function registerMenu() {
-        if (!window.Lampa || !Lampa.Settings) return;
+            const isImportant =
+                classes.includes('view--online') ||
+                classes.includes('view--torrent') ||
+                classes.includes('view--trailer') ||
+                classes.includes('button--book') ||
+                classes.includes('button--reaction') ||
+                classes.includes('button--subscribe') ||
+                classes.includes('button--subs') ||
+                text.includes('онлайн') ||
+                text.includes('online');
 
-        // Валідний SVG!
-        const iconGear =
-`<svg viewBox="0 0 24 24" width="24" height="24">
-<path fill="#fff"
-d="M12 2 L14 7 L20 8 L15 12 L17 18 L12 15 L7 18 L9 12 L4 8 L10 7 Z"/>
-</svg>`;
+            const isPlay = classes.includes('button--play');
+            const isSources =
+                text.includes('джерела') ||
+                text.includes('джерело') ||
+                text.includes('sources') ||
+                text.includes('source') ||
+                text.includes('источники') ||
+                text.includes('источник');
 
-        Lampa.Settings.add({
-            group: 'plugins',
-            icon: iconGear,
-            id: PLUGIN_ID,
-            name: PLUGIN_NAME,
-            description: 'Налаштування розширених кнопок',
+            const isOptions = classes.includes('button--options');
+            const isEmpty = text.length <= 2;
 
-            onRender: function (body) {
-                if (!body) return;
-
-                const createSwitch = (title, key) => {
-                    const item = $('<div class="settings-item selector"></div>');
-                    const checkbox = $('<div class="settings-param"></div>');
-                    const label = $('<div class="settings-label"></div>').text(title);
-
-                    checkbox.text(SETTINGS[key] ? 'Увімкнено' : 'Вимкнено');
-
-                    item.append(label);
-                    item.append(checkbox);
-
-                    item.on('hover:enter', () => {
-                        SETTINGS[key] = !SETTINGS[key];
-                        checkbox.text(SETTINGS[key] ? 'Увімкнено' : 'Вимкнено');
-                        saveSettings(SETTINGS);
-                        Lampa.Utils.notify(`Змінено: ${title}`);
-                    });
-
-                    body.append(item);
-                };
-
-                body.empty();
-
-                createSwitch('Розділення кнопок', 'enableSeparator');
-                createSwitch('Оптимізовані SVG іконки', 'enableSVG');
-                createSwitch('Видалення кнопки «Джерела»', 'removeSources');
-                createSwitch('Видалення кнопки «Дивитись»', 'removePlay');
-                createSwitch('Сортування кнопок', 'reorderButtons');
-                createSwitch('Кольорова підсвітка кнопок', 'colorize');
+            if (!isImportant && (isPlay || isSources || (isOptions && isEmpty))) {
+                button.remove();
             }
         });
     }
 
-    /* ================================
-       2. CSS
-    ================================= */
-    function injectCSS() {
-        if (!SETTINGS.colorize) return;
+    function reorderButtons(container) {
+        container.css('display', 'flex');
 
-        if (!document.getElementById('custom-buttons-style')) {
-            const style = document.createElement('style');
-            style.id = 'custom-buttons-style';
+        container.find('.full-start__button').each(function () {
+            const button = $(this);
+            const classes = button.attr('class') || '';
+            const text = button.text().toLowerCase();
 
-            style.textContent = `
-                .full-start__button { transition: transform 0.2s ease !important; }
-                .full-start__button:active { transform: scale(0.97) !important; }
+            let order = 999;
 
-                .full-start__button.view--online svg path { fill: #2196f3 !important; }
-                .full-start__button.view--torrent svg path { fill: #32ff32 !important; }
-                .full-start__button.view--trailer svg path { fill: #ff4444 !important; }
+            if (classes.includes('view--online') || text.includes('онлайн')) order = 1;
+            else if (classes.includes('view--torrent')) order = 2;
+            else if (classes.includes('view--trailer')) order = 3;
 
-                .full-start__button svg {
-                    width: 1.6em !important;
-                    height: 1.6em !important;
-                }
-            `;
-            document.head.appendChild(style);
-        }
+            button.css('order', order);
+        });
     }
 
-    /* ================================
-       3. SVG НАБІР
-    ================================= */
+    /* =============================
+        2. СПОСТЕРЕЖЕННЯ ЗА КНОПКАМИ
+    ==============================*/
+
+    function startObserver(event) {
+        const render = event.object.activity.render();
+        const mainContainer = render.find('.full-start-new__buttons')[0];
+
+        if (!mainContainer) return;
+
+        observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                    mutation.addedNodes.forEach(node => {
+                        if (
+                            node.nodeType === 1 &&
+                            node.classList &&
+                            node.classList.contains('full-start__button')
+                        ) {
+                            const text = node.textContent.toLowerCase().trim();
+                            const classes = node.className || '';
+
+                            const isImportant =
+                                classes.includes('view--online') ||
+                                classes.includes('view--torrent') ||
+                                classes.includes('view--trailer') ||
+                                classes.includes('button--book') ||
+                                classes.includes('button--reaction') ||
+                                classes.includes('button--subscribe') ||
+                                classes.includes('button--subs') ||
+                                text.includes('онлайн') ||
+                                text.includes('online');
+
+                            const isPlay = classes.includes('button--play');
+                            const isSources =
+                                text.includes('джерела') ||
+                                text.includes('джерело') ||
+                                text.includes('sources') ||
+                                text.includes('source') ||
+                                text.includes('источники') ||
+                                text.includes('источник');
+
+                            const isOptions = classes.includes('button--options');
+                            const isEmpty = text.length <= 2;
+
+                            if (!isImportant && (isPlay || isSources || (isOptions && isEmpty))) {
+                                $(node).remove();
+                                return;
+                            }
+
+                            updateButtonSVGs(); // оновлення SVG нових кнопок
+                        }
+                    });
+                }
+            });
+        });
+
+        observer.observe(mainContainer, {
+            childList: true,
+            subtree: false
+        });
+    }
+
+    function stopObserver() {
+        if (observer) observer.disconnect();
+        observer = null;
+    }
+
+    /* =============================
+        3. SVG + CSS З ДРУГОГО ПЛАГІНА
+    ==============================*/
+
     const svgs = {
-        torrent: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50"><path d="M25,2C12.317,2,2,12.317,2,25s10.317,23,23,23s23-10.317,23-23S37.683,2,25,2zM40.5,30.963c-3.1,0-4.9-2.4-4.9-2.4S34.1,35,27,35c-1.4,0-3.6-0.837-3.6-0.837l4.17,9.643C26.727,43.92,25.874,44,25,44c-2.157,0-4.222-0.377-6.155-1.039L9.237,16.851c0,0-0.7-1.2,0.4-1.5c1.1-0.3,5.4-1.2,5.4-1.2s1.475-0.494,1.8,0.5c0.5,1.3,4.063,11.112,4.063,11.112S22.6,29,27.4,29c4.7,0,5.9-3.437,5.7-3.937c-1.2-3-4.993-11.862-4.993-11.862s-0.6-1.1,0.8-1.4c1.4-0.3,3.8-0.7,3.8-0.7s1.105-0.163,1.6,0.8c0.738,1.437,5.193,11.262,5.193,11.262s1.1,2.9,3.3,2.9c0.464,0,0.834-0.046,1.152-0.104c-0.082,1.635-0.348,3.221-0.817,4.722C42.541,30.867,41.756,30.963,40.5,30.963z"/></svg>`,
+        torrent: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50"><path d="M25,2C12.317,2,2,12.317,2,25s10.317,23,23,23s23-10.317,23-23S37.683,2,25,2zM40.5,30.963c-3.1,0-4.9-2.4-4.9-2.4S34.1,35,27,35c-1.4,0-3.6-0.837-3.6-0.837l4.17,9.643C26.727,43.92,25.874,44,25,44c-2.157,0-4.222-0.377-6.155-1.039L9.237,16.851c0,0-0.7-1.2,0.4-1.5c1.1-0.3,5.4-1.2,5.4-1.2s1.475-0.494,1.8,0.5c0.5,1.3,4.063,11.112,4.063,11.112S22.6,29,27.4,29c4.7,0,5.9-3.437,5.7-3.937c-1.2-3-4.993-11.862-4.993-11.862s-0.6-1.1,0.8-1.4c1.4-0.3,3.8-0.7,3.8-0.7s1.105-0.163,1.6,0.8c0.738,1.437,5.193,11.262,5.193,11.262s1.1,2.9,3.3,2.9c0.464,0,0.834-0.046,1.152-0.104c-0.082,1.635-0.348,3.221-0.817,4.722C42.541,30.867,41.756,30.963,40.5,30.963z" fill="currentColor"/></svg>`,
 
-        online: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path d="M20.331 14.644l-13.794-13.831 17.55 10.075zM2.938 0c-0.813 0.425-1.356 1.2-1.356 2.206v27.581c0 1.006 0.544 1.781 1.356 2.206l16.038-16zM29.512 14.1l-3.681-2.131-4.106 4.031 4.106 4.031 3.756-2.131c1.125-0.893 1.125-2.906-0.075-3.8zM6.538 31.188l17.55-10.075-3.756-3.756z"/></svg>`,
+        online: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path d="M20.331 14.644l-13.794-13.831 17.55 10.075zM2.938 0c-0.813 0.425-1.356 1.2-1.356 2.206v27.581c0 1.006 0.544 1.781 1.356 2.206l16.038-16zM29.512 14.1l-3.681-2.131-4.106 4.031 4.106 4.031 3.756-2.131c1.125-0.893 1.125-2.906-0.075-3.8zM6.538 31.188l17.55-10.075-3.756-3.756z" fill="currentColor"/></svg>`,
 
-        trailer: `<svg viewBox="0 0 80 70" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z"/></svg>`
+        trailer: `<svg viewBox="0 0 80 70" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z" fill="currentColor"/></svg>`
     };
 
-    function updateButtons() {
-        if (!SETTINGS.enableSVG) return;
-
+    function updateButtonSVGs() {
         const map = {
             'view--torrent': svgs.torrent,
             'view--online': svgs.online,
@@ -141,120 +217,84 @@ d="M12 2 L14 7 L20 8 L15 12 L17 18 L12 15 L7 18 L9 12 L4 8 L10 7 Z"/>
 
         for (const cls in map) {
             $(`.full-start__button.${cls}`).each(function () {
-                const oldSvg = $(this).find('svg');
-                if (!oldSvg.length) return;
+                const button = $(this);
+                const oldSvg = button.find('svg');
+
+                if (oldSvg.length === 0) return;
 
                 const newSvg = $(map[cls]);
 
                 oldSvg.html(newSvg.html());
-                oldSvg.attr('viewBox', newSvg.attr('viewBox'));
+
+                if (newSvg.attr('viewBox')) oldSvg.attr('viewBox', newSvg.attr('viewBox'));
+                if (newSvg.attr('xmlns')) oldSvg.attr('xmlns', newSvg.attr('xmlns'));
+
+                oldSvg.css({
+                    width: '1.5em',
+                    height: '1.5em'
+                });
             });
         }
     }
 
-    /* ================================
-       4. РОЗПОДІЛ КНОПОК
-    ================================= */
-    function processButtons(event) {
-        if (!SETTINGS.enableSeparator) return;
+    /* =============================
+        4. CSS
+    ==============================*/
 
-        try {
-            const render = event.object.activity.render();
-            const main = render.find('.full-start-new__buttons');
-            const hidden = render.find('.buttons--container');
+    function injectStyles() {
+        if (document.getElementById('custom-buttons-style')) return;
 
-            if (!main.length) return;
+        const style = document.createElement('style');
+        style.id = 'custom-buttons-style';
+        style.textContent = `
+            .full-start__button { 
+                position: relative; 
+                transition: transform 0.2s ease !important;
+            }
+            .full-start__button:active { transform: scale(0.98) !important; }
 
-            const torrentBtn = hidden.find('.view--torrent');
-            const trailerBtn = hidden.find('.view--trailer');
+            .full-start__button.view--online svg path { fill: #2196f3 !important; }
+            .full-start__button.view--torrent svg path { fill: lime !important; }
+            .full-start__button.view--trailer svg path { fill: #f44336 !important; }
 
-            if (torrentBtn.length) main.append(torrentBtn.removeClass('hide'));
-            if (trailerBtn.length) main.append(trailerBtn.removeClass('hide'));
+            .full-start__button svg {
+                width: 1.5em !important;
+                height: 1.5em !important;
+            }
 
-            if (SETTINGS.removeSources || SETTINGS.removePlay)
-                setTimeout(() => removeBadButtons(main), 50);
+            @media (max-width: 767px) {
+                .full-start__button {
+                    min-height: 44px !important;
+                    padding: 10px !important;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
 
-            if (SETTINGS.reorderButtons)
-                reorderButtons(main);
+    /* =============================
+        5. РЕЄСТРАЦІЯ ПЛАГІНА
+    ==============================*/
 
-        } catch (e) {
-            console.error('UnifiedButtons:', e);
+    function registerPlugin() {
+        if (window.plugin) {
+            window.plugin(PLUGIN_NAME, {
+                type: 'component',
+                name: 'Button Separator + Optimized Buttons',
+                version: '4.0',
+                author: 'Roman + Oleksandr',
+                description: 'Обʼєднаний плагін: сортування кнопок, захист онлайн, оновлені SVG, оптимізовані стилі'
+            });
         }
     }
 
-    function removeBadButtons(container) {
-        const all = container.find('.full-start__button');
-
-        all.each(function () {
-            const btn = $(this);
-            const text = btn.text().toLowerCase();
-            const cls = btn.attr('class');
-
-            const important =
-                cls.includes('view--online') ||
-                cls.includes('view--torrent') ||
-                cls.includes('view--trailer') ||
-                text.includes('онлайн');
-
-            const isSources = text.includes('джерел') || text.includes('source');
-            const isPlay = cls.includes('button--play');
-
-            if (!important) {
-                if (SETTINGS.removeSources && isSources) btn.remove();
-                if (SETTINGS.removePlay && isPlay) btn.remove();
-            }
-        });
+    /* =============================
+        СТАРТ
+    ==============================*/
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initPlugin);
+    } else {
+        initPlugin();
     }
-
-    function reorderButtons(box) {
-        box.find('.full-start__button').each(function () {
-            const c = $(this).attr('class');
-
-            if (c.includes('view--online')) $(this).css('order', 1);
-            else if (c.includes('view--torrent')) $(this).css('order', 2);
-            else if (c.includes('view--trailer')) $(this).css('order', 3);
-            else $(this).css('order', 999);
-        });
-    }
-
-    /* ================================
-       5. OBSERVER FIX
-    ================================= */
-    function startObserver(event) {
-        const render = event.object.activity.render();
-        const main = render.find('.full-start-new__buttons')[0];
-        if (!main) return;
-
-        observer = new MutationObserver(() => updateButtons());
-        observer.observe(main, { childList: true });
-    }
-
-    function stopObserver() {
-        if (observer) observer.disconnect();
-        observer = null;
-    }
-
-    /* ================================
-       6. INIT
-    ================================= */
-    function init() {
-        if (!window.Lampa) return setTimeout(init, 50);
-
-        registerMenu();
-        injectCSS();
-
-        Lampa.Listener.follow('full', (e) => {
-            if (e.type === 'complite') {
-                setTimeout(() => {
-                    processButtons(e);
-                    updateButtons();
-                    startObserver(e);
-                }, 150);
-            }
-            if (e.type === 'destroy') stopObserver();
-        });
-    }
-
-    init();
 
 })();
