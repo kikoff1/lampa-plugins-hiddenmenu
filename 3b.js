@@ -109,13 +109,32 @@
             'view--trailer': svgs.trailer  
         };  
           
+        // Спочатку обробляємо стандартні кнопки  
+        for (const cls in map) {  
+            $(`.full-start__button.${cls}`).each(function() {  
+                const button = $(this);  
+                const oldSvg = button.find('svg');  
+                  
+                if (oldSvg.length === 0) return;  
+                  
+                const newSvg = $(map[cls]);  
+                oldSvg.html(newSvg.html());  
+                  
+                if (newSvg.attr('viewBox')) {  
+                    oldSvg.attr('viewBox', newSvg.attr('viewBox'));  
+                }  
+                if (newSvg.attr('xmlns')) {  
+                    oldSvg.attr('xmlns', newSvg.attr('xmlns'));  
+                }  
+            });  
+        }  
+          
         // Додаємо обробку для кнопки .button--play якщо це онлайн кнопка (Lampa 3.0.0+)  
         $('.full-start__button.button--play').each(function() {  
             const button = $(this);  
             const text = button.text().toLowerCase().trim();  
-            const classes = button.attr('class') || '';  
               
-            // Перевіряємо чи це онлайн кнопка  
+            // Перевіряємо чи це онлайн кнопка за текстом або атрибутами  
             const isOnlineButton = text.includes('онлайн') ||   
                                   text.includes('online') ||  
                                   button.attr('data-subtitle')?.includes('v') ||  
@@ -125,62 +144,20 @@
             if (isOnlineButton) {  
                 const oldSvg = button.find('svg');  
                 if (oldSvg.length > 0) {  
-                    const newSvg = $(svgs.online);  
-                    const width = oldSvg.attr('width') || '1.5em';  
-                    const height = oldSvg.attr('height') || '1.5em';  
+                    // Замінюємо SVG на онлайн іконку  
+                    oldSvg.html(svgs.online.replace(/<svg[^>]*>|<\/svg>/g, ''));  
                       
-                    if (oldSvg.attr('class')) {  
-                        newSvg.attr('class', oldSvg.attr('class'));  
+                    if (svgs.online.includes('viewBox')) {  
+                        oldSvg.attr('viewBox', '0 0 32 32');  
+                    }  
+                    if (svgs.online.includes('xmlns')) {  
+                        oldSvg.attr('xmlns', 'http://www.w3.org/2000/svg');  
                     }  
                       
-                    oldSvg.html(newSvg.html());  
-                      
-                    if (newSvg.attr('viewBox')) {  
-                        oldSvg.attr('viewBox', newSvg.attr('viewBox'));  
-                    }  
-                    if (newSvg.attr('xmlns')) {  
-                        oldSvg.attr('xmlns', newSvg.attr('xmlns'));  
-                    }  
-                      
-                    oldSvg.css({  
-                        'width': width,  
-                        'height': height  
-                    });  
+                    console.log('Іконку онлайн замінено для кнопки .button--play');  
                 }  
             }  
         });  
-          
-        // Оригінальний код для інших кнопок  
-        for (const cls in map) {  
-            $(`.full-start__button.${cls}`).each(function() {  
-                const button = $(this);  
-                const oldSvg = button.find('svg');  
-                  
-                if (oldSvg.length === 0) return;  
-                  
-                const newSvg = $(map[cls]);  
-                const width = oldSvg.attr('width') || '1.5em';  
-                const height = oldSvg.attr('height') || '1.5em';  
-                  
-                if (oldSvg.attr('class')) {  
-                    newSvg.attr('class', oldSvg.attr('class'));  
-                }  
-                  
-                oldSvg.html(newSvg.html());  
-                  
-                if (newSvg.attr('viewBox')) {  
-                    oldSvg.attr('viewBox', newSvg.attr('viewBox'));  
-                }  
-                if (newSvg.attr('xmlns')) {  
-                    oldSvg.attr('xmlns', newSvg.attr('xmlns'));  
-                }  
-                  
-                oldSvg.css({  
-                    'width': width,  
-                    'height': height  
-                });  
-            });  
-        }  
     }  
       
     function processButtons(event) {  
@@ -299,6 +276,7 @@
                     button.find('span').text().toLowerCase().includes('online')  
                 ))) {  
                 order = 0; // Найперший  
+                console.log('Онлайн кнопка встановлена першою:', classes);  
             } else if (classes.includes('view--torrent') || text.includes('торрент')) {  
                 order = 1;  
             } else if (classes.includes('view--trailer') || text.includes('трейлер')) {  
