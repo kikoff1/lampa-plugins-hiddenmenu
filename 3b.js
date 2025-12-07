@@ -85,11 +85,11 @@
           
         online: `  
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">  
-                <path d="M20.331 14.644l-13.794-13.831 17.55 10.075zM2.938 0c-0.813 0.425-1.356 1.2-1.356 2.206v27.581c0 1.006 0.544 1.781 1.356 2.206l16.038-16zM29.512 14.1l-3.681-2.131-4.106 4.031 4.106 4.031 3.756-2.131c1.125-0.893 1.125-2.906-0.075-3.8zM6.538 31.188l17.55-10.075-3.756-3.756z" fill="currentColor"/>  
+                <path d="M20.331 14.644l-13.794-13.831 17.55 10.075zM2.938 0c-0.813 0.425-1.356 1.2-1.356 2.206v27.581c0 1.006 0.543 1.781 1.356 2.206l17.55-10.075-13.794-13.831 13.794-13.831zM29.062 0c0.813 0.425 1.356 1.2 1.356 2.206v27.581c0 1.006-0.543 1.781-1.356 2.206l-17.55-10.075 13.794-13.831-13.794-13.831z" fill="currentColor"/>  
             </svg>`,  
           
         trailer: `  
-            <svg viewBox="0 0 80 70" xmlns="http://www.w3.org/2000/svg">  
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 70">  
                 <path fill-rule="evenodd" clip-rule="evenodd" d="M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z" fill="currentColor"/>  
             </svg>`  
     };  
@@ -102,6 +102,7 @@
               
             if (!mainContainer.length) return;  
               
+            // Додаємо тільки торренти та трейлери (без онлайн кнопки)  
             const torrentBtn = hiddenContainer.find('.view--torrent');  
             const trailerBtn = hiddenContainer.find('.view--trailer');  
               
@@ -129,16 +130,19 @@
     }  
       
     function updateButtonSVGs() {  
-        // Оновлюємо стандартні кнопки  
-        $('.full-start__button.view--online').each(function() {  
+        // Оновлюємо кнопку "Дивитись" з іконкою онлайн  
+        $('.full-start__button.button--play').each(function() {  
             const button = $(this);  
             const oldSvg = button.find('svg');  
             if (oldSvg.length > 0) {  
+                // Замінюємо на онлайн іконку  
                 oldSvg.html(svgs.online.replace(/<svg[^>]*>|<\/svg>/g, ''));  
                 oldSvg.attr('viewBox', '0 0 32 32');  
+                console.log('Іконку онлайн застосовано до кнопки Дивитись');  
             }  
         });  
           
+        // Оновлюємо торренти та трейлери  
         $('.full-start__button.view--torrent').each(function() {  
             const button = $(this);  
             const oldSvg = button.find('svg');  
@@ -156,23 +160,6 @@
                 oldSvg.attr('viewBox', '0 0 80 70');  
             }  
         });  
-          
-        // Обробляємо кнопку .button--play для всіх версій  
-        $('.full-start__button.button--play').each(function() {  
-            const button = $(this);  
-            const text = button.text().toLowerCase().trim();  
-            const oldSvg = button.find('svg');  
-              
-            if (oldSvg.length > 0) {  
-                // Перевіряємо чи це онлайн кнопка  
-                if (text.includes('онлайн') || text.includes('online') ||   
-                    button.attr('data-subtitle')?.includes('v')) {  
-                    // Онлайн іконка  
-                    oldSvg.html(svgs.online.replace(/<svg[^>]*>|<\/svg>/g, ''));  
-                    oldSvg.attr('viewBox', '0 0 32 32');  
-                }  
-            }  
-        });  
     }  
       
     function reorderButtons(container) {  
@@ -181,27 +168,16 @@
         container.find('.full-start__button').each(function() {  
             const button = $(this);  
             const classes = button.attr('class') || '';  
-            const text = button.text().toLowerCase();  
               
             let order = 999;  
               
-            // Онлайн кнопка - завжди перша  
-            if (classes.includes('view--online') ||   
-                text.includes('онлайн') ||   
-                text.includes('online') ||  
-                (classes.includes('button--play') && (  
-                    text.includes('онлайн') ||   
-                    text.includes('online') ||  
-                    button.attr('data-subtitle')?.includes('v')  
-                ))) {  
+            // Кнопка "Дивитись" - перша  
+            if (classes.includes('button--play')) {  
                 order = 0;  
-            } else if (classes.includes('button--play')) {  
-                // Кнопка "Дивитись" - після онлайн  
+            } else if (classes.includes('view--torrent')) {  
                 order = 1;  
-            } else if (classes.includes('view--torrent') || text.includes('торрент')) {  
+            } else if (classes.includes('view--trailer')) {  
                 order = 2;  
-            } else if (classes.includes('view--trailer') || text.includes('трейлер')) {  
-                order = 3;  
             }  
               
             button.css('order', order);  
