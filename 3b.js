@@ -1,5 +1,5 @@
-// Об’єднаний плагін: UnifiedButtons + Menu Settings
-// Версія: 5.0 — додано меню налаштувань
+// Unified Buttons + Settings
+// Version: 5.1 — повністю виправлена (Script Error Fix)
 
 (function () {
 
@@ -8,7 +8,7 @@
     let observer = null;
 
     /* ================================
-       0. ЗБЕРЕЖЕННЯ НАЛАШТУВАНЬ
+       0. Налаштування
     ================================= */
     const DEFAULT_SETTINGS = {
         enableSeparator: true,
@@ -22,7 +22,7 @@
     function loadSettings() {
         try {
             return Object.assign(
-                {}, 
+                {},
                 DEFAULT_SETTINGS,
                 JSON.parse(localStorage.getItem(PLUGIN_ID) || '{}')
             );
@@ -38,18 +38,27 @@
     let SETTINGS = loadSettings();
 
     /* ================================
-       1. MENU: LAMPA → Налаштування
+       1. MENU
     ================================= */
     function registerMenu() {
         if (!window.Lampa || !Lampa.Settings) return;
 
+        // Валідний SVG!
+        const iconGear =
+`<svg viewBox="0 0 24 24" width="24" height="24">
+<path fill="#fff"
+d="M12 2 L14 7 L20 8 L15 12 L17 18 L12 15 L7 18 L9 12 L4 8 L10 7 Z"/>
+</svg>`;
+
         Lampa.Settings.add({
             group: 'plugins',
-            icon: '<svg width="24" height="24"><path d="M12 0 L15 8 L24 9 L17 14 L19 22 L12 17 L5 22 L7 14 0 9 9 8 Z" fill="#fff"/></svg>',
+            icon: iconGear,
             id: PLUGIN_ID,
             name: PLUGIN_NAME,
             description: 'Налаштування розширених кнопок',
+
             onRender: function (body) {
+                if (!body) return;
 
                 const createSwitch = (title, key) => {
                     const item = $('<div class="settings-item selector"></div>');
@@ -65,7 +74,6 @@
                         SETTINGS[key] = !SETTINGS[key];
                         checkbox.text(SETTINGS[key] ? 'Увімкнено' : 'Вимкнено');
                         saveSettings(SETTINGS);
-
                         Lampa.Utils.notify(`Змінено: ${title}`);
                     });
 
@@ -80,13 +88,12 @@
                 createSwitch('Видалення кнопки «Дивитись»', 'removePlay');
                 createSwitch('Сортування кнопок', 'reorderButtons');
                 createSwitch('Кольорова підсвітка кнопок', 'colorize');
-
             }
         });
     }
 
     /* ================================
-       2. CSS (працює тільки при enable)
+       2. CSS
     ================================= */
     function injectCSS() {
         if (!SETTINGS.colorize) return;
@@ -113,7 +120,7 @@
     }
 
     /* ================================
-          3. SVG НАБІР
+       3. SVG НАБІР
     ================================= */
     const svgs = {
         torrent: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50"><path d="M25,2C12.317,2,2,12.317,2,25s10.317,23,23,23s23-10.317,23-23S37.683,2,25,2zM40.5,30.963c-3.1,0-4.9-2.4-4.9-2.4S34.1,35,27,35c-1.4,0-3.6-0.837-3.6-0.837l4.17,9.643C26.727,43.92,25.874,44,25,44c-2.157,0-4.222-0.377-6.155-1.039L9.237,16.851c0,0-0.7-1.2,0.4-1.5c1.1-0.3,5.4-1.2,5.4-1.2s1.475-0.494,1.8,0.5c0.5,1.3,4.063,11.112,4.063,11.112S22.6,29,27.4,29c4.7,0,5.9-3.437,5.7-3.937c-1.2-3-4.993-11.862-4.993-11.862s-0.6-1.1,0.8-1.4c1.4-0.3,3.8-0.7,3.8-0.7s1.105-0.163,1.6,0.8c0.738,1.437,5.193,11.262,5.193,11.262s1.1,2.9,3.3,2.9c0.464,0,0.834-0.046,1.152-0.104c-0.082,1.635-0.348,3.221-0.817,4.722C42.541,30.867,41.756,30.963,40.5,30.963z"/></svg>`,
@@ -134,8 +141,7 @@
 
         for (const cls in map) {
             $(`.full-start__button.${cls}`).each(function () {
-                const button = $(this);
-                const oldSvg = button.find('svg');
+                const oldSvg = $(this).find('svg');
                 if (!oldSvg.length) return;
 
                 const newSvg = $(map[cls]);
@@ -147,7 +153,7 @@
     }
 
     /* ================================
-         4. ПЕРШИЙ ПЛАГІН
+       4. РОЗПОДІЛ КНОПОК
     ================================= */
     function processButtons(event) {
         if (!SETTINGS.enableSeparator) return;
@@ -166,7 +172,7 @@
             if (trailerBtn.length) main.append(trailerBtn.removeClass('hide'));
 
             if (SETTINGS.removeSources || SETTINGS.removePlay)
-                setTimeout(() => removeBadButtons(main), 130);
+                setTimeout(() => removeBadButtons(main), 50);
 
             if (SETTINGS.reorderButtons)
                 reorderButtons(main);
@@ -202,18 +208,17 @@
 
     function reorderButtons(box) {
         box.find('.full-start__button').each(function () {
-            const btn = $(this);
-            const c = btn.attr('class');
+            const c = $(this).attr('class');
 
-            if (c.includes('view--online')) btn.css('order', 1);
-            else if (c.includes('view--torrent')) btn.css('order', 2);
-            else if (c.includes('view--trailer')) btn.css('order', 3);
-            else btn.css('order', 999);
+            if (c.includes('view--online')) $(this).css('order', 1);
+            else if (c.includes('view--torrent')) $(this).css('order', 2);
+            else if (c.includes('view--trailer')) $(this).css('order', 3);
+            else $(this).css('order', 999);
         });
     }
 
     /* ================================
-       5. OBSERVER
+       5. OBSERVER FIX
     ================================= */
     function startObserver(event) {
         const render = event.object.activity.render();
@@ -223,6 +228,7 @@
         observer = new MutationObserver(() => updateButtons());
         observer.observe(main, { childList: true });
     }
+
     function stopObserver() {
         if (observer) observer.disconnect();
         observer = null;
@@ -232,7 +238,7 @@
        6. INIT
     ================================= */
     function init() {
-        if (!window.Lampa) return setTimeout(init, 100);
+        if (!window.Lampa) return setTimeout(init, 50);
 
         registerMenu();
         injectCSS();
@@ -243,7 +249,7 @@
                     processButtons(e);
                     updateButtons();
                     startObserver(e);
-                }, 200);
+                }, 150);
             }
             if (e.type === 'destroy') stopObserver();
         });
