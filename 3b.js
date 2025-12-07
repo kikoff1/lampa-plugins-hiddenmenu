@@ -1,5 +1,5 @@
-// Версія плагіну: 4.0 - Об'єднана версія з адаптацією під Lampa 3.0.0+  
-// Поєднує розділення кнопок та оптимізовані SVG/стилі  
+// Версія плагіну: 4.1 - Об'єднана версія з виправленням захисту кнопки "Онлайн"  
+// Поєднує розділення кнопок та оптимізовані SVG/стилі з адаптацією під Lampa 3.0.0+  
   
 (function() {  
     'use strict';  
@@ -187,15 +187,20 @@
             const text = button.text().toLowerCase().trim();  
             const classes = button.attr('class') || '';  
               
-            const isImportantButton = classes.includes('view--online') ||   
+            // Розширена перевірка для кнопки Онлайн - додатково перевіряємо data-subtitle  
+            const isOnlineButton = classes.includes('view--online') ||   
+                                  text.includes('онлайн') ||   
+                                  text.includes('online') ||  
+                                  button.attr('data-subtitle')?.includes('v1.') ||  // Перевірка для версії онлайн плагіна  
+                                  button.find('span').text().toLowerCase().includes('онлайн');  
+              
+            const isImportantButton = isOnlineButton ||  // Онлайн завжди важлива  
                                      classes.includes('view--torrent') ||   
                                      classes.includes('view--trailer') ||   
                                      classes.includes('button--book') ||   
                                      classes.includes('button--reaction') ||   
                                      classes.includes('button--subscribe') ||   
-                                     classes.includes('button--subs') ||   
-                                     text.includes('онлайн') ||   
-                                     text.includes('online');  
+                                     classes.includes('button--subs');  
               
             const isPlayButton = classes.includes('button--play');  
             const isSourcesButton = text.includes('джерела') ||   
@@ -208,7 +213,8 @@
             const isOptionsButton = classes.includes('button--options');  
             const isEmpty = text === '' || text.length <= 2;  
               
-            if (!isImportantButton && (isPlayButton || isSourcesButton || (isOptionsButton && isEmpty))) {  
+            // Ніколи не видаляємо онлайн кнопку  
+            if (!isImportantButton && !isOnlineButton && (isPlayButton || isSourcesButton || (isOptionsButton && isEmpty))) {  
                 button.remove();  
             }  
         });  
@@ -249,16 +255,22 @@
                         if (node.nodeType === 1 && node.classList && node.classList.contains('full-start__button')) {  
                             const text = node.textContent.toLowerCase().trim();  
                             const classes = node.className || '';  
+                            const $node = $(node);  
                               
-                            const isImportantButton = classes.includes('view--online') ||   
+                            // Розширена перевірка для кнопки Онлайн  
+                            const isOnlineButton = classes.includes('view--online') ||   
+                                                  text.includes('онлайн') ||   
+                                                  text.includes('online') ||  
+                                                  $node.attr('data-subtitle')?.includes('v1.') ||  
+                                                  $node.find('span').text().toLowerCase().includes('онлайн');  
+                              
+                            const isImportantButton = isOnlineButton ||   
                                                      classes.includes('view--torrent') ||   
                                                      classes.includes('view--trailer') ||   
                                                      classes.includes('button--book') ||   
                                                      classes.includes('button--reaction') ||   
                                                      classes.includes('button--subscribe') ||   
-                                                     classes.includes('button--subs') ||   
-                                                     text.includes('онлайн') ||   
-                                                     text.includes('online');  
+                                                     classes.includes('button--subs');  
                               
                             const isPlayButton = classes.includes('button--play');  
                             const isSourcesButton = text.includes('джерела') ||   
@@ -271,8 +283,9 @@
                             const isOptionsButton = classes.includes('button--options');  
                             const isEmpty = text === '' || text.length <= 2;  
                               
-                            if (!isImportantButton && (isPlayButton || isSourcesButton || (isOptionsButton && isEmpty))) {  
-                                $(node).remove();  
+                            // Ніколи не видаляємо онлайн кнопку  
+                            if (!isImportantButton && !isOnlineButton && (isPlayButton || isSourcesButton || (isOptionsButton && isEmpty))) {  
+                                $node.remove();  
                             }  
                         }  
                     });  
@@ -301,9 +314,9 @@
         const manifest = {  
             type: 'component',  
             name: 'Enhanced Button Separator',  
-            version: '4.0.0',  
+            version: '4.1.0',  
             author: 'Merged Plugin',  
-            description: 'Об\'єднаний плагін: розділення кнопок + оптимізовані SVG/стилі з адаптацією під Lampa 3.0.0+'  
+            description: 'Об\'єднаний плагін: розділення кнопок + оптимізовані SVG/стилі з виправленням захисту кнопки Онлайн для Lampa 3.0.0+'  
         };  
           
         if (window.plugin) {  
