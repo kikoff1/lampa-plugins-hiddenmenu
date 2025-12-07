@@ -1,10 +1,12 @@
-// Обʼєднаний плагін: ButtonSeparator + OptimizedButtons
-// Версія: 4.0 (2-in-1)
+// Плагін: ButtonSeparator (оновлено для Lampa 3.0+)
+// Версія: 4.1 - Підтримка Lampa 3.0.0+ (data-action/data-name для online/torrent/trailer)
+// Оригінал: ButtonSeparator (з додатковими правками для нової структури Lampa)
+// Автор: адаптація для тебе
 
-(function () {
+(function() {
     'use strict';
 
-    const PLUGIN_NAME = 'ButtonSeparatorOptimized';
+    const PLUGIN_NAME = 'ButtonSeparator';
     let observer = null;
 
     function initPlugin() {
@@ -13,14 +15,10 @@
             return;
         }
 
-        injectStyles();
-
-        Lampa.Listener.follow('full', function (event) {
-
+        Lampa.Listener.follow('full', function(event) {
             if (event.type === 'complite') {
                 setTimeout(() => {
                     processButtons(event);
-                    updateButtonSVGs();
                     startObserver(event);
                 }, 300);
             }
@@ -29,14 +27,9 @@
                 stopObserver();
             }
         });
-
-        registerPlugin();
     }
 
-    /* ========================
-       1. ОБРОБКА КНОПОК
-    ==========================*/
-
+    // Основна обробка кнопок при відкритті Full Card
     function processButtons(event) {
         try {
             const render = event.object.activity.render();
@@ -45,8 +38,28 @@
 
             if (!mainContainer.length) return;
 
-            const torrentBtn = hiddenContainer.find('.view--torrent');
-            const trailerBtn = hiddenContainer.find('.view--trailer');
+            // ========== ПІДТРИМКА СТАРИХ І НОВИХ ВЕРСІЙ LAMPA ==========
+            // Пошук кнопок в hiddenContainer: старі класи та нові атрибути data-action / data-name
+            const onlineBtn =
+                hiddenContainer.find('.view--online')
+                    .add(hiddenContainer.find('[data-action="online"]'))
+                    .add(hiddenContainer.find('[data-name="online"]'));
+
+            const torrentBtn =
+                hiddenContainer.find('.view--torrent')
+                    .add(hiddenContainer.find('[data-action="torrent"]'))
+                    .add(hiddenContainer.find('[data-name="torrent"]'));
+
+            const trailerBtn =
+                hiddenContainer.find('.view--trailer')
+                    .add(hiddenContainer.find('[data-action="trailer"]'))
+                    .add(hiddenContainer.find('[data-name="trailer"]'));
+
+            // Переносимо у головний контейнер (якщо є)
+            if (onlineBtn.length > 0) {
+                onlineBtn.removeClass('hide').addClass('selector');
+                mainContainer.append(onlineBtn);
+            }
 
             if (torrentBtn.length > 0) {
                 torrentBtn.removeClass('hide').addClass('selector');
@@ -58,7 +71,10 @@
                 mainContainer.append(trailerBtn);
             }
 
-            setTimeout(() => removeSourcesButton(mainContainer), 150);
+            // Невелика затримка перед видаленням непотрібних кнопок
+            setTimeout(() => {
+                removeSourcesButton(mainContainer);
+            }, 150);
 
             reorderButtons(mainContainer);
 
@@ -69,19 +85,21 @@
             }
 
         } catch (error) {
-            console.error(`${PLUGIN_NAME}: Error`, error);
+            console.error(`${PLUGIN_NAME}: Помилка`, error);
         }
     }
 
+    // Видаляє кнопки "Джерела", "Дивитись" і порожні options, але зберігає важливі
     function removeSourcesButton(mainContainer) {
         const allButtons = mainContainer.find('.full-start__button');
 
-        allButtons.each(function () {
+        allButtons.each(function() {
             const button = $(this);
-            const text = button.text().toLowerCase().trim();
+            const text = (button.text() || '').toLowerCase().trim();
             const classes = button.attr('class') || '';
 
-            const isImportant =
+            // Визначаємо, чи це важлива кнопка (онлайн, торрент, трейлер, підписки тощо)
+            const isImportantButton =
                 classes.includes('view--online') ||
                 classes.includes('view--torrent') ||
                 classes.includes('view--trailer') ||
@@ -89,68 +107,95 @@
                 classes.includes('button--reaction') ||
                 classes.includes('button--subscribe') ||
                 classes.includes('button--subs') ||
+                // нові формати (data-action / data-name)
+                button.attr('data-action') === 'online' ||
+                button.attr('data-name') === 'online' ||
+                button.attr('data-action') === 'torrent' ||
+                button.attr('data-name') === 'torrent' ||
+                button.attr('data-action') === 'trailer' ||
+                button.attr('data-name') === 'trailer' ||
                 text.includes('онлайн') ||
                 text.includes('online');
 
-            const isPlay = classes.includes('button--play');
-            const isSources =
+            const isPlayButton = classes.includes('button--play');
+            const isSourcesButton =
                 text.includes('джерела') ||
                 text.includes('джерело') ||
                 text.includes('sources') ||
                 text.includes('source') ||
                 text.includes('источники') ||
                 text.includes('источник');
+            const isOptionsButton = classes.includes('button--options');
+            const isEmpty = text === '' || text.length <= 2;
 
-            const isOptions = classes.includes('button--options');
-            const isEmpty = text.length <= 2;
-
-            if (!isImportant && (isPlay || isSources || (isOptions && isEmpty))) {
+            // Якщо не важлива і це play або sources або порожня options — видаляємо
+            if (!isImportantButton && (isPlayButton || isSourcesButton || (isOptionsButton && isEmpty))) {
                 button.remove();
             }
         });
     }
 
+    // Встановлює порядок кнопок (online -> torrent -> trailer -> всі інші)
     function reorderButtons(container) {
         container.css('display', 'flex');
 
-        container.find('.full-start__button').each(function () {
+        container.find('.full-start__button').each(function() {
             const button = $(this);
             const classes = button.attr('class') || '';
-            const text = button.text().toLowerCase();
+            const text = (button.text() || '').toLowerCase();
 
             let order = 999;
 
-            if (classes.includes('view--online') || text.includes('онлайн')) order = 1;
-            else if (classes.includes('view--torrent')) order = 2;
-            else if (classes.includes('view--trailer')) order = 3;
+            if (
+                classes.includes('view--online') ||
+                button.attr('data-action') === 'online' ||
+                button.attr('data-name') === 'online' ||
+                text.includes('онлайн') ||
+                text.includes('online')
+            ) {
+                order = 1;
+            } else if (
+                classes.includes('view--torrent') ||
+                button.attr('data-action') === 'torrent' ||
+                button.attr('data-name') === 'torrent' ||
+                text.includes('торрент') ||
+                text.includes('torrent')
+            ) {
+                order = 2;
+            } else if (
+                classes.includes('view--trailer') ||
+                button.attr('data-action') === 'trailer' ||
+                button.attr('data-name') === 'trailer' ||
+                text.includes('трейлер') ||
+                text.includes('trailer')
+            ) {
+                order = 3;
+            }
 
             button.css('order', order);
         });
     }
 
-    /* =============================
-        2. СПОСТЕРЕЖЕННЯ ЗА КНОПКАМИ
-    ==============================*/
-
+    // Запускає MutationObserver для динамічно доданих кнопок
     function startObserver(event) {
         const render = event.object.activity.render();
         const mainContainer = render.find('.full-start-new__buttons')[0];
 
         if (!mainContainer) return;
 
+        // Якщо вже існує — відключимо старий, щоб не було дублювання
+        stopObserver();
+
         observer = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
                 if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                    mutation.addedNodes.forEach(node => {
-                        if (
-                            node.nodeType === 1 &&
-                            node.classList &&
-                            node.classList.contains('full-start__button')
-                        ) {
-                            const text = node.textContent.toLowerCase().trim();
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.nodeType === 1 && node.classList && node.classList.contains('full-start__button')) {
+                            const $node = $(node);
+                            const text = (node.textContent || '').toLowerCase().trim();
                             const classes = node.className || '';
 
-                            const isImportant =
+                            const isImportantButton =
                                 classes.includes('view--online') ||
                                 classes.includes('view--torrent') ||
                                 classes.includes('view--trailer') ||
@@ -158,11 +203,13 @@
                                 classes.includes('button--reaction') ||
                                 classes.includes('button--subscribe') ||
                                 classes.includes('button--subs') ||
+                                $node.attr('data-action') === 'online' ||
+                                $node.attr('data-name') === 'online' ||
                                 text.includes('онлайн') ||
                                 text.includes('online');
 
-                            const isPlay = classes.includes('button--play');
-                            const isSources =
+                            const isPlayButton = classes.includes('button--play');
+                            const isSourcesButton =
                                 text.includes('джерела') ||
                                 text.includes('джерело') ||
                                 text.includes('sources') ||
@@ -170,15 +217,18 @@
                                 text.includes('источники') ||
                                 text.includes('источник');
 
-                            const isOptions = classes.includes('button--options');
-                            const isEmpty = text.length <= 2;
+                            const isOptionsButton = classes.includes('button--options');
+                            const isEmpty = text === '' || text.length <= 2;
 
-                            if (!isImportant && (isPlay || isSources || (isOptions && isEmpty))) {
-                                $(node).remove();
-                                return;
+                            if (!isImportantButton && (isPlayButton || isSourcesButton || (isOptionsButton && isEmpty))) {
+                                $node.remove();
+                            } else {
+                                // Якщо це важлива кнопка — гарантуємо сортування та інтеграцію
+                                // (викликаємо реордера в наступному тикі щоб уникнути перегонистих змін)
+                                setTimeout(() => {
+                                    reorderButtons($(mainContainer));
+                                }, 20);
                             }
-
-                            updateButtonSVGs(); // оновлення SVG нових кнопок
                         }
                     });
                 }
@@ -192,109 +242,34 @@
     }
 
     function stopObserver() {
-        if (observer) observer.disconnect();
-        observer = null;
-    }
-
-    /* =============================
-        3. SVG + CSS З ДРУГОГО ПЛАГІНА
-    ==============================*/
-
-    const svgs = {
-        torrent: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50"><path d="M25,2C12.317,2,2,12.317,2,25s10.317,23,23,23s23-10.317,23-23S37.683,2,25,2zM40.5,30.963c-3.1,0-4.9-2.4-4.9-2.4S34.1,35,27,35c-1.4,0-3.6-0.837-3.6-0.837l4.17,9.643C26.727,43.92,25.874,44,25,44c-2.157,0-4.222-0.377-6.155-1.039L9.237,16.851c0,0-0.7-1.2,0.4-1.5c1.1-0.3,5.4-1.2,5.4-1.2s1.475-0.494,1.8,0.5c0.5,1.3,4.063,11.112,4.063,11.112S22.6,29,27.4,29c4.7,0,5.9-3.437,5.7-3.937c-1.2-3-4.993-11.862-4.993-11.862s-0.6-1.1,0.8-1.4c1.4-0.3,3.8-0.7,3.8-0.7s1.105-0.163,1.6,0.8c0.738,1.437,5.193,11.262,5.193,11.262s1.1,2.9,3.3,2.9c0.464,0,0.834-0.046,1.152-0.104c-0.082,1.635-0.348,3.221-0.817,4.722C42.541,30.867,41.756,30.963,40.5,30.963z" fill="currentColor"/></svg>`,
-
-        online: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path d="M20.331 14.644l-13.794-13.831 17.55 10.075zM2.938 0c-0.813 0.425-1.356 1.2-1.356 2.206v27.581c0 1.006 0.544 1.781 1.356 2.206l16.038-16zM29.512 14.1l-3.681-2.131-4.106 4.031 4.106 4.031 3.756-2.131c1.125-0.893 1.125-2.906-0.075-3.8zM6.538 31.188l17.55-10.075-3.756-3.756z" fill="currentColor"/></svg>`,
-
-        trailer: `<svg viewBox="0 0 80 70" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z" fill="currentColor"/></svg>`
-    };
-
-    function updateButtonSVGs() {
-        const map = {
-            'view--torrent': svgs.torrent,
-            'view--online': svgs.online,
-            'view--trailer': svgs.trailer
-        };
-
-        for (const cls in map) {
-            $(`.full-start__button.${cls}`).each(function () {
-                const button = $(this);
-                const oldSvg = button.find('svg');
-
-                if (oldSvg.length === 0) return;
-
-                const newSvg = $(map[cls]);
-
-                oldSvg.html(newSvg.html());
-
-                if (newSvg.attr('viewBox')) oldSvg.attr('viewBox', newSvg.attr('viewBox'));
-                if (newSvg.attr('xmlns')) oldSvg.attr('xmlns', newSvg.attr('xmlns'));
-
-                oldSvg.css({
-                    width: '1.5em',
-                    height: '1.5em'
-                });
-            });
+        if (observer) {
+            observer.disconnect();
+            observer = null;
         }
     }
 
-    /* =============================
-        4. CSS
-    ==============================*/
-
-    function injectStyles() {
-        if (document.getElementById('custom-buttons-style')) return;
-
-        const style = document.createElement('style');
-        style.id = 'custom-buttons-style';
-        style.textContent = `
-            .full-start__button { 
-                position: relative; 
-                transition: transform 0.2s ease !important;
-            }
-            .full-start__button:active { transform: scale(0.98) !important; }
-
-            .full-start__button.view--online svg path { fill: #2196f3 !important; }
-            .full-start__button.view--torrent svg path { fill: lime !important; }
-            .full-start__button.view--trailer svg path { fill: #f44336 !important; }
-
-            .full-start__button svg {
-                width: 1.5em !important;
-                height: 1.5em !important;
-            }
-
-            @media (max-width: 767px) {
-                .full-start__button {
-                    min-height: 44px !important;
-                    padding: 10px !important;
-                }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-
-    /* =============================
-        5. РЕЄСТРАЦІЯ ПЛАГІНА
-    ==============================*/
-
+    // Якщо потрібна реєстрація у вікні plugin()
     function registerPlugin() {
         if (window.plugin) {
-            window.plugin(PLUGIN_NAME, {
+            window.plugin('button_separator', {
                 type: 'component',
-                name: 'Button Separator + Optimized Buttons',
-                version: '4.0',
-                author: 'Roman + Oleksandr',
-                description: 'Обʼєднаний плагін: сортування кнопок, захист онлайн, оновлені SVG, оптимізовані стилі'
+                name: 'Button Separator',
+                version: '4.1',
+                author: 'Adapted',
+                description: 'Розділяє кнопки Онлайн/Торренти/Трейлери. Підтримка Lampa 3.0+'
             });
         }
     }
 
-    /* =============================
-        СТАРТ
-    ==============================*/
+    // Ініціалізація (DOMContentLoaded або зараз)
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initPlugin);
+        document.addEventListener('DOMContentLoaded', () => {
+            initPlugin();
+            registerPlugin();
+        });
     } else {
         initPlugin();
+        registerPlugin();
     }
 
 })();
