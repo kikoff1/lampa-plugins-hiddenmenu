@@ -1,4 +1,4 @@
-// Версія плагіну: 4.3 - Фінальна версія з адаптацією під Lampa 3.0.0+  
+// Версія плагіну: 4.4 - Фінальна версія з іконкою для онлайн кнопки в Lampa 3.0.0+  
 // Поєднує розділення кнопок та оптимізовані SVG/стилі  
   
 (function() {  
@@ -109,6 +109,48 @@
             'view--trailer': svgs.trailer  
         };  
           
+        // Додаємо обробку для кнопки .button--play якщо це онлайн кнопка (Lampa 3.0.0+)  
+        $('.full-start__button.button--play').each(function() {  
+            const button = $(this);  
+            const text = button.text().toLowerCase().trim();  
+            const classes = button.attr('class') || '';  
+              
+            // Перевіряємо чи це онлайн кнопка  
+            const isOnlineButton = text.includes('онлайн') ||   
+                                  text.includes('online') ||  
+                                  button.attr('data-subtitle')?.includes('v') ||  
+                                  button.find('span').text().toLowerCase().includes('онлайн') ||  
+                                  button.find('span').text().toLowerCase().includes('online');  
+              
+            if (isOnlineButton) {  
+                const oldSvg = button.find('svg');  
+                if (oldSvg.length > 0) {  
+                    const newSvg = $(svgs.online);  
+                    const width = oldSvg.attr('width') || '1.5em';  
+                    const height = oldSvg.attr('height') || '1.5em';  
+                      
+                    if (oldSvg.attr('class')) {  
+                        newSvg.attr('class', oldSvg.attr('class'));  
+                    }  
+                      
+                    oldSvg.html(newSvg.html());  
+                      
+                    if (newSvg.attr('viewBox')) {  
+                        oldSvg.attr('viewBox', newSvg.attr('viewBox'));  
+                    }  
+                    if (newSvg.attr('xmlns')) {  
+                        oldSvg.attr('xmlns', newSvg.attr('xmlns'));  
+                    }  
+                      
+                    oldSvg.css({  
+                        'width': width,  
+                        'height': height  
+                    });  
+                }  
+            }  
+        });  
+          
+        // Оригінальний код для інших кнопок  
         for (const cls in map) {  
             $(`.full-start__button.${cls}`).each(function() {  
                 const button = $(this);  
@@ -247,18 +289,25 @@
               
             let order = 999;  
               
-            if (classes.includes('view--online') || text.includes('онлайн')) {  
-                order = 1;  
+            // Онлайн кнопка - завжди перша (включаючи .button--play)  
+            if (classes.includes('view--online') ||   
+                text.includes('онлайн') ||   
+                text.includes('online') ||  
+                (classes.includes('button--play') && (  
+                    button.attr('data-subtitle')?.includes('v') ||  
+                    button.find('span').text().toLowerCase().includes('онлайн') ||  
+                    button.find('span').text().toLowerCase().includes('online')  
+                ))) {  
+                order = 0; // Найперший  
             } else if (classes.includes('view--torrent') || text.includes('торрент')) {  
-                order = 2;  
+                order = 1;  
             } else if (classes.includes('view--trailer') || text.includes('трейлер')) {  
-                order = 3;  
+                order = 2;  
             }  
               
             button.css('order', order);  
         });  
-    }  
-      
+    }
     function startObserver(event) {  
         const render = event.object.activity.render();  
         const mainContainer = render.find('.full-start-new__buttons')[0];  
@@ -342,16 +391,15 @@
             observer = null;  
         }  
     }  
-         
       
     // Реєстрація плагіна  
     if (typeof Lampa !== 'undefined') {  
         const manifest = {  
             type: 'component',  
             name: 'Enhanced Button Separator',  
-            version: '4.3.0',  
+            version: '4.4.0',  
             author: 'Merged Plugin',  
-            description: 'Об\'єднаний плагін: розділення кнопок + оптимізовані SVG/стилі з адаптацією під Lampa 3.0.0+'  
+            description: 'Об\'єднаний плагін: розділення кнопок + оптимізовані SVG/стилі з іконкою для онлайн кнопки в Lampa 3.0.0+'  
         };  
           
         if (window.plugin) {  
