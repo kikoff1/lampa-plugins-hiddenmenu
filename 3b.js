@@ -29,6 +29,12 @@
                     processButtons(event);  
                     updateButtonSVGs();  
                     startObserver(event);  
+                      
+                    // Додаткова перевірка через 500мс для онлайн кнопки  
+                    setTimeout(() => {  
+                        processButtons(event);  
+                        updateButtonSVGs();  
+                    }, 500);  
                 }, 300);  
             }  
               
@@ -187,22 +193,22 @@
             const text = button.text().toLowerCase().trim();  
             const classes = button.attr('class') || '';  
               
-            // Максимально розширена перевірка для кнопки Онлайн  
+            // Універсальна перевірка для онлайн кнопки  
             const isOnlineButton = classes.includes('view--online') ||   
                                   text.includes('онлайн') ||   
                                   text.includes('online') ||  
-                                  button.attr('data-subtitle')?.includes('v') ||  // Будь-яка версія  
-                                  button.attr('data-subtitle')?.includes('1.') || // Конкретніше  
+                                  button.attr('data-subtitle')?.includes('v') ||  
                                   button.find('span').text().toLowerCase().includes('онлайн') ||  
-                                  button.find('span').text().toLowerCase().includes('online') ||  
-                                  // Додаткова перевірка за SVG (онлайн кнопка має унікальний SVG)  
-                                  button.find('svg').html().includes('M20.331 14.644') ||  
-                                  // Перевірка за компонентом (якщо це онлайн плагін)  
-                                  button.attr('data-component') === 'online';  
+                                  button.find('span').text().toLowerCase().includes('online');  
               
-            // Важливі кнопки (включаючи онлайн)  
-            const isImportantButton = isOnlineButton ||   
-                                     classes.includes('view--torrent') ||   
+            // ЗАВЖДИ залишаємо онлайн кнопку  
+            if (isOnlineButton) {  
+                console.log('Знайдено онлайн кнопку, залишаємо:', classes);  
+                return;  
+            }  
+              
+            // Інші важливі кнопки  
+            const isImportantButton = classes.includes('view--torrent') ||   
                                      classes.includes('view--trailer') ||   
                                      classes.includes('button--book') ||   
                                      classes.includes('button--reaction') ||   
@@ -220,14 +226,9 @@
             const isOptionsButton = classes.includes('button--options');  
             const isEmpty = text === '' || text.length <= 2;  
               
-            // ГАРАНТОВАНО не видаляємо онлайн кнопку  
-            if (isOnlineButton) {  
-                // Навіть якщо це кнопка "Дивитись" або "Джерела", якщо це онлайн - залишаємо  
-                return;  
-            }  
-              
             // Видаляємо тільки неважливі кнопки  
             if (!isImportantButton && (isPlayButton || isSourcesButton || (isOptionsButton && isEmpty))) {  
+                console.log('Видаляємо кнопку:', classes, text);  
                 button.remove();  
             }  
         });  
@@ -253,8 +254,7 @@
               
             button.css('order', order);  
         });  
-    }  
-      
+    }
     function startObserver(event) {  
         const render = event.object.activity.render();  
         const mainContainer = render.find('.full-start-new__buttons')[0];  
@@ -270,21 +270,22 @@
                             const classes = node.className || '';  
                             const $node = $(node);  
                               
-                            // Максимально розширена перевірка для кнопки Онлайн  
+                            // Універсальна перевірка для онлайн кнопки  
                             const isOnlineButton = classes.includes('view--online') ||   
                                                   text.includes('онлайн') ||   
                                                   text.includes('online') ||  
-                                                  $node.attr('data-subtitle')?.includes('v') ||  // Будь-яка версія  
-                                                  $node.attr('data-subtitle')?.includes('1.') || // Конкретніше  
+                                                  $node.attr('data-subtitle')?.includes('v') ||  
                                                   $node.find('span').text().toLowerCase().includes('онлайн') ||  
-                                                  $node.find('span').text().toLowerCase().includes('online') ||  
-                                                  // Додаткова перевірка за SVG (онлайн кнопка має унікальний SVG)  
-                                                  $node.find('svg').html().includes('M20.331 14.644') ||  
-                                                  // Перевірка за компонентом (якщо це онлайн плагін)  
-                                                  $node.attr('data-component') === 'online';  
+                                                  $node.find('span').text().toLowerCase().includes('online');  
                               
-                            const isImportantButton = isOnlineButton ||   
-                                                     classes.includes('view--torrent') ||   
+                            // ЗАВЖДИ залишаємо онлайн кнопку  
+                            if (isOnlineButton) {  
+                                console.log('Observer: знайдено онлайн кнопку, залишаємо:', classes);  
+                                return;  
+                            }  
+                              
+                            // Інші важливі кнопки  
+                            const isImportantButton = classes.includes('view--torrent') ||   
                                                      classes.includes('view--trailer') ||   
                                                      classes.includes('button--book') ||   
                                                      classes.includes('button--reaction') ||   
@@ -302,13 +303,9 @@
                             const isOptionsButton = classes.includes('button--options');  
                             const isEmpty = text === '' || text.length <= 2;  
                               
-                            // ГАРАНТОВАНО не видаляємо онлайн кнопку  
-                            if (isOnlineButton) {  
-                                return; // Ніколи не видаляємо онлайн кнопку  
-                            }  
-                              
                             // Видаляємо тільки неважливі кнопки  
                             if (!isImportantButton && (isPlayButton || isSourcesButton || (isOptionsButton && isEmpty))) {  
+                                console.log('Observer: видаляємо кнопку:', classes, text);  
                                 $node.remove();  
                             }  
                         }  
