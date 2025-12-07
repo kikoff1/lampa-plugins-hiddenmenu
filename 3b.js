@@ -1,11 +1,11 @@
-// Версія плагіну: 4.5 - Фінальна версія з правильним таймінгом для Lampa 3.0.0+  
+// Версія плагіну: 4.5 - Фінальна версія з адаптацією під Lampa 3.0.0+  
+// Поєднує розділення кнопок та оптимізовані SVG/стилі  
+  
 (function() {  
     'use strict';  
       
     const PLUGIN_NAME = 'EnhancedButtonSeparator';  
     let observer = null;  
-    let updateAttempts = 0;  
-    const MAX_ATTEMPTS = 10;  
       
     function initPlugin() {  
         if (typeof Lampa === 'undefined') {  
@@ -17,9 +17,11 @@
           
         Lampa.Listener.follow('full', function(event) {  
             if (event.type === 'complite') {  
-                updateAttempts = 0;  
-                // Починаємо перевірку з затримкою і повторюємо кілька разів  
-                setTimeout(() => tryUpdateButtons(event), 500);  
+                setTimeout(() => {  
+                    processButtons(event);  
+                    updateButtonSVGs();  
+                    startObserver(event);  
+                }, 300);  
             }  
               
             if (event.type === 'destroy') {  
@@ -28,69 +30,6 @@
         });  
     }  
       
-    function tryUpdateButtons(event) {  
-        processButtons(event);  
-        updateButtonSVGs();  
-        startObserver(event);  
-          
-        // Повторюємо спроби, якщо онлайн кнопка ще не з'явилася  
-        if (updateAttempts < MAX_ATTEMPTS) {  
-            updateAttempts++;  
-            setTimeout(() => tryUpdateButtons(event), 500);  
-        }  
-    }  
-      
-    function updateButtonSVGs() {  
-        // Оновлюємо стандартні кнопки  
-        $('.full-start__button.view--online').each(function() {  
-            const button = $(this);  
-            const oldSvg = button.find('svg');  
-            if (oldSvg.length > 0) {  
-                oldSvg.html(svgs.online.replace(/<svg[^>]*>|<\/svg>/g, ''));  
-                oldSvg.attr('viewBox', '0 0 32 32');  
-                console.log('Онлайн іконку оновлено для view--online');  
-            }  
-        });  
-          
-        // Шукаємо онлайн кнопку за текстом та атрибутами  
-        $('.full-start__button').each(function() {  
-            const button = $(this);  
-            const text = button.text().toLowerCase();  
-              
-            if (text.includes('онлайн') || text.includes('online')) {  
-                const oldSvg = button.find('svg');  
-                if (oldSvg.length > 0 && !button.hasClass('view--online')) {  
-                    oldSvg.html(svgs.online.replace(/<svg[^>]*>|<\/svg>/g, ''));  
-                    oldSvg.attr('viewBox', '0 0 32 32');  
-                    console.log('Онлайн іконку оновлено для кнопки з текстом:', text);  
-                }  
-            }  
-        });  
-    }  
-      
-    function reorderButtons(container) {  
-        container.css('display', 'flex');  
-          
-        container.find('.full-start__button').each(function() {  
-            const button = $(this);  
-            const text = button.text().toLowerCase();  
-            let order = 999;  
-              
-            // Онлайн кнопка - завжди перша  
-            if (button.hasClass('view--online') || text.includes('онлайн') || text.includes('online')) {  
-                order = 0;  
-                console.log('Онлайн кнопка встановлена першою');  
-            } else if (button.hasClass('view--torrent') || text.includes('торрент')) {  
-                order = 1;  
-            } else if (button.hasClass('view--trailer') || text.includes('трейлер')) {  
-                order = 2;  
-            }  
-              
-            button.css('order', order);  
-        });  
-    }  
-      
-    // Решта функцій без змін...  
     function initStyles() {  
         if (!document.getElementById('enhanced-buttons-style')) {  
             const style = document.createElement('style');  
@@ -112,15 +51,47 @@
                     width: 1.5em !important;  
                     height: 1.5em !important;  
                 }  
+                  
+                .full-start__button.loading::before {  
+                    content: '';  
+                    position: absolute;  
+                    top: 0; left: 0; right: 0;  
+                    height: 2px;  
+                    background: rgba(255,255,255,0.5);  
+                    animation: loading 1s linear infinite;  
+                }  
+                  
+                @keyframes loading {  
+                    from { transform: translateX(-100%); }  
+                    to   { transform: translateX(100%); }  
+                }  
+                  
+                @media (max-width: 767px) {  
+                    .full-start__button {  
+                        min-height: 44px !important;  
+                        padding: 10px !important;  
+                    }  
+                }  
             `;  
             document.head.appendChild(style);  
         }  
     }  
       
     const svgs = {  
-        online: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path d="M20.331 14.644l-13.794-13.831 17.55 10.075zM2.938 0c-0.813 0.425-1.356 1.2-1.356 2.206v27.581c0 1.006 0.544 1.781 1.356 2.206l16.038-16zM29.512 14.1l-3.681-2.131-4.106 4.031 4.106 4.031 3.756-2.131c1.125-0.893 1.125-2.906-0.075-3.8zM6.538 31.188l17.55-10.075-3.756-3.756z" fill="currentColor"/></svg>`,  
-        torrent: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50"><path d="M25,2C12.317,2,2,12.317,2,25s10.317,23,23,23s23-10.317,23-23S37.683,2,25,2z" fill="currentColor"/></svg>`,  
-        trailer: `<svg viewBox="0 0 80 70" xmlns="http://www.w3.org/2000/svg"><path d="M55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z" fill="currentColor"/></svg>`  
+        torrent: `  
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50">  
+                <path d="M25,2C12.317,2,2,12.317,2,25s10.317,23,23,23s23-10.317,23-23S37.683,2,25,2zM40.5,30.963c-3.1,0-4.9-2.4-4.9-2.4S34.1,35,27,35c-1.4,0-3.6-0.837-3.6-0.837l4.17,9.643C26.727,43.92,25.874,44,25,44c-2.157,0-4.222-0.377-6.155-1.039L9.237,16.851c0,0-0.7-1.2,0.4-1.5c1.1-0.3,5.4-1.2,5.4-1.2s1.475-0.494,1.8,0.5c0.5,1.3,4.063,11.112,4.063,11.112S22.6,29,27.4,29c4.7,0,5.9-3.437,5.7-3.937c-1.2-3-4.993-11.862-4.993-11.862s-0.6-1.1,0.8-1.4c1.4-0.3,3.8-0.7,3.8-0.7s1.105-0.163,1.6,0.8c0.738,1.437,5.193,11.262,5.193,11.262s1.1,2.9,3.3,2.9c0.464,0,0.834-0.046,1.152-0.104c-0.082,1.635-0.348,3.221-0.817,4.722C42.541,30.867,41.756,30.963,40.5,30.963z" fill="currentColor"/>  
+            </svg>`,  
+          
+        online: `  
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">  
+                <path d="M20.331 14.644l-13.794-13.831 17.55 10.075zM2.938 0c-0.813 0.425-1.356 1.2-1.356 2.206v27.581c0 1.006 0.544 1.781 1.356 2.206l16.038-16zM29.512 14.1l-3.681-2.131-4.106 4.031 4.106 4.031 3.756-2.131c1.125-0.893 1.125-2.906-0.075-3.8zM6.538 31.188l17.55-10.075-3.756-3.756z" fill="currentColor"/>  
+            </svg>`,  
+          
+        trailer: `  
+            <svg viewBox="0 0 80 70" xmlns="http://www.w3.org/2000/svg">  
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z" fill="currentColor"/>  
+            </svg>`  
     };  
       
     function processButtons(event) {  
@@ -146,9 +117,95 @@
               
             reorderButtons(mainContainer);  
               
+            if (Lampa.Controller) {  
+                setTimeout(() => {  
+                    Lampa.Controller.collectionSet(mainContainer.parent());  
+                }, 200);  
+            }  
+              
         } catch (error) {  
             console.error(`${PLUGIN_NAME}: Помилка`, error);  
         }  
+    }  
+      
+    function updateButtonSVGs() {  
+        // Оновлюємо стандартні кнопки  
+        $('.full-start__button.view--online').each(function() {  
+            const button = $(this);  
+            const oldSvg = button.find('svg');  
+            if (oldSvg.length > 0) {  
+                oldSvg.html(svgs.online.replace(/<svg[^>]*>|<\/svg>/g, ''));  
+                oldSvg.attr('viewBox', '0 0 32 32');  
+            }  
+        });  
+          
+        $('.full-start__button.view--torrent').each(function() {  
+            const button = $(this);  
+            const oldSvg = button.find('svg');  
+            if (oldSvg.length > 0) {  
+                oldSvg.html(svgs.torrent.replace(/<svg[^>]*>|<\/svg>/g, ''));  
+                oldSvg.attr('viewBox', '0 0 50 50');  
+            }  
+        });  
+          
+        $('.full-start__button.view--trailer').each(function() {  
+            const button = $(this);  
+            const oldSvg = button.find('svg');  
+            if (oldSvg.length > 0) {  
+                oldSvg.html(svgs.trailer.replace(/<svg[^>]*>|<\/svg>/g, ''));  
+                oldSvg.attr('viewBox', '0 0 80 70');  
+            }  
+        });  
+          
+        // Обробляємо кнопку .button--play для всіх версій  
+        $('.full-start__button.button--play').each(function() {  
+            const button = $(this);  
+            const text = button.text().toLowerCase().trim();  
+            const oldSvg = button.find('svg');  
+              
+            if (oldSvg.length > 0) {  
+                // Перевіряємо чи це онлайн кнопка  
+                if (text.includes('онлайн') || text.includes('online') ||   
+                    button.attr('data-subtitle')?.includes('v')) {  
+                    // Онлайн іконка  
+                    oldSvg.html(svgs.online.replace(/<svg[^>]*>|<\/svg>/g, ''));  
+                    oldSvg.attr('viewBox', '0 0 32 32');  
+                }  
+            }  
+        });  
+    }  
+      
+    function reorderButtons(container) {  
+        container.css('display', 'flex');  
+          
+        container.find('.full-start__button').each(function() {  
+            const button = $(this);  
+            const classes = button.attr('class') || '';  
+            const text = button.text().toLowerCase();  
+              
+            let order = 999;  
+              
+            // Онлайн кнопка - завжди перша  
+            if (classes.includes('view--online') ||   
+                text.includes('онлайн') ||   
+                text.includes('online') ||  
+                (classes.includes('button--play') && (  
+                    text.includes('онлайн') ||   
+                    text.includes('online') ||  
+                    button.attr('data-subtitle')?.includes('v')  
+                ))) {  
+                order = 0;  
+            } else if (classes.includes('button--play')) {  
+                // Кнопка "Дивитись" - після онлайн  
+                order = 1;  
+            } else if (classes.includes('view--torrent') || text.includes('торрент')) {  
+                order = 2;  
+            } else if (classes.includes('view--trailer') || text.includes('трейлер')) {  
+                order = 3;  
+            }  
+              
+            button.css('order', order);  
+        });  
     }  
       
     function startObserver(event) {  
@@ -181,12 +238,14 @@
             name: 'Enhanced Button Separator',  
             version: '4.5.0',  
             author: 'Merged Plugin',  
-            description: 'Об\'єднаний плагін з виправленим таймінгом для Lampa 3.0.0+'  
+            description: 'Об\'єднаний плагін: розділення кнопок + оптимізовані SVG/стилі з адаптацією під Lampa 3.0.0+'  
         };  
           
         if (window.plugin) {  
             window.plugin('enhanced_button_separator', manifest);  
         }  
+          
+        Lampa.Manifest.plugins = manifest;  
     }  
       
     if (document.readyState === 'loading') {  
