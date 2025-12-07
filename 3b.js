@@ -1,4 +1,4 @@
-// Версія плагіну: 4.1 - Об'єднана версія з виправленням захисту кнопки "Онлайн"  
+// Версія плагіну: 4.2 - Фінальна версія з посиленим захистом кнопки "Онлайн"  
 // Поєднує розділення кнопок та оптимізовані SVG/стилі з адаптацією під Lampa 3.0.0+  
   
 (function() {  
@@ -187,14 +187,21 @@
             const text = button.text().toLowerCase().trim();  
             const classes = button.attr('class') || '';  
               
-            // Розширена перевірка для кнопки Онлайн - додатково перевіряємо data-subtitle  
+            // Максимально розширена перевірка для кнопки Онлайн  
             const isOnlineButton = classes.includes('view--online') ||   
                                   text.includes('онлайн') ||   
                                   text.includes('online') ||  
-                                  button.attr('data-subtitle')?.includes('v1.') ||  // Перевірка для версії онлайн плагіна  
-                                  button.find('span').text().toLowerCase().includes('онлайн');  
+                                  button.attr('data-subtitle')?.includes('v') ||  // Будь-яка версія  
+                                  button.attr('data-subtitle')?.includes('1.') || // Конкретніше  
+                                  button.find('span').text().toLowerCase().includes('онлайн') ||  
+                                  button.find('span').text().toLowerCase().includes('online') ||  
+                                  // Додаткова перевірка за SVG (онлайн кнопка має унікальний SVG)  
+                                  button.find('svg').html().includes('M20.331 14.644') ||  
+                                  // Перевірка за компонентом (якщо це онлайн плагін)  
+                                  button.attr('data-component') === 'online';  
               
-            const isImportantButton = isOnlineButton ||  // Онлайн завжди важлива  
+            // Важливі кнопки (включаючи онлайн)  
+            const isImportantButton = isOnlineButton ||   
                                      classes.includes('view--torrent') ||   
                                      classes.includes('view--trailer') ||   
                                      classes.includes('button--book') ||   
@@ -213,8 +220,14 @@
             const isOptionsButton = classes.includes('button--options');  
             const isEmpty = text === '' || text.length <= 2;  
               
-            // Ніколи не видаляємо онлайн кнопку  
-            if (!isImportantButton && !isOnlineButton && (isPlayButton || isSourcesButton || (isOptionsButton && isEmpty))) {  
+            // ГАРАНТОВАНО не видаляємо онлайн кнопку  
+            if (isOnlineButton) {  
+                // Навіть якщо це кнопка "Дивитись" або "Джерела", якщо це онлайн - залишаємо  
+                return;  
+            }  
+              
+            // Видаляємо тільки неважливі кнопки  
+            if (!isImportantButton && (isPlayButton || isSourcesButton || (isOptionsButton && isEmpty))) {  
                 button.remove();  
             }  
         });  
@@ -257,12 +270,18 @@
                             const classes = node.className || '';  
                             const $node = $(node);  
                               
-                            // Розширена перевірка для кнопки Онлайн  
+                            // Максимально розширена перевірка для кнопки Онлайн  
                             const isOnlineButton = classes.includes('view--online') ||   
                                                   text.includes('онлайн') ||   
                                                   text.includes('online') ||  
-                                                  $node.attr('data-subtitle')?.includes('v1.') ||  
-                                                  $node.find('span').text().toLowerCase().includes('онлайн');  
+                                                  $node.attr('data-subtitle')?.includes('v') ||  // Будь-яка версія  
+                                                  $node.attr('data-subtitle')?.includes('1.') || // Конкретніше  
+                                                  $node.find('span').text().toLowerCase().includes('онлайн') ||  
+                                                  $node.find('span').text().toLowerCase().includes('online') ||  
+                                                  // Додаткова перевірка за SVG (онлайн кнопка має унікальний SVG)  
+                                                  $node.find('svg').html().includes('M20.331 14.644') ||  
+                                                  // Перевірка за компонентом (якщо це онлайн плагін)  
+                                                  $node.attr('data-component') === 'online';  
                               
                             const isImportantButton = isOnlineButton ||   
                                                      classes.includes('view--torrent') ||   
@@ -283,8 +302,13 @@
                             const isOptionsButton = classes.includes('button--options');  
                             const isEmpty = text === '' || text.length <= 2;  
                               
-                            // Ніколи не видаляємо онлайн кнопку  
-                            if (!isImportantButton && !isOnlineButton && (isPlayButton || isSourcesButton || (isOptionsButton && isEmpty))) {  
+                            // ГАРАНТОВАНО не видаляємо онлайн кнопку  
+                            if (isOnlineButton) {  
+                                return; // Ніколи не видаляємо онлайн кнопку  
+                            }  
+                              
+                            // Видаляємо тільки неважливі кнопки  
+                            if (!isImportantButton && (isPlayButton || isSourcesButton || (isOptionsButton && isEmpty))) {  
                                 $node.remove();  
                             }  
                         }  
@@ -314,9 +338,9 @@
         const manifest = {  
             type: 'component',  
             name: 'Enhanced Button Separator',  
-            version: '4.1.0',  
+            version: '4.2.0',  
             author: 'Merged Plugin',  
-            description: 'Об\'єднаний плагін: розділення кнопок + оптимізовані SVG/стилі з виправленням захисту кнопки Онлайн для Lampa 3.0.0+'  
+            description: 'Об\'єднаний плагін: розділення кнопок + оптимізовані SVG/стилі з посиленим захистом кнопки Онлайн для Lampa 3.0.0+'  
         };  
           
         if (window.plugin) {  
