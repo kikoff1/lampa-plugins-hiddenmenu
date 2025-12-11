@@ -43,16 +43,39 @@
           parser_torrent_type: 'jackett' // Тип парсера
       }
   }, {
-      // Другий парсер: Spawn UA (V2).
+      // 2 парсер: Spawn UA (V2).
       base: 'spawnum_duckdns_org_49117', // Новий унікальний ідентифікатор
       name: 'Spawn UA (V2)', // Нова назва
+      settings: {
+          url: 'jackett.1337.cx', // Нова адреса
+          key: '7', // Новий ключ API
+          parser_torrent_type: 'jackett' // Тип парсера
+      }
+
+}, {
+      // 3 парсер: Spawn UA (V3).
+      base: 'spawnum_duckdns_org_49117', // Новий унікальний ідентифікатор
+      name: 'Spawn UA (V3)', // Нова назва
       settings: {
           url: 'spawnum.duckdns.org:49117', // Нова адреса
           key: '2', // Новий ключ API
           parser_torrent_type: 'jackett' // Тип парсера
       }
+
+
+
+}, {
+      // 4 парсер: Мій.
+      base: 'tytowqus.deploy.cx', // Новий унікальний ідентифікатор
+      name: 'Мій', // Нова назва
+      settings: {
+          url: 'tytowqus.deploy.cx', // Нова адреса
+          key: '1', // Новий ключ API
+          parser_torrent_type: 'jackett' // Тип парсера
+      }
+
   },{
-      // Третій парсер: RedApi. Залишено без змін.
+      // 5 парсер: RedApi. Залишено без змін.
       base: 'redapi_cfhttp_top',
       name: 'RedApi',
       settings: {
@@ -61,7 +84,7 @@
           parser_torrent_type: 'jackett'
       }
   }, {
-      // Четвертий парсер: Jacred viewbox. Залишено без змін.
+      // 6 парсер: Jacred viewbox. Залишено без змін.
       base: 'jacred_viewbox_dev',
       name: 'Jacred Viewbox',
       settings: {
@@ -70,7 +93,7 @@
           parser_torrent_type: 'jackett'
       }
   }, {
-      // П'ятий парсер: Jacred pro. Залишено без змін.
+      // 7 парсер: Jacred pro. Залишено без змін.
       base: 'jacred_pro',
       name: 'Jacred Pro',
       settings: {
