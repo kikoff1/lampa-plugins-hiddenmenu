@@ -44,7 +44,7 @@
       }
   }, {
       // 2 парсер: Spawn UA (V2).
-      base: 'spawnum_duckdns_org_49117', // Новий унікальний ідентифікатор
+      base: 'jackett.1337.cx', // Новий унікальний ідентифікатор
       name: 'Spawn UA (V2)', // Нова назва
       settings: {
           url: 'jackett.1337.cx', // Нова адреса
