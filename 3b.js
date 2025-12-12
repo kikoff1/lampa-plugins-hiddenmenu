@@ -1,4 +1,4 @@
-// Версія плагіну: 5.1 - Виправлена версія з кращою обробкою помилок  
+// Версія плагіну: 5.2 - Виправлена версія з правильним порядком кнопок  
 // Розділяє кнопки окремо: Онлайн, Торренти, Трейлери + оптимізовані SVG та стилі  
 // Підтримка кнопки "Дивитись" для Lampa 3.0.0+ + меню налаштувань  
   
@@ -97,6 +97,15 @@
                 `;  
             }  
               
+            cssContent += `  
+                @media (max-width: 767px) {  
+                    .full-start__button {  
+                        min-height: 44px !important;  
+                        padding: 10px !important;  
+                    }  
+                }  
+            `;  
+              
             style.textContent = cssContent;  
             document.head.appendChild(style);  
         } catch (e) {  
@@ -112,7 +121,7 @@
         play: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path d="M20.331 14.644l-13.794-13.831 17.55 10.075zM2.938 0c-0.813 0.425-1.356 1.2-1.356 2.206v27.581c0 1.006 0.544 1.781 1.356 2.206l16.038-16zM29.512 14.1l-3.681-2.131-4.106 4.031 4.106 4.031 3.756-2.131c1.125-0.893 1.125-2.906-0.075-3.8zM6.538 31.188l17.55-10.075-3.756-3.756z" fill="currentColor"/></svg>`  
     };  
       
-    // Додавання налаштувань  
+    /* === Додавання налаштувань === */  
     function addSettings() {  
         try {  
             // Додаємо компонент налаштувань  
@@ -144,6 +153,10 @@
                     settings.separateButtons = !settings.separateButtons;  
                     saveSettings(settings);  
                     addStyles();  
+                    // Перезавантажуємо сторінку для застосування змін  
+                    setTimeout(() => {  
+                        window.location.reload();  
+                    }, 100);  
                 }  
             });  
               
@@ -225,7 +238,7 @@
         }  
     }  
       
-    // Обробка кнопок з перевіркою  
+    // Обробка кнопок з виправленим порядком  
     function processButtons(event) {  
         try {  
             const settings = getSettings();  
@@ -242,18 +255,49 @@
             if (!mainContainer.length) return;  
               
             const hiddenContainer = render.find('.buttons--container');  
+              
+            // Збираємо всі кнопки, які потрібно перемістити  
+            const buttonsToMove = [];  
+              
             const torrentBtn = hiddenContainer.find('.view--torrent');  
             const trailerBtn = hiddenContainer.find('.view--trailer');  
               
             if (torrentBtn.length > 0) {  
                 torrentBtn.removeClass('hide').addClass('selector');  
-                mainContainer.append(torrentBtn);  
+                buttonsToMove.push(torrentBtn);  
             }  
               
             if (trailerBtn.length > 0) {  
                 trailerBtn.removeClass('hide').addClass('selector');  
-                mainContainer.append(trailerBtn);  
+                buttonsToMove.push(trailerBtn);  
             }  
+              
+            // Вставляємо кнопки після кнопки "Онлайн" (якщо вона є) або після "Дивитись"  
+            const onlineBtn = mainContainer.find('.view--online');  
+            const playBtn = mainContainer.find('.button--play');  
+              
+            let insertAfter = null;  
+            if (onlineBtn.length > 0) {  
+                insertAfter = onlineBtn;  
+            } else if (playBtn.length > 0) {  
+                insertAfter = playBtn;  
+            }  
+              
+            if (insertAfter && insertAfter.length > 0) {  
+                buttonsToMove.forEach(btn => {  
+                    insertAfter.after(btn);  
+                });  
+            } else {  
+                // Якщо не знайдено основних кнопок, додаємо в початок  
+                buttonsToMove.forEach(btn => {  
+                    mainContainer.prepend(btn);  
+                });  
+            }  
+              
+            setTimeout(() => {  
+                removeSourcesButton(mainContainer);  
+                reorderButtons(mainContainer); // Сортуємо після всіх змін  
+            }, 200);  
               
             setTimeout(() => {  
                 updateButtons();  
@@ -262,6 +306,39 @@
         } catch (e) {  
             console.error(`${PLUGIN_NAME}: Помилка обробки кнопок`, e);  
         }  
+    }  
+      
+    // Виправлена функція сортування кнопок  
+    function reorderButtons(container) {  
+        container.css('display', 'flex');  
+          
+        container.find('.full-start__button').each(function() {  
+            const button = $(this);  
+            const classes = button.attr('class') || '';  
+            const text = button.text().toLowerCase();  
+              
+            let order = 999;  
+              
+            if (classes.includes('button--play') || text.includes('дивитись') || text.includes('watch')) {  
+                order = 0;  
+            } else if (classes.includes('view--online') || text.includes('онлайн')) {  
+                order = 1;  
+            } else if (classes.includes('view--torrent') || text.includes('торрент')) {  
+                order = 2;  
+            } else if (classes.includes('view--trailer') || text.includes('трейлер')) {  
+                order = 3;  
+            } else if (classes.includes('button--book') || text.includes('додати') || text.includes('зберегти')) {  
+                order = 4;  
+            } else if (classes.includes('button--reaction')) {  
+                order = 5;  
+            } else if (classes.includes('button--subscribe') || classes.includes('button--subs')) {  
+                order = 6;  
+            } else if (classes.includes('button--options')) {  
+                order = 7;  
+            }  
+              
+            button.css('order', order);  
+        });  
     }  
       
     // Спостерігач за змінами  
@@ -302,7 +379,7 @@
                 window.plugin('unified_button_manager', {  
                     type: 'component',  
                     name: 'Unified Button Manager',  
-                    version: '5.1',  
+                    version: '5.2',  
                     author: 'Merged Plugin',  
                     description: 'Об\'єднаний плагін: розділення кнопок + оптимізовані SVG та стилі з налаштуваннями'  
                 });  
