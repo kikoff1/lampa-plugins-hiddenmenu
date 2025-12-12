@@ -1,6 +1,6 @@
-// Версія плагіну: 4.1 - Виправлена версія  
+// Версія плагіну: 5.0 - З налаштуваннями  
 // Розділяє кнопки окремо: Онлайн, Торренти, Трейлери + оптимізовані SVG та стилі  
-// Підтримка кнопки "Дивитись" для Lampa 3.0.0+  
+// Підтримка кнопки "Дивитись" для Lampa 3.0.0+ + меню налаштувань  
   
 (function() {  
     'use strict';  
@@ -8,10 +8,27 @@
     const PLUGIN_NAME = 'UnifiedButtonManager';  
     let observer = null;  
       
-    /* === Перевірка версії Lampa (виправлена) === */  
+    // Налаштування за замовчуванням  
+    const defaultSettings = {  
+        separateButtons: true,  
+        customIcons: true,  
+        coloredIcons: true  
+    };  
+      
+    // Отримання налаштувань  
+    function getSettings() {  
+        const saved = Lampa.Storage.get('unified_button_settings', '{}');  
+        return Object.assign({}, defaultSettings, JSON.parse(saved));  
+    }  
+      
+    // Збереження налаштувань  
+    function saveSettings(settings) {  
+        Lampa.Storage.set('unified_button_settings', JSON.stringify(settings));  
+    }  
+      
+    /* === Перевірка версії Lampa === */  
     function isLampaVersionOrHigher(minVersion) {  
         try {  
-            // Спробуємо різні способи отримання версії  
             let version = null;  
               
             if (window.Lampa && window.Lampa.Manifest && window.Lampa.Manifest.app_version) {  
@@ -34,20 +51,55 @@
         }  
     }  
       
-    /* === CSS (покращена специфічність) === */  
+    /* === CSS (з умовними стилями) === */  
     function addStyles() {  
-        if (!document.getElementById('unified-buttons-style')) {  
-            const style = document.createElement('style');  
-            style.id = 'unified-buttons-style';  
-            style.textContent = `  
+        if (document.getElementById('unified-buttons-style')) {  
+            document.getElementById('unified-buttons-style').remove();  
+        }  
+          
+        const settings = getSettings();  
+        const style = document.createElement('style');  
+        style.id = 'unified-buttons-style';  
+          
+        let cssContent = `  
+            .full-start__button {  
+                position: relative !important;  
+                transition: transform 0.2s ease !important;  
+            }  
+            .full-start__button:active {  
+                transform: scale(0.98) !important;  
+            }  
+              
+            .full-start__button svg {  
+                width: 1.5em !important;  
+                height: 1.5em !important;  
+            }  
+              
+            .full-start__button.loading::before {  
+                content: '';  
+                position: absolute;  
+                top: 0; left: 0; right: 0;  
+                height: 2px;  
+                background: rgba(255,255,255,0.5);  
+                animation: loading 1s linear infinite;  
+            }  
+              
+            @keyframes loading {  
+                from { transform: translateX(-100%); }  
+                to   { transform: translateX(100%); }  
+            }  
+              
+            @media (max-width: 767px) {  
                 .full-start__button {  
-                    position: relative !important;  
-                    transition: transform 0.2s ease !important;  
+                    min-height: 44px !important;  
+                    padding: 10px !important;  
                 }  
-                .full-start__button:active {  
-                    transform: scale(0.98) !important;  
-                }  
-                  
+            }  
+        `;  
+          
+        // Додаємо кольорові іконки тільки якщо налаштування увімкнено  
+        if (settings.coloredIcons && settings.customIcons) {  
+            cssContent += `  
                 .full-start__button.view--online svg path {   
                     fill: #2196f3 !important;   
                 }  
@@ -60,35 +112,11 @@
                 .full-start__button.button--play svg path {   
                     fill: #2196f3 !important;   
                 }  
-                  
-                .full-start__button svg {  
-                    width: 1.5em !important;  
-                    height: 1.5em !important;  
-                }  
-                  
-                .full-start__button.loading::before {  
-                    content: '';  
-                    position: absolute;  
-                    top: 0; left: 0; right: 0;  
-                    height: 2px;  
-                    background: rgba(255,255,255,0.5);  
-                    animation: loading 1s linear infinite;  
-                }  
-                  
-                @keyframes loading {  
-                    from { transform: translateX(-100%); }  
-                    to   { transform: translateX(100%); }  
-                }  
-                  
-                @media (max-width: 767px) {  
-                    .full-start__button {  
-                        min-height: 44px !important;  
-                        padding: 10px !important;  
-                    }  
-                }  
             `;  
-            document.head.appendChild(style);  
         }  
+          
+        style.textContent = cssContent;  
+        document.head.appendChild(style);  
     }  
       
     /* === SVGs === */  
@@ -97,7 +125,7 @@
         online: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path d="M20.331 14.644l-13.794-13.831 17.55 10.075zM2.938 0c-0.813 0.425-1.356 1.2-1.356 2.206v27.581c0 1.006 0.544 1.781 1.356 2.206l16.038-16zM29.512 14.1l-3.681-2.131-4.106 4.031 4.106 4.031 3.756-2.131c1.125-0.893 1.125-2.906-0.075-3.8zM6.538 31.188l17.55-10.075-3.756-3.756z" fill="currentColor"/></svg>`,  
         trailer: `<svg viewBox="0 0 80 70" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z" fill="currentColor"/></svg>`,  
         play: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path d="M20.331 14.644l-13.794-13.831 17.55 10.075zM2.938 0c-0.813 0.425-1.356 1.2-1.356 2.206v27.581c0 1.006 0.544 1.781 1.356 2.206l16.038-16zM29.512 14.1l-3.681-2.131-4.106 4.031 4.106 4.031 3.756-2.131c1.125-0.893 1.125-2.906-0.075-3.8zM6.538 31.188l17.55-10.075-3.756-3.756z" fill="currentColor"/></svg>`  
-    };
+    };  
       
     function initPlugin() {  
         if (typeof Lampa === 'undefined') {  
@@ -105,7 +133,10 @@
             return;  
         }  
           
-        // Додаємо стили одразу  
+        // Додаємо налаштування  
+        addSettings();  
+          
+        // Додаємо стили з урахуванням налаштувань  
         addStyles();  
           
         Lampa.Listener.follow('full', function(event) {  
@@ -113,20 +144,104 @@
                 setTimeout(() => {  
                     processButtons(event);  
                     startObserver(event);  
-                }, 500); // Збільшено затримку  
+                }, 500);  
             }  
               
             if (event.type === 'destroy') {  
                 stopObserver();  
             }  
         });  
+    }
+    /* === Додавання налаштувань === */  
+    function addSettings() {  
+        // Додаємо компонент налаштувань  
+        Lampa.SettingsApi.addComponent({  
+            component: 'unified_buttons',  
+            icon: `<svg height="36" viewBox="0 0 38 36" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                <rect x="2" y="8" width="34" height="21" rx="3" stroke="white" stroke-width="3"/>  
+                <circle cx="9" cy="18" r="2" fill="white"/>  
+                <circle cx="19" cy="18" r="2" fill="white"/>  
+                <circle cx="29" cy="18" r="2" fill="white"/>  
+            </svg>`,  
+            name: 'Налаштування 3 кнопок'  
+        });  
+          
+        // Параметр 1: Розділити всі кнопки  
+        Lampa.SettingsApi.addParam({  
+            component: 'unified_buttons',  
+            param: {  
+                name: 'separateButtons',  
+                type: 'trigger',  
+                default: defaultSettings.separateButtons  
+            },  
+            field: {  
+                name: 'Розділити всі кнопки',  
+                description: 'Розділяти кнопки Онлайн, Торренти, Трейлери'  
+            },  
+            onChange: () => {  
+                const settings = getSettings();  
+                settings.separateButtons = !settings.separateButtons;  
+                saveSettings(settings);  
+                addStyles(); // Перестворюємо стилі  
+            }  
+        });  
+          
+        // Параметр 2: Замінити іконки  
+        Lampa.SettingsApi.addParam({  
+            component: 'unified_buttons',  
+            param: {  
+                name: 'customIcons',  
+                type: 'trigger',  
+                default: defaultSettings.customIcons  
+            },  
+            field: {  
+                name: 'Замінити іконки',  
+                description: 'Використовувати нові іконки замість стандартних'  
+            },  
+            onChange: () => {  
+                const settings = getSettings();  
+                settings.customIcons = !settings.customIcons;  
+                saveSettings(settings);  
+                addStyles(); // Перестворюємо стилі  
+                // Оновлюємо іконки на сторінці  
+                setTimeout(() => {  
+                    if (typeof updateButtons === 'function') {  
+                        updateButtons();  
+                    }  
+                }, 100);  
+            }  
+        });  
+          
+        // Параметр 3: Кольорові іконки  
+        Lampa.SettingsApi.addParam({  
+            component: 'unified_buttons',  
+            param: {  
+                name: 'coloredIcons',  
+                type: 'trigger',  
+                default: defaultSettings.coloredIcons  
+            },  
+            field: {  
+                name: 'Кольорові іконки',  
+                description: 'Застосовувати кольорові іконки (сині, зелені, червоні)'  
+            },  
+            onChange: () => {  
+                const settings = getSettings();  
+                settings.coloredIcons = !settings.coloredIcons;  
+                saveSettings(settings);  
+                addStyles(); // Перестворюємо стилі  
+            }  
+        });  
     }  
       
     function processButtons(event) {  
         try {  
+            const settings = getSettings();  
+              
+            // Якщо розділення кнопок вимкнено - виходимо  
+            if (!settings.separateButtons) return;  
+              
             const render = event.object.activity.render();  
               
-            // Шукаємо контейнери різними способами  
             let mainContainer = render.find('.full-start-new__buttons');  
             if (!mainContainer.length) {  
                 mainContainer = render.find('.full-start__buttons');  
@@ -175,8 +290,7 @@
         } catch (error) {  
             console.error(`${PLUGIN_NAME}: Помилка обробки кнопок`, error);  
         }  
-    }  
-      
+    }
     function removeSourcesButton(mainContainer) {  
         const allButtons = mainContainer.find('.full-start__button');  
         const isVersion3OrHigher = isLampaVersionOrHigher('3.0.0');  
@@ -238,8 +352,14 @@
               
             button.css('order', order);  
         });  
-    }
+    }  
+      
     function updateButtons() {  
+        const settings = getSettings();  
+          
+        // Якщо заміна іконок вимкнена - виходимо  
+        if (!settings.customIcons) return;  
+          
         const map = {  
             'view--torrent': svgs.torrent,  
             'view--online': svgs.online,  
@@ -343,19 +463,19 @@
             observer.disconnect();  
             observer = null;  
         }  
-    }  
-      
+    }
     // Реєстрація плагіна  
     if (window.plugin) {  
         window.plugin('unified_button_manager', {  
             type: 'component',  
             name: 'Unified Button Manager',  
-            version: '4.2',  
+            version: '5.0',  
             author: 'Merged Plugin',  
-            description: 'Об\'єднаний плагін: розділення кнопок + оптимізовані SVG та стилі з підтримкою Lampa 3.0.0+'  
+            description: 'Об\'єднаний плагін: розділення кнопок + оптимізовані SVG та стилі з налаштуваннями'  
         });  
     }  
       
+    // Ініціалізація плагіна  
     if (document.readyState === 'loading') {  
         document.addEventListener('DOMContentLoaded', initPlugin);  
     } else {  
