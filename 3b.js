@@ -1,11 +1,25 @@
-// Версія плагіну: 4.0 - Об'єднана версія (Optimized Buttons + ButtonSeparator)  
+// Версія плагіну: 4.1 - Об'єднана версія з підтримкою кнопки "Дивитись"  
 // Розділяє кнопки окремо: Онлайн, Торренти, Трейлери + оптимізовані SVG та стилі  
+// Підтримка кнопки "Дивитись" для Lampa 3.0.0+  
   
 (function() {  
     'use strict';  
       
     const PLUGIN_NAME = 'UnifiedButtonManager';  
     let observer = null;  
+      
+    /* === Перевірка версії Lampa === */  
+    function isLampaVersionOrHigher(minVersion) {  
+        if (!Lampa || !Lampa.Manifest || !Lampa.Manifest.app_version) {  
+            return false;  
+        }  
+          
+        const currentVersion = Lampa.Manifest.app_version;  
+        const current = parseInt(currentVersion.replace(/\./g, ''));  
+        const minimum = parseInt(minVersion.replace(/\./g, ''));  
+          
+        return current >= minimum;  
+    }  
       
     /* === CSS === */  
     function addStyles() {  
@@ -24,6 +38,7 @@
                 .full-start__button.view--online svg path { fill: #2196f3 !important; }  
                 .full-start__button.view--torrent svg path { fill: lime !important; }  
                 .full-start__button.view--trailer svg path { fill: #f44336 !important; }  
+                .full-start__button.button--play svg path { fill: #2196f3 !important; }  
                   
                 .full-start__button svg {  
                     width: 1.5em !important;  
@@ -71,6 +86,12 @@
             <svg viewBox="0 0 80 70" xmlns="http://www.w3.org/2000/svg">  
                 <path fill-rule="evenodd" clip-rule="evenodd"  
                 d="M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z" fill="currentColor"/>  
+            </svg>`,  
+              
+        play: `  
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 29">  
+                <circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/>  
+                <path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/>  
             </svg>`  
     };  
       
@@ -119,7 +140,7 @@
                 mainContainer.append(trailerBtn);  
             }  
               
-            // Крок 2: Видаляємо непотрібні кнопки  
+            // Крок 2: Видаляємо непотрібні кнопки з урахуванням версії  
             setTimeout(() => {  
                 removeSourcesButton(mainContainer);  
             }, 150);  
@@ -146,12 +167,14 @@
       
     function removeSourcesButton(mainContainer) {  
         const allButtons = mainContainer.find('.full-start__button');  
+        const isVersion3OrHigher = isLampaVersionOrHigher('3.0.0');  
           
         allButtons.each(function() {  
             const button = $(this);  
             const text = button.text().toLowerCase().trim();  
             const classes = button.attr('class') || '';  
               
+            // Список важливих кнопок - ОБОВ'ЯЗКОВО зберігаємо онлайн  
             const isImportantButton = classes.includes('view--online') ||     
                                      classes.includes('view--torrent') ||     
                                      classes.includes('view--trailer') ||    
@@ -159,10 +182,13 @@
                                      classes.includes('button--reaction') ||    
                                      classes.includes('button--subscribe') ||    
                                      classes.includes('button--subs') ||    
-                                     text.includes('онлайн') ||    
+                                     text.includes('онлайн') ||  // Додатковий захист по тексту  
                                      text.includes('online');  
               
+            // Перевіряємо чи це кнопка "Дивитись"  
             const isPlayButton = classes.includes('button--play');  
+              
+            // Перевіряємо чи це кнопка "Джерела"  
             const isSourcesButton = text.includes('джерела') ||     
                                    text.includes('джерело') ||    
                                    text.includes('sources') ||     
@@ -170,10 +196,16 @@
                                    text.includes('источники') ||    
                                    text.includes('источник');  
               
+            // Перевіряємо чи це порожня кнопка options  
             const isOptionsButton = classes.includes('button--options');  
             const isEmpty = text === '' || text.length <= 2;  
               
-            if (!isImportantButton && (isPlayButton || isSourcesButton || (isOptionsButton && isEmpty))) {  
+            // Видаляємо якщо це кнопка "Дивитись" АБО кнопка джерел АБО порожня кнопка options  
+            // НО НЕ видаляємо важливі кнопки І не видаляємо "Дивитись" в версії 3.0.0+  
+            if (!isImportantButton &&   
+                ((isPlayButton && !isVersion3OrHigher) ||   
+                 isSourcesButton ||   
+                 (isOptionsButton && isEmpty))) {  
                 button.remove();  
             }  
         });  
@@ -189,7 +221,9 @@
               
             let order = 999;  
               
-            if (classes.includes('view--online') || text.includes('онлайн')) {  
+            if (classes.includes('button--play') || text.includes('дивитись') || text.includes('watch')) {  
+                order = 0; // Перша кнопка  
+            } else if (classes.includes('view--online') || text.includes('онлайн')) {  
                 order = 1;  
             } else if (classes.includes('view--torrent') || text.includes('торрент')) {  
                 order = 2;  
@@ -205,7 +239,8 @@
         const map = {  
             'view--torrent': svgs.torrent,  
             'view--online': svgs.online,  
-            'view--trailer': svgs.trailer  
+            'view--trailer': svgs.trailer,  
+            'button--play': svgs.play  
         };  
           
         for (const cls in map) {  
@@ -253,8 +288,10 @@
                     mutation.addedNodes.forEach((node) => {  
                         if (node.nodeType === 1 && node.classList && node.classList.contains('full-start__button')) {  
                             const text = node.textContent.toLowerCase().trim();  
+                            const classes = node
                             const classes = node.className || '';  
                               
+                            // Список важливих кнопок - ОБОВ'ЯЗКОВО зберігаємо онлайн  
                             const isImportantButton = classes.includes('view--online') ||     
                                                      classes.includes('view--torrent') ||     
                                                      classes.includes('view--trailer') ||    
@@ -276,7 +313,12 @@
                             const isOptionsButton = classes.includes('button--options');  
                             const isEmpty = text === '' || text.length <= 2;  
                               
-                            if (!isImportantButton && (isPlayButton || isSourcesButton || (isOptionsButton && isEmpty))) {  
+                            const isVersion3OrHigher = isLampaVersionOrHigher('3.0.0');  
+                              
+                            if (!isImportantButton &&   
+                                ((isPlayButton && !isVersion3OrHigher) ||   
+                                 isSourcesButton ||   
+                                 (isOptionsButton && isEmpty))) {  
                                 $(node).remove();  
                             }  
                         }  
@@ -306,9 +348,9 @@
         window.plugin('unified_button_manager', {  
             type: 'component',  
             name: 'Unified Button Manager',  
-            version: '4.0',  
+            version: '4.1',  
             author: 'Merged Plugin',  
-            description: 'Об\'єднаний плагін: розділення кнопок + оптимізовані SVG та стилі'  
+            description: 'Об\'єднаний плагін: розділення кнопок + оптимізовані SVG та стилі з підтримкою Lampa 3.0.0+'  
         });  
     }  
       
