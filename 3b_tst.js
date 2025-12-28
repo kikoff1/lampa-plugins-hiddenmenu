@@ -1,4 +1,4 @@
-// Версія плагіну: 4.3 - Виправлена версія з налаштуваннями  
+// Версія плагіну: 4.4 - Повністю виправлена версія  
 // Розділяє кнопки окремо: Онлайн, Торренти, Трейлери + оптимізовані SVG та стилі  
 // Підтримка кнопки "Дивитись" для Lampa 3.0.0+ + налаштування  
   
@@ -155,54 +155,62 @@
     /* === Додавання налаштувань === */  
     function addSettings() {  
         try {  
+            // Перевіряємо чи доступний SettingsApi  
+            if (!Lampa.SettingsApi) {  
+                console.warn(`${PLUGIN_NAME}: SettingsApi не доступний`);  
+                return;  
+            }  
+              
             // Додаємо переклади  
-            Lampa.Lang.add({  
-                unified_buttons_title: {  
-                    ru: 'Менеджер кнопок',  
-                    uk: 'Менеджер кнопок',  
-                    en: 'Button Manager'  
-                },  
-                unified_buttons_enabled: {  
-                    ru: 'Включить менеджер кнопок',  
-                    uk: 'Увімкнути менеджер кнопок',  
-                    en: 'Enable button manager'  
-                },  
-                unified_buttons_hide_sources: {  
-                    ru: 'Скрывать кнопку "Источники"',  
-                    uk: 'Приховати кнопку "Джерела"',  
-                    en: 'Hide "Sources" button'  
-                },  
-                unified_buttons_colors: {  
-                    ru: 'Настройка цветов кнопок',  
-                    uk: 'Налаштування кольорів кнопок',  
-                    en: 'Button color settings'  
-                },  
-                unified_buttons_color_online: {  
-                    ru: 'Цвет кнопки "Онлайн"',  
-                    uk: 'Колір кнопки "Онлайн"',  
-                    en: 'Online button color'  
-                },  
-                unified_buttons_color_torrent: {  
-                    ru: 'Цвет кнопки "Торрент"',  
-                    uk: 'Колір кнопки "Торрент"',  
-                    en: 'Torrent button color'  
-                },  
-                unified_buttons_color_trailer: {  
-                    ru: 'Цвет кнопки "Трейлер"',  
-                    uk: 'Колір кнопки "Трейлер"',  
-                    en: 'Trailer button color'  
-                },  
-                unified_buttons_color_play: {  
-                    ru: 'Цвет кнопки "Смотреть"',  
-                    uk: 'Колір кнопки "Дивитись"',  
-                    en: 'Play button color'  
-                },  
-                unified_buttons_reset_colors: {  
-                    ru: 'Сбросить цвета',  
-                    uk: 'Скинути кольори',  
-                    en: 'Reset colors'  
-                }  
-            });  
+            if (Lampa.Lang) {  
+                Lampa.Lang.add({  
+                    unified_buttons_title: {  
+                        ru: 'Менеджер кнопок',  
+                        uk: 'Менеджер кнопок',  
+                        en: 'Button Manager'  
+                    },  
+                    unified_buttons_enabled: {  
+                        ru: 'Включить менеджер кнопок',  
+                        uk: 'Увімкнути менеджер кнопок',  
+                        en: 'Enable button manager'  
+                    },  
+                    unified_buttons_hide_sources: {  
+                        ru: 'Скрывать кнопку "Источники"',  
+                        uk: 'Приховати кнопку "Джерела"',  
+                        en: 'Hide "Sources" button'  
+                    },  
+                    unified_buttons_colors: {  
+                        ru: 'Настройка цветов кнопок',  
+                        uk: 'Налаштування кольорів кнопок',  
+                        en: 'Button color settings'  
+                    },  
+                    unified_buttons_color_online: {  
+                        ru: 'Цвет кнопки "Онлайн"',  
+                        uk: 'Колір кнопки "Онлайн"',  
+                        en: 'Online button color'  
+                    },  
+                    unified_buttons_color_torrent: {  
+                        ru: 'Цвет кнопки "Торрент"',  
+                        uk: 'Колір кнопки "Торрент"',  
+                        en: 'Torrent button color'  
+                    },  
+                    unified_buttons_color_trailer: {  
+                        ru: 'Цвет кнопки "Трейлер"',  
+                        uk: 'Колір кнопки "Трейлер"',  
+                        en: 'Trailer button color'  
+                    },  
+                    unified_buttons_color_play: {  
+                        ru: 'Цвет кнопки "Смотреть"',  
+                        uk: 'Колір кнопки "Дивитись"',  
+                        en: 'Play button color'  
+                    },  
+                    unified_buttons_reset_colors: {  
+                        ru: 'Сбросить цвета',  
+                        uk: 'Скинути кольори',  
+                        en: 'Reset colors'  
+                    }  
+                });  
+            }  
               
             // Додаємо компонент в налаштування  
             Lampa.SettingsApi.addComponent({  
@@ -215,7 +223,7 @@
                     <circle cx="22" cy="22" r="2" fill="currentColor"/>  
                     <circle cx="15" cy="15" r="2" fill="currentColor"/>  
                 </svg>`,  
-                name: Lampa.Lang.translate('unified_buttons_title')  
+                name: Lampa.Lang ? Lampa.Lang.translate('unified_buttons_title') : 'Button Manager'  
             });  
               
             // Ввімкнення/вимкнення плагіна  
@@ -227,7 +235,7 @@
                     default: true  
                 },  
                 field: {  
-                    name: Lampa.Lang.translate('unified_buttons_enabled')  
+                    name: Lampa.Lang ? Lampa.Lang.translate('unified_buttons_enabled') : 'Enable button manager'  
                 },  
                 onChange: applySettings  
             });  
@@ -241,7 +249,7 @@
                     default: true  
                 },  
                 field: {  
-                    name: Lampa.Lang.translate('unified_buttons_hide_sources')  
+                    name: Lampa.Lang ? Lampa.Lang.translate('unified_buttons_hide_sources') : 'Hide "Sources" button'  
                 }  
             });  
               
@@ -252,7 +260,7 @@
                     type: 'title'  
                 },  
                 field: {  
-                    name: Lampa.Lang.translate('unified_buttons_colors')  
+                    name: Lampa.Lang ? Lampa.Lang.translate('unified_buttons_colors') : 'Button color settings'  
                 }  
             });  
               
@@ -276,7 +284,7 @@
                     placeholder: '#2196f3'  
                 },  
                 field: {  
-                    name: Lampa.Lang.translate('unified_buttons_color_online'),  
+                    name: Lampa.Lang ? Lampa.Lang.translate('unified_buttons_color_online') : 'Online button color',  
                     description: 'Наприклад: #2196f3 або blue'  
                 },  
                 onChange: updateColors  
@@ -291,7 +299,7 @@
                     placeholder: 'lime'  
                 },  
                 field: {  
-                    name: Lampa.Lang.translate('unified_buttons_color_torrent'),  
+                    name: Lampa.Lang ? Lampa.Lang.translate('unified_buttons_color_torrent') : 'Torrent button color',  
                     description: 'Наприклад: lime або #00ff00'  
                 },  
                 onChange: updateColors  
@@ -306,7 +314,7 @@
                     placeholder: '#f44336'  
                 },  
                 field: {  
-                    name: Lampa.Lang.translate('unified_buttons_color_trailer'),  
+                    name: Lampa.Lang ? Lampa.Lang.translate('unified_buttons_color_trailer') : 'Trailer button color',  
                     description: 'Наприклад: #f44336 або red'  
                 },  
                 onChange: updateColors  
@@ -321,7 +329,7 @@
                     placeholder: '#2196f3'  
                 },  
                 field: {  
-                    name: Lampa.Lang.translate('unified_buttons_color_play'),  
+                    name: Lampa.Lang ? Lampa.Lang.translate('unified_buttons_color_play') : 'Play button color',  
                     description: 'Наприклад: #2196f3 або blue'  
                 },  
                 onChange: updateColors  
@@ -335,7 +343,7 @@
                     type: 'button'  
                 },  
                 field: {  
-                    name: Lampa.Lang.translate('unified_buttons_reset_colors')  
+                    name: Lampa.Lang ? Lampa.Lang.translate('unified_buttons_reset_colors') : 'Reset colors'  
                 },  
                 onChange: () => {  
                     try {  
@@ -351,7 +359,9 @@
                         // Повертаємо стандартні кольори  
                         addStyles();  
                           
-                        Lampa.Noty.show('Кольори скинуто до стандартних');  
+                        if (Lampa.Noty) {  
+                            Lampa.Noty.show('Кольори скинуто до стандартних');  
+                        }  
                     } catch (e) {  
                         console.error(`${PLUGIN_NAME}: Помилка скидання кольорів`, e);  
                     }  
@@ -655,7 +665,7 @@
             window.plugin('unified_button_manager', {  
                 type: 'component',  
                 name: 'Unified Button Manager',  
-                version: '4.3',  
+                version: '4.4',  
                 author: 'Enhanced Plugin',  
                 description: 'Об\'єднаний плагін: розділення кнопок + оптимізовані SVG та стилі з підтримкою Lampa 3.0.0+ та налаштуваннями'  
             });  
