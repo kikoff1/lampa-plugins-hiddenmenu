@@ -1,4 +1,7 @@
-// Версія плагіну: 4.2 - Виправлена версія з налаштуваннями  
+// Версія плагіну: 4.3 - Фінальна виправлена версія  
+// Розділяє кнопки окремо: Онлайн, Торренти, Трейлери + оптимізовані SVG та стилі  
+// Підтримка кнопки "Дивитись" для Lampa 3.0.0+ з повноцінними налаштуваннями  
+  
 (function() {  
     'use strict';  
       
@@ -82,6 +85,32 @@
         });  
     }  
       
+    // Оновлення стилів при зміні налаштувань  
+    function updateStyles() {  
+        const settings = getSettings();  
+        const existingStyle = document.getElementById('unified-buttons-style');  
+          
+        if (existingStyle) {  
+            existingStyle.remove();  
+        }  
+          
+        addStyles();  
+          
+        // Оновлюємо кнопки на поточній сторінці  
+        if (Lampa.Activity && Lampa.Activity.active()) {  
+            const activeActivity = Lampa.Activity.active();  
+            if (activeActivity.component === 'full') {  
+                setTimeout(() => {  
+                    updateButtons();  
+                    const container = $('.full-start__button').parent();  
+                    if (container.length) {  
+                        processButtonsForContainer(container);  
+                    }  
+                }, 100);  
+            }  
+        }  
+    }  
+      
     // Додавання налаштувань  
     function addSettings() {  
         Lampa.SettingsApi.addComponent({  
@@ -90,7 +119,6 @@
             name: Lampa.Lang.translate('unified_button_manager_title')  
         });  
           
-        // Додавання параметрів  
         const params = [  
             { key: 'showOnline', title: Lampa.Lang.translate('unified_button_manager_show_online') },  
             { key: 'showTorrent', title: Lampa.Lang.translate('unified_button_manager_show_torrent') },  
@@ -115,6 +143,12 @@
                     const settings = getSettings();  
                     settings[param.key] = value;  
                     saveSettings(settings);  
+                      
+                    // Застосовуємо зміни негайно  
+                    updateStyles();  
+                      
+                    // Показуємо повідомлення  
+                    Lampa.Notice.show(Lampa.Lang.translate('settings_save'));  
                 }  
             });  
         });  
@@ -147,8 +181,9 @@
       
     // CSS стилі  
     function addStyles() {  
+        const settings = getSettings();  
+          
         if (!document.getElementById('unified-buttons-style')) {  
-            const settings = getSettings();  
             const style = document.createElement('style');  
             style.id = 'unified-buttons-style';  
             style.textContent = `  
@@ -197,12 +232,65 @@
         play: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path d="M20.331 14.644l-13.794-13.831 17.55 10.075zM2.938 0c-0.813 0.425-1.356 1.2-1.356 2.206v27.581c0 1.006 0.544 1.781 1.356 2.206l16.038-16zM29.512 14.1l-3.681-2.131-4.106 4.031 4.106 4.031 3.756-2.131c1.125-0.893 1.125-2.906-0.075-3.8zM6.538 31.188l17.55-10.075-3.756-3.756z" fill="currentColor"/></svg>`  
     };  
       
-    // Обробка кнопок  
+    // Ініціалізація плагіна  
+    function initPlugin() {  
+        if (typeof Lampa === 'undefined') {  
+            setTimeout(initPlugin, 100);  
+            return;  
+        }  
+          
+        addLocalization();  
+        addSettings();  
+        addStyles();  
+          
+        Lampa.Listener.follow('full', function(event) {  
+            if (event.type === 'complite') {  
+                setTimeout(() => {  
+                    processButtons(event);  
+                    startObserver(event);  
+                }, 500);  
+            }  
+              
+            if (event.type === 'destroy') {  
+                stopObserver();  
+            }  
+        });  
+    }  
+      
+    // Перевірка готовності та запуск  
+    if (window.appready) {  
+        initPlugin();  
+    } else {  
+        Lampa.Listener.follow('app', function(e) {  
+            if (e.type === 'ready') {  
+                initPlugin();  
+            }  
+        });  
+    }  
+      
+    // Реєстрація плагіна  
+    if (window.plugin) {  
+        window.plugin('unified_button_manager', {  
+            type: 'component',  
+            name: 'Unified Button Manager',  
+            version: '4.3',  
+            author: 'Merged Plugin',  
+            description: 'Об\'єднаний плагін: розділення кнопок + оптимізовані SVG та стилі з підтримкою Lampa 3.0.0+ та налаштуваннями'  
+        });  
+    }  
+  
+})();
+// Продовження плагіна - Частина 2  
+(function() {  
+    'use strict';  
+      
+    // Обробка кнопок для події full  
     function processButtons(event) {  
         try {  
             const settings = getSettings();  
             const render = event.object.activity.render();  
               
+            // Шукаємо контейнери різними способами  
             let mainContainer = render.find('.full-start-new__buttons');  
             if (!mainContainer.length) {  
                 mainContainer = render.find('.full-start__buttons');  
@@ -253,6 +341,7 @@
         }  
     }  
       
+    // Видалення непотрібних кнопок  
     function removeSourcesButton(mainContainer) {  
         const settings = getSettings();  
         const allButtons = mainContainer.find('.full-start__button');  
@@ -295,6 +384,7 @@
         });  
     }  
       
+    // Впорядкування кнопок  
     function reorderButtons(container) {  
         const settings = getSettings();  
         container.css('display', 'flex');  
@@ -320,6 +410,7 @@
         });  
     }  
       
+    // Оновлення SVG іконок  
     function updateButtons() {  
         const map = {  
             'view--torrent': svgs.torrent,  
@@ -361,6 +452,7 @@
         }  
     }  
       
+    // Запуск спостерігача за змінами в DOM  
     function startObserver(event) {  
         const settings = getSettings();  
         const render = event.object.activity.render();  
@@ -421,58 +513,207 @@
         });  
     }  
       
+    // Зупинка спостерігача  
     function stopObserver() {  
         if (observer) {  
             observer.disconnect();  
             observer = null;  
         }  
     }  
+  
+})();
+// Продовження плагіна - Частина 3  
+(function() {  
+    'use strict';  
       
-    // Ініціалізація плагіна  
-    function initPlugin() {  
-        if (typeof Lampa === 'undefined') {  
-            setTimeout(initPlugin, 100);  
-            return;  
-        }  
-          
-        addLocalization();  
-        addSettings();  
-        addStyles();  
-          
-        Lampa.Listener.follow('full', function(event) {  
-            if (event.type === 'complite') {  
-                setTimeout(() => {  
-                    processButtons(event);  
-                    startObserver(event);  
-                }, 500);  
+    // Перевірка версії Lampa  
+    function isLampaVersionOrHigher(minVersion) {  
+        try {  
+            let version = null;  
+              
+            if (window.Lampa && window.Lampa.Manifest && window.Lampa.Manifest.app_version) {  
+                version = window.Lampa.Manifest.app_version;  
+            } else if (window.lampa_settings && window.lampa_settings.version) {  
+                version = window.lampa_settings.version;  
+            } else if (window.Lampa && window.Lampa.App && window.Lampa.App.version) {  
+                version = window.Lampa.App.version;  
             }  
               
-            if (event.type === 'destroy') {  
-                stopObserver();  
+            if (!version) return false;  
+              
+            const current = parseInt(version.replace(/\./g, ''));  
+            const minimum = parseInt(minVersion.replace(/\./g, ''));  
+              
+            return current >= minimum;  
+        } catch (e) {  
+            console.warn(`${PLUGIN_NAME}: Помилка перевірки версії`, e);  
+            return false;  
+        }  
+    }  
+      
+    // Обробка кнопок для контейнера (використовується в updateStyles)  
+    function processButtonsForContainer(container) {  
+        try {  
+            const settings = getSettings();  
+              
+            if (!container.length) return;  
+              
+            // Оновлюємо видимість кнопок відповідно до налаштувань  
+            container.find('.full-start__button').each(function() {  
+                const button = $(this);  
+                const classes = button.attr('class') || '';  
+                  
+                // Приховуємо/показуємо кнопки відповідно до налаштувань  
+                if (classes.includes('view--online') && !settings.showOnline) {  
+                    button.hide();  
+                } else if (classes.includes('view--torrent') && !settings.showTorrent) {  
+                    button.hide();  
+                } else if (classes.includes('view--trailer') && !settings.showTrailer) {  
+                    button.hide();  
+                } else if (classes.includes('button--play') && !settings.showPlay) {  
+                    button.hide();  
+                } else {  
+                    button.show();  
+                }  
+            });  
+              
+            // Перевпорядковуємо кнопки  
+            reorderButtons(container);  
+              
+            // Оновлюємо SVG іконки  
+            updateButtons();  
+              
+        } catch (error) {  
+            console.error(`${PLUGIN_NAME}: Помилка обробки контейнера`, error);  
+        }  
+    }  
+      
+    // Функція для оновлення всіх кнопок на сторінці  
+    function refreshAllButtons() {  
+        try {  
+            const containers = [  
+                $('.full-start-new__buttons'),  
+                $('.full-start__buttons'),  
+                $('.buttons--container')  
+            ];  
+              
+            containers.forEach(container => {  
+                if (container.length) {  
+                    processButtonsForContainer(container);  
+                }  
+            });  
+              
+        } catch (error) {  
+            console.error(`${PLUGIN_NAME}: Помилка оновлення кнопок`, error);  
+        }  
+    }  
+      
+    // Додаткова функція для отримання активного компонента  
+    function getActiveComponent() {  
+        try {  
+            if (Lampa.Activity && Lampa.Activity.active()) {  
+                return Lampa.Activity.active();  
             }  
-        });  
+            return null;  
+        } catch (e) {  
+            console.warn(`${PLUGIN_NAME}: Помилка отримання активного компонента`, e);  
+            return null;  
+        }  
     }  
       
-    // Перевірка готовності та запуск  
-    if (window.appready) {  
-        initPlugin();  
-    } else {  
-        Lampa.Listener.follow('app', function(e) {  
-            if (e.type === 'ready') {  
-                initPlugin();  
+    // Функція для перевірки чи знаходимось на сторінці повного опису  
+    function isOnFullPage() {  
+        try {  
+            const active = getActiveComponent();  
+            return active && active.component === 'full';  
+        } catch (e) {  
+            console.warn(`${PLUGIN_NAME}: Помилка перевірки сторінки`, e);  
+            return false;  
+        }  
+    }  
+      
+    // Функція для безпечного виконання коду з затримкою  
+    function safeTimeout(callback, delay) {  
+        try {  
+            setTimeout(callback, delay);  
+        } catch (e) {  
+            console.warn(`${PLUGIN_NAME}: Помилка виконання затримки`, e);  
+        }  
+    }  
+      
+    // Функція для логування дій плагіна  
+    function logAction(action, data = null) {  
+        if (window.lampa_settings && window.lampa_settings.debug) {  
+            console.log(`${PLUGIN_NAME}: ${action}`, data);  
+        }  
+    }  
+      
+    // Ініціалізація додаткових слухачів подій  
+    function initAdditionalListeners() {  
+        try {  
+            // Слухаємо зміни мови для оновлення інтерфейсу  
+            Lampa.Listener.follow('lang', function(e) {  
+                if (e.type === 'change') {  
+                    safeTimeout(() => {  
+                        refreshAllButtons();  
+                    }, 500);  
+                }  
+            });  
+              
+            // Слухаємо зміни теми для оновлення стилів  
+            Lampa.Listener.follow('theme', function(e) {  
+                if (e.type === 'change') {  
+                    safeTimeout(() => {  
+                        updateStyles();  
+                    }, 100);  
+                }  
+            });  
+              
+        } catch (e) {  
+            console.warn(`${PLUGIN_NAME}: Помилка ініціалізації слухачів`, e);  
+        }  
+    }  
+      
+    // Функція для очищення ресурсів  
+    function cleanup() {  
+        try {  
+            stopObserver();  
+              
+            // Видаляємо стилі  
+            const style = document.getElementById('unified-buttons-style');  
+            if (style) {  
+                style.remove();  
             }  
+              
+            logAction('Cleanup completed');  
+              
+        } catch (e) {  
+            console.warn(`${PLUGIN_NAME}: Помилка очищення`, e);  
+        }  
+    }  
+      
+    // Експорт функцій для можливого використання іншими плагінами  
+    if (window.Lampa && window.Lampa.Exports) {  
+        window.Lampa.Exports.UnifiedButtonManager = {  
+            refreshButtons: refreshAllButtons,  
+            updateStyles: updateStyles,  
+            getSettings: getSettings,  
+            cleanup: cleanup  
+        };  
+    }  
+      
+    // Додаємо обробник для виходу з додатку  
+    if (window.addEventListener) {  
+        window.addEventListener('beforeunload', function() {  
+            cleanup();  
         });  
     }  
       
-    // Реєстрація плагіна  
-    if (window.plugin) {  
-        window.plugin('unified_button_manager', {  
-            type: 'component',  
-            name: 'Unified Button Manager',  
-            version: '4.2',  
-            author: 'Merged Plugin',  
-            description: 'Об\'єднаний плагін: розділення кнопок + оптимізовані SVG та стилі з підтримкою Lampa 3.0.0+ та налаштуваннями'  
-        });  
+    // Ініціалізуємо додаткові слухачі  
+    if (typeof Lampa !== 'undefined') {  
+        initAdditionalListeners();  
     }  
       
+    logAction('Plugin part 3 initialized');  
+  
 })();
