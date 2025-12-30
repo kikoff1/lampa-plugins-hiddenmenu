@@ -1,6 +1,6 @@
-// Версія плагіну: 4.2 - Версія з налаштуваннями  
+// Версія плагіну: 4.12 - Версія з налаштуваннями  
 // Розділяє кнопки окремо: Онлайн, Торренти, Трейлери + оптимізовані SVG та стилі  
-// Підтримка кнопки "Дивитись" для Lampa 3.0.0+ + налаштування розбиття розділів  
+// Підтримка кнопки "Дивитись" для Lampa 3.0.0+ + Налаштування  
   
 (function() {  
     'use strict';  
@@ -8,46 +8,9 @@
     const PLUGIN_NAME = 'UnifiedButtonManager';  
     let observer = null;  
       
-    // === НАЛАШТУВАННЯ ПЛАГІНА ===  
-    const PLUGIN_SETTINGS = {  
-        split_large_sections: {  
-            default: false,  
-            type: 'trigger',  
-            title: 'Розділяти великі розділи',  
-            description: 'Розділяти кнопки на окремі групи, якщо їх забагато'  
-        },  
-        max_buttons_per_section: {  
-            default: 4,  
-            type: 'select',  
-            title: 'Максимальна кількість кнопок у розділі',  
-            description: 'Після цього числа кнопки будуть перенесені в новий розділ',  
-            options: {  
-                '3': '3',  
-                '4': '4',   
-                '5': '5',  
-                '6': '6'  
-            }  
-        }  
-    };  
-      
-    // Функції для роботи з налаштуваннями  
-    function getSetting(key) {  
-        if (typeof Lampa !== 'undefined' && Lampa.Storage) {  
-            return Lampa.Storage.get(`unified_button_${key}`, PLUGIN_SETTINGS[key].default);  
-        }  
-        return PLUGIN_SETTINGS[key].default;  
-    }  
-      
-    function setSetting(key, value) {  
-        if (typeof Lampa !== 'undefined' && Lampa.Storage) {  
-            Lampa.Storage.set(`unified_button_${key}`, value);  
-        }  
-    }  
-      
-    /* === Перевірка версії Lampa (виправлена) === */  
+    // === Перевірка версії Lampa ===  
     function isLampaVersionOrHigher(minVersion) {  
         try {  
-            // Спробуємо різні способи отримання версії  
             let version = null;  
               
             if (window.Lampa && window.Lampa.Manifest && window.Lampa.Manifest.app_version) {  
@@ -70,7 +33,61 @@
         }  
     }  
       
-    /* === CSS (покращена специфічність + стилі для груп) === */  
+    // === Додавання перекладів ===  
+    function addTranslations() {  
+        Lampa.Lang.add({  
+            unified_button_manager_title: {  
+                ru: 'Менеджер кнопок',  
+                uk: 'Менеджер кнопок',  
+                en: 'Button Manager'  
+            },  
+            unified_button_manager_edit_buttons: {  
+                ru: 'Редактировать кнопки',  
+                uk: 'Редагувати кнопки',  
+                en: 'Edit Buttons'  
+            },  
+            unified_button_manager_enable_online: {  
+                ru: 'Показать кнопку "Онлайн"',  
+                uk: 'Показати кнопку "Онлайн"',  
+                en: 'Show "Online" Button'  
+            },  
+            unified_button_manager_enable_torrent: {  
+                ru: 'Показать кнопку "Торрент"',  
+                uk: 'Показати кнопку "Торрент"',  
+                en: 'Show "Torrent" Button'  
+            },  
+            unified_button_manager_enable_trailer: {  
+                ru: 'Показать кнопку "Трейлер"',  
+                uk: 'Показати кнопку "Трейлер"',  
+                en: 'Show "Trailer" Button'  
+            },  
+            unified_button_manager_hide_sources: {  
+                ru: 'Скрывать кнопку "Источники"',  
+                uk: 'Приховувати кнопку "Джерела"',  
+                en: 'Hide "Sources" Button'  
+            },  
+            unified_button_manager_custom_order: {  
+                ru: 'Настраиваемый порядок кнопок',  
+                uk: 'Налаштовуваний порядок кнопок',  
+                en: 'Custom Button Order'  
+            }  
+        });  
+    }  
+      
+    // === Застосування налаштувань ===  
+    function applySettings() {  
+        const settings = Lampa.Storage.get('unified_button_manager_settings', {  
+            enable_online: true,  
+            enable_torrent: true,  
+            enable_trailer: true,  
+            hide_sources: true,  
+            custom_order: ['play', 'online', 'torrent', 'trailer']  
+        });  
+          
+        return settings;  
+    }  
+      
+    // === CSS стилі ===  
     function addStyles() {  
         if (!document.getElementById('unified-buttons-style')) {  
             const style = document.createElement('style');  
@@ -116,101 +133,253 @@
                     to   { transform: translateX(100%); }  
                 }  
                   
-                /* Стилі для груп кнопок */  
-                .button-group-title {  
-                    font-size: 14px;  
-                    color: #888;  
-                    margin: 10px 0 5px 0;  
-                    padding: 0 10px;  
-                    font-weight: 500;  
-                }  
-                  
-                .button-group {  
-                    display: flex;  
-                    flex-wrap: wrap;  
-                    gap: 10px;  
-                    margin-bottom: 10px;  
-                }  
-                  
                 @media (max-width: 767px) {  
                     .full-start__button {  
                         min-height: 44px !important;  
                         padding: 10px !important;  
                     }  
-                    .button-group {  
-                        gap: 5px;  
-                    }  
+                }  
+                  
+                /* Стилі для редактора кнопок */  
+                .button-edit-list {  
+                    background: rgba(0,0,0,0.8);  
+                    border-radius: 0.5em;  
+                    padding: 1em;  
+                }  
+                  
+                .button-edit-list__item {  
+                    display: flex !important;  
+                    padding: 0.8em !important;  
+                    border-radius: 0.3em !important;  
+                    align-items: center !important;  
+                    margin-bottom: 0.5em !important;  
+                    background: rgba(255, 255, 255, 0.05) !important;  
+                }  
+                  
+                .button-edit-list__item:nth-child(even) {  
+                    background: rgba(255, 255, 255, 0.1) !important;  
+                }  
+                  
+                .button-edit-list__icon {  
+                    width: 2em !important;  
+                    height: 2em !important;  
+                    margin-right: 1em !important;  
+                    flex-shrink: 0 !important;  
+                    display: flex !important;  
+                    align-items: center !important;  
+                    justify-content: center !important;  
+                }  
+                  
+                .button-edit-list__title {  
+                    font-size: 1.1em !important;  
+                    font-weight: 300 !important;  
+                    flex-grow: 1 !important;  
+                }  
+                  
+                .button-edit-list__move,  
+                .button-edit-list__toggle {  
+                    width: 2.4em !important;  
+                    height: 2.4em !important;  
+                    display: flex !important;  
+                    align-items: center !important;  
+                    justify-content: center !important;  
+                    margin-left: 0.5em !important;  
+                }  
+                  
+                .button-edit-list__move svg {  
+                    width: 1em !important;  
+                    height: 1em !important;  
+                }  
+                  
+                .button-edit-list__toggle svg {  
+                    width: 1.2em !important;  
+                    height: 1.2em !important;  
                 }  
             `;  
             document.head.appendChild(style);  
         }  
-    }
-    /* === SVGs === */  
+    }  
+      
+    // === SVG іконки ===  
     const svgs = {  
         torrent: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50"><path d="M25,2C12.317,2,2,12.317,2,25s10.317,23,23,23s23-10.317,23-23S37.683,2,25,2zM40.5,30.963c-3.1,0-4.9-2.4-4.9-2.4S34.1,35,27,35c-1.4,0-3.6-0.837-3.6-0.837l4.17,9.643C26.727,43.92,25.874,44,25,44c-2.157,0-4.222-0.377-6.155-1.039L9.237,16.851c0,0-0.7-1.2,0.4-1.5c1.1-0.3,5.4-1.2,5.4-1.2s1.475-0.494,1.8,0.5c0.5,1.3,4.063,11.112,4.063,11.112S22.6,29,27.4,29c4.7,0,5.9-3.437,5.7-3.937c-1.2-3-4.993-11.862-4.993-11.862s-0.6-1.1,0.8-1.4c1.4-0.3,3.8-0.7,3.8-0.7s1.105-0.163,1.6,0.8c0.738,1.437,5.193,11.262,5.193,11.262s1.1,2.9,3.3,2.9c0.464,0,0.834-0.046,1.152-0.104c-0.082,1.635-0.348,3.221-0.817,4.722C42.541,30.867,41.756,30.963,40.5,30.963z" fill="currentColor"/></svg>`,  
         online: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path d="M20.331 14.644l-13.794-13.831 17.55 10.075zM2.938 0c-0.813 0.425-1.356 1.2-1.356 2.206v27.581c0 1.006 0.544 1.781 1.356 2.206l16.038-16zM29.512 14.1l-3.681-2.131-4.106 4.031 4.106 4.031 3.756-2.131c1.125-0.893 1.125-2.906-0.075-3.8zM6.538 31.188l17.55-10.075-3.756-3.756z" fill="currentColor"/></svg>`,  
         trailer: `<svg viewBox="0 0 80 70" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z" fill="currentColor"/></svg>`,  
         play: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path d="M20.331 14.644l-13.794-13.831 17.55 10.075zM2.938 0c-0.813 0.425-1.356 1.2-1.356 2.206v27.581c0 1.006 0.544 1.781 1.356 2.206l16.038-16zM29.512 14.1l-3.681-2.131-4.106 4.031 4.106 4.031 3.756-2.131c1.125-0.893 1.125-2.906-0.075-3.8zM6.538 31.188l17.55-10.075-3.756-3.756z" fill="currentColor"/></svg>`  
-    };  
-      
-    /* === Реєстрація налаштувань === */  
-    function registerSettings() {  
-        if (typeof Lampa !== 'undefined' && Lampa.Settings) {  
-            Lampa.Settings.listener.follow('open', function () {  
-                const settingsData = {  
-                    component: 'unified_button_manager',  
-                    name: 'Unified Button Manager',  
-                    settings: []  
-                };  
-  
-                // Додаємо налаштування  
-                for (const key in PLUGIN_SETTINGS) {  
-                    const setting = PLUGIN_SETTINGS[key];  
-                    settingsData.settings.push({  
-                        key: `unified_button_${key}`,  
-                        type: setting.type,  
-                        title: setting.title,  
-                        description: setting.description,  
-                        default: setting.default,  
-                        options: setting.options || null  
-                    });  
-                }  
-  
-                // Реєструємо в системі налаштувань  
-                Lampa.Settings.add(settingsData);  
-            });  
-        }  
-    }  
-      
-    function initPlugin() {  
-        if (typeof Lampa === 'undefined') {  
-            setTimeout(initPlugin, 100);  
-            return;  
-        }  
+    };
+    // === Функція редагування кнопок ===  
+    function editButtons() {  
+        let list = $('<div class="button-edit-list"></div>');  
+        let settings = applySettings();  
           
-        // Додаємо стили одразу  
-        addStyles();  
+        // Створюємо елементи для редагування  
+        const buttonTypes = [  
+            { key: 'play', name: 'Дивитись', class: 'button--play', svg: svgs.play },  
+            { key: 'online', name: 'Онлайн', class: 'view--online', svg: svgs.online },  
+            { key: 'torrent', name: 'Торрент', class: 'view--torrent', svg: svgs.torrent },  
+            { key: 'trailer', name: 'Трейлер', class: 'view--trailer', svg: svgs.trailer }  
+        ];  
           
-        // Реєструємо налаштування  
-        registerSettings();  
+        // Сортуємо відповідно до збереженого порядку  
+        buttonTypes.sort((a, b) => {  
+            const orderA = settings.custom_order.indexOf(a.key);  
+            const orderB = settings.custom_order.indexOf(b.key);  
+            return orderA - orderB;  
+        });  
           
-        Lampa.Listener.follow('full', function(event) {  
-            if (event.type === 'complite') {  
-                setTimeout(() => {  
-                    processButtons(event);  
-                    startObserver(event);  
-                }, 500);  
-            }  
+        buttonTypes.forEach((buttonType, index) => {  
+            const isEnabled = settings[`enable_${buttonType.key}`];  
               
-            if (event.type === 'destroy') {  
-                stopObserver();  
+            let item_sort = $(`<div class="button-edit-list__item">  
+                <div class="button-edit-list__icon">${buttonType.svg}</div>  
+                <div class="button-edit-list__title">${buttonType.name}</div>  
+                <div class="button-edit-list__move move-up selector">  
+                    <svg width="22" height="14" viewBox="0 0 22 14" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                        <path d="M2 12L11 3L20 12" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>  
+                    </svg>  
+                </div>  
+                <div class="button-edit-list__move move-down selector">  
+                    <svg width="22" height="14" viewBox="0 0 22 14" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                        <path d="M2 2L11 11L20 2" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>  
+                    </svg>  
+                </div>  
+                <div class="button-edit-list__toggle toggle selector">  
+                    <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                        <rect x="1.89111" y="1.78369" width="21.793" height="21.793" rx="3.5" stroke="currentColor" stroke-width="3"/>  
+                        <path d="M7.44873 12.9658L10.8179 16.3349L18.1269 9.02588" stroke="currentColor" stroke-width="3" class="dot" opacity="0" stroke-linecap="round"/>  
+                    </svg>  
+                </div>  
+            </div>`);  
+              
+            // Обробники переміщення  
+            item_sort.find('.move-up').on('hover:enter', () => {  
+                let prev = item_sort.prev();  
+                if (prev.length) {  
+                    item_sort.insertBefore(prev);  
+                }  
+            });  
+              
+            item_sort.find('.move-down').on('hover:enter', () => {  
+                let next = item_sort.next();  
+                if (next.length) {  
+                    item_sort.insertAfter(next);  
+                }  
+            });  
+              
+            // Обробник увімкнення/вимкнення  
+            item_sort.find('.toggle').on('hover:enter', () => {  
+                const dot = item_sort.find('.dot');  
+                const currentOpacity = dot.attr('opacity');  
+                dot.attr('opacity', currentOpacity == '0' ? '1' : '0');  
+            }).find('.dot').attr('opacity', isEnabled ? '1' : '0');  
+              
+            list.append(item_sort);  
+        });  
+          
+        // Відкриваємо модальне вікно  
+        Lampa.Modal.open({  
+            title: Lampa.Lang.translate('unified_button_manager_edit_buttons'),  
+            html: list,  
+            size: 'small',  
+            scroll_to_center: true,  
+            onBack: () => {  
+                saveButtonSettings();  
+                Lampa.Modal.close();  
+                Lampa.Controller.toggle('settings_component');  
             }  
         });  
     }  
       
+    // === Збереження налаштувань кнопок ===  
+    function saveButtonSettings() {  
+        let settings = applySettings();  
+        let newOrder = [];  
+          
+        $('.button-edit-list__item').each(function() {  
+            const title = $(this).find('.button-edit-list__title').text();  
+            const buttonType = [  
+                { key: 'play', name: 'Дивитись' },  
+                { key: 'online', name: 'Онлайн' },  
+                { key: 'torrent', name: 'Торрент' },  
+                { key: 'trailer', name: 'Трейлер' }  
+            ].find(type => type.name === title);  
+              
+            if (buttonType) {  
+                newOrder.push(buttonType.key);  
+                const isEnabled = $(this).find('.dot').attr('opacity') == '1';  
+                settings[`enable_${buttonType.key}`] = isEnabled;  
+            }  
+        });  
+          
+        settings.custom_order = newOrder;  
+        Lampa.Storage.set('unified_button_manager_settings', settings);  
+          
+        // Застосовуємо зміни  
+        applyCurrentSettings();  
+    }  
+      
+    // === Застосування поточних налаштувань ===  
+    function applyCurrentSettings() {  
+        const settings = applySettings();  
+          
+        // Оновлюємо видимість кнопок  
+        $('.full-start__button').each(function() {  
+            const button = $(this);  
+            const classes = button.attr('class') || '';  
+              
+            if (classes.includes('view--online') && !settings.enable_online) {  
+                button.hide();  
+            } else if (classes.includes('view--torrent') && !settings.enable_torrent) {  
+                button.hide();  
+            } else if (classes.includes('view--trailer') && !settings.enable_trailer) {  
+                button.hide();  
+            } else {  
+                button.show();  
+            }  
+        });  
+          
+        // Оновлюємо порядок кнопок  
+        reorderButtonsWithSettings(settings);  
+    }  
+      
+    // === Перевпорядкування кнопок з урахуванням налаштувань ===  
+    function reorderButtonsWithSettings(settings) {  
+        const container = $('.full-start-new__buttons, .full-start__buttons, .buttons--container').first();  
+          
+        if (!container.length) return;  
+          
+        container.css('display', 'flex');  
+          
+        container.find('.full-start__button').each(function() {  
+            const button = $(this);  
+            const classes = button.attr('class') || '';  
+            const text = button.text().toLowerCase();  
+              
+            let order = 999;  
+            let buttonKey = null;  
+              
+            if (classes.includes('button--play') || text.includes('дивитись') || text.includes('watch')) {  
+                buttonKey = 'play';  
+            } else if (classes.includes('view--online') || text.includes('онлайн')) {  
+                buttonKey = 'online';  
+            } else if (classes.includes('view--torrent') || text.includes('торрент')) {  
+                buttonKey = 'torrent';  
+            } else if (classes.includes('view--trailer') || text.includes('трейлер')) {  
+                buttonKey = 'trailer';  
+            }  
+              
+            if (buttonKey && settings.custom_order.includes(buttonKey)) {  
+                order = settings.custom_order.indexOf(buttonKey);  
+            }  
+              
+            button.css('order', order);  
+        });  
+    }
+    // === Основна функція обробки кнопок ===  
     function processButtons(event) {  
         try {  
             const render = event.object.activity.render();  
+            const settings = applySettings();  
               
             // Шукаємо контейнери різними способами  
             let mainContainer = render.find('.full-start-new__buttons');  
@@ -228,25 +397,25 @@
                 return;  
             }  
               
-            // Переміщуємо кнопки  
+            // Переміщуємо кнопки з урахуванням налаштувань  
             const torrentBtn = hiddenContainer.find('.view--torrent');  
             const trailerBtn = hiddenContainer.find('.view--trailer');  
               
-            if (torrentBtn.length > 0) {  
+            if (torrentBtn.length > 0 && settings.enable_torrent) {  
                 torrentBtn.removeClass('hide').addClass('selector');  
                 mainContainer.append(torrentBtn);  
             }  
               
-            if (trailerBtn.length > 0) {  
+            if (trailerBtn.length > 0 && settings.enable_trailer) {  
                 trailerBtn.removeClass('hide').addClass('selector');  
                 mainContainer.append(trailerBtn);  
             }  
               
             setTimeout(() => {  
-                removeSourcesButton(mainContainer);  
+                removeSourcesButton(mainContainer, settings);  
             }, 200);  
               
-            reorderButtons(mainContainer);  
+            reorderButtonsWithSettings(settings);  
               
             setTimeout(() => {  
                 updateButtons();  
@@ -263,7 +432,8 @@
         }  
     }  
       
-    function removeSourcesButton(mainContainer) {  
+    // === Видалення непотрібних кнопок ===  
+    function removeSourcesButton(mainContainer, settings) {  
         const allButtons = mainContainer.find('.full-start__button');  
         const isVersion3OrHigher = isLampaVersionOrHigher('3.0.0');  
           
@@ -293,90 +463,17 @@
             const isOptionsButton = classes.includes('button--options');  
             const isEmpty = text === '' || text.length <= 2;  
               
+            // Видаляємо кнопки згідно з налаштуваннями  
             if (!isImportantButton &&     
                 ((isPlayButton && !isVersion3OrHigher) ||     
-                 isSourcesButton ||     
+                 (isSourcesButton && settings.hide_sources) ||     
                  (isOptionsButton && isEmpty))) {  
                 button.remove();  
             }  
         });  
     }  
       
-    function reorderButtons(container) {  
-        const shouldSplit = getSetting('split_large_sections');  
-        const maxButtons = parseInt(getSetting('max_buttons_per_section'));  
-          
-        container.css('display', 'flex');  
-        container.css('flex-direction', 'column');  
-          
-        const allButtons = container.find('.full-start__button');  
-        const buttonGroups = [];  
-          
-        // Сортуємо кнопки  
-        const sortedButtons = [];  
-        allButtons.each(function() {  
-            const button = $(this);  
-            const classes = button.attr('class') || '';  
-            const text = button.text().toLowerCase();  
-              
-            let order = 999;  
-            if (classes.includes('button--play') || text.includes('дивитись') || text.includes('watch')) {  
-                order = 0;  
-            } else if (classes.includes('view--online') || text.includes('онлайн')) {  
-                order = 1;  
-            } else if (classes.includes('view--torrent') || text.includes('торрент')) {  
-                order = 2;  
-            } else if (classes.includes('view--trailer') || text.includes('трейлер')) {  
-                order = 3;  
-            }  
-              
-            sortedButtons.push({ button, order });  
-        });  
-          
-        sortedButtons.sort((a, b) => a.order - b.order);  
-          
-        // Розбиваємо на групи, якщо потрібно  
-        if (shouldSplit && sortedButtons.length > maxButtons) {  
-            for (let i = 0; i < sortedButtons.length; i += maxButtons) {  
-                buttonGroups.push(sortedButtons.slice(i, i + maxButtons));  
-            }  
-        } else {  
-            buttonGroups.push(sortedButtons);  
-        }  
-          
-        // Очищуємо контейнер і додаємо групи  
-        container.empty();  
-          
-        buttonGroups.forEach((group, groupIndex) => {  
-            if (buttonGroups.length > 1) {  
-                // Додаємо заголовок групи, якщо є кілька груп  
-                const groupTitle = $(`<div class="button-group-title">Розділ ${groupIndex + 1}</div>`);  
-                groupTitle.css({  
-                    'font-size': '14px',  
-                    'color': '#888',  
-                    'margin': '10px 0 5px 0',  
-                    'padding': '0 10px'  
-                });  
-                container.append(groupTitle);  
-            }  
-              
-            // Створюємо контейнер для групи кнопок  
-            const groupContainer = $('<div class="button-group"></div>');  
-            groupContainer.css({  
-                'display': 'flex',  
-                'flex-wrap': 'wrap',  
-                'gap': '10px',  
-                'margin-bottom': '10px'  
-            });  
-              
-            group.forEach(item => {  
-                groupContainer.append(item.button);  
-            });  
-              
-            container.append(groupContainer);  
-        });  
-    }  
-      
+    // === Оновлення SVG іконок ===  
     function updateButtons() {  
         const map = {  
             'view--torrent': svgs.torrent,  
@@ -418,6 +515,7 @@
         }  
     }  
       
+    // === Запуск спостерігача за змінами ===  
     function startObserver(event) {  
         const render = event.object.activity.render();  
         const mainContainer = render.find('.full-start-new__buttons')[0];  
@@ -429,6 +527,7 @@
                 if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {  
                     mutation.addedNodes.forEach((node) => {  
                         if (node.nodeType === 1 && node.classList && node.classList.contains('full-start__button')) {  
+                            const settings = applySettings();  
                             const text = node.textContent.toLowerCase().trim();  
                             const classes = node.className || '';  
                               
@@ -451,13 +550,13 @@
                                                    text.includes('источник');  
                               
                             const isOptionsButton = classes.includes('button--options');  
-                                                      const isEmpty = text === '' || text.length <= 2;  
+                            const isEmpty = text === '' || text.length <= 2;  
                               
                             const isVersion3OrHigher = isLampaVersionOrHigher('3.0.0');  
                               
                             if (!isImportantButton &&     
                                 ((isPlayButton && !isVersion3OrHigher) ||     
-                                 isSourcesButton ||     
+                                 (isSourcesButton && settings.hide_sources) ||     
                                  (isOptionsButton && isEmpty))) {  
                                 $(node).remove();  
                             }  
@@ -476,6 +575,7 @@
         });  
     }  
       
+    // === Зупинка спостерігача ===  
     function stopObserver() {  
         if (observer) {  
             observer.disconnect();  
@@ -483,21 +583,151 @@
         }  
     }  
       
-    // Реєстрація плагіна  
+    // === Ініціалізація плагіна ===  
+    function initPlugin() {  
+        if (typeof Lampa === 'undefined') {  
+            setTimeout(initPlugin, 100);  
+            return;  
+        }  
+          
+        // Додаємо переклади та стилі  
+        addTranslations();  
+        addStyles();  
+          
+        // Застосовуємо налаштування при старті  
+        setTimeout(() => {  
+            applyCurrentSettings();  
+        }, 500);  
+          
+        Lampa.Listener.follow('full', function(event) {  
+            if (event.type === 'complite') {  
+                setTimeout(() => {  
+                    processButtons(event);  
+                    startObserver(event);  
+                }, 500);  
+            }  
+              
+            if (event.type === 'destroy') {  
+                stopObserver();  
+            }  
+        });  
+    }
+    // === Додавання налаштувань до системи ===  
+    function addSettings() {  
+        Lampa.SettingsApi.addComponent({  
+            component: 'unified_button_manager',  
+            icon: `<svg width="30" height="29" viewBox="0 0 30 29" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                <path d="M18.2989 5.27973L2.60834 20.9715C2.52933 21.0507 2.47302 21.1496 2.44528 21.258L0.706081 28.2386C0.680502 28.3422 0.682069 28.4507 0.710632 28.5535C0.739195 28.6563 0.793788 28.75 0.869138 28.8255C0.984875 28.9409 1.14158 29.0057 1.30498 29.0059C1.35539 29.0058 1.4056 28.9996 1.45449 28.9873L8.43509 27.2479C8.54364 27.2206 8.64271 27.1643 8.72172 27.0851L24.4137 11.3944L18.2989 5.27973ZM28.3009 3.14018L26.5543 1.39363C25.3869 0.226285 23.3524 0.227443 22.1863 1.39363L20.0469 3.53318L26.1614 9.64766L28.3009 7.50816C28.884 6.9253 29.2052 6.14945 29.2052 5.32432C29.2052 4.49919 28.884 3.72333 28.3009 3.14018Z" fill="currentColor"/>  
+            </svg>`,  
+            name: Lampa.Lang.translate('unified_button_manager_title')  
+        });  
+          
+        // Кнопка редагування кнопок  
+        Lampa.SettingsApi.addParam({  
+            component: 'unified_button_manager',  
+            param: {  
+                name: 'edit_buttons',  
+                type: 'button',  
+            },  
+            field: {  
+                name: Lampa.Lang.translate('unified_button_manager_edit_buttons'),  
+            },  
+            onChange: editButtons  
+        });  
+          
+        // Перемикач для кнопки "Онлайн"  
+        Lampa.SettingsApi.addParam({  
+            component: 'unified_button_manager',  
+            param: {  
+                name: 'enable_online',  
+                type: 'trigger',  
+                default: true  
+            },  
+            field: {  
+                name: Lampa.Lang.translate('unified_button_manager_enable_online'),  
+            },  
+            onChange: applyCurrentSettings  
+        });  
+          
+        // Перемикач для кнопки "Торрент"  
+        Lampa.SettingsApi.addParam({  
+            component: 'unified_button_manager',  
+            param: {  
+                name: 'enable_torrent',  
+                type: 'trigger',  
+                default: true  
+            },  
+            field: {  
+                name: Lampa.Lang.translate('unified_button_manager_enable_torrent'),  
+            },  
+            onChange: applyCurrentSettings  
+        });  
+          
+        // Перемикач для кнопки "Трейлер"  
+        Lampa.SettingsApi.addParam({  
+            component: 'unified_button_manager',  
+            param: {  
+                name: 'enable_trailer',  
+                type: 'trigger',  
+                default: true  
+            },  
+            field: {  
+                name: Lampa.Lang.translate('unified_button_manager_enable_trailer'),  
+            },  
+            onChange: applyCurrentSettings  
+        });  
+          
+        // Перемикач для приховування кнопки "Джерела"  
+        Lampa.SettingsApi.addParam({  
+            component: 'unified_button_manager',  
+            param: {  
+                name: 'hide_sources',  
+                type: 'trigger',  
+                default: true  
+            },  
+            field: {  
+                name: Lampa.Lang.translate('unified_button_manager_hide_sources'),  
+                description: 'Приховує кнопку джерел на сторінці перегляду'  
+            },  
+            onChange: applyCurrentSettings  
+        });  
+    }  
+      
+    // === Реєстрація плагіна ===  
     if (window.plugin) {  
         window.plugin('unified_button_manager', {  
             type: 'component',  
             name: 'Unified Button Manager',  
             version: '4.2',  
-            author: 'Merged Plugin',  
-            description: 'Об\'єднаний плагін: розділення кнопок + оптимізовані SVG та стилі з підтримкою Lampa 3.0.0+'  
+            author: 'Enhanced Plugin',  
+            description: 'Об\'єднаний плагін: розділення кнопок + оптимізовані SVG та стилі з підтримкою Lampa 3.0.0+ та налаштуваннями'  
         });  
     }  
       
-    if (document.readyState === 'loading') {  
-        document.addEventListener('DOMContentLoaded', initPlugin);  
-    } else {  
+    // === Основна функція запуску ===  
+    function startPlugin() {  
+        if (typeof Lampa === 'undefined') {  
+            setTimeout(startPlugin, 100);  
+            return;  
+        }  
+          
+        // Ініціалізуємо плагін  
         initPlugin();  
+          
+        // Додаємо налаштування  
+        addSettings();  
+          
+        // Застосовуємо налаштування при старті  
+        setTimeout(() => {  
+            applyCurrentSettings();  
+        }, 1000);  
     }  
       
-})();    
+    // === Запуск плагіна ===  
+    if (document.readyState === 'loading') {  
+        document.addEventListener('DOMContentLoaded', startPlugin);  
+    } else {  
+        startPlugin();  
+    }  
+      
+})();
