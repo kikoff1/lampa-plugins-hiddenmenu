@@ -102,10 +102,10 @@
                 }    
                     
                 /* Чорно-білі кнопки (коли colorful_buttons = false) */    
-                .full-start__button.monochrome .view--online svg path,    
-                .full-start__button.monochrome .view--torrent svg path,    
-                .full-start__button.monochrome .view--trailer svg path,    
-                .full-start__button.monochrome .button--play svg path {    
+                .full-start__button.monochrome.view--online svg path,    
+                .full-start__button.monochrome.view--torrent svg path,    
+                .full-start__button.monochrome.view--trailer svg path,    
+                .full-start__button.monochrome.button--play svg path {    
                     fill: currentColor !important;    
                 }    
                     
@@ -380,7 +380,7 @@
                 
             button.css('order', order);    
         });    
-    }  
+    }    
     // === Основна функція обробки кнопок ===    
     function processButtons(event) {    
         try {    
