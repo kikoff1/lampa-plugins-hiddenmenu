@@ -95,7 +95,7 @@
                         padding: 10px !important;  
                     }  
                 }  
-            `;  
+            
             document.head.appendChild(style);  
         }  
     }  
