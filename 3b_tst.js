@@ -46,20 +46,10 @@
                 uk: 'Редагувати кнопки',    
                 en: 'Edit Buttons'    
             },    
-            unified_button_manager_enable_torrent: {    
-                ru: 'Показать кнопку "Торрент"',    
-                uk: 'Показати кнопку "Торрент"',    
-                en: 'Show "Torrent" Button'    
-            },    
-            unified_button_manager_enable_trailer: {    
-                ru: 'Показать кнопку "Трейлер"',    
-                uk: 'Показати кнопку "Трейлер"',    
-                en: 'Show "Trailer" Button'    
-            },    
-            unified_button_manager_hide_sources: {    
-                ru: 'Скрывать кнопку "Источники"',    
-                uk: 'Приховувати кнопку "Джерела"',    
-                en: 'Hide "Sources" Button'    
+            unified_button_manager_colorful_buttons: {    
+                ru: 'Цветные кнопки',    
+                uk: 'Кольорові кнопки',    
+                en: 'Colorful Buttons'    
             },    
             unified_button_manager_custom_order: {    
                 ru: 'Настраиваемый порядок кнопок',    
@@ -76,6 +66,7 @@
             enable_torrent: true,    
             enable_trailer: true,    
             hide_sources: true,    
+            colorful_buttons: true,    
             custom_order: ['play', 'online', 'torrent', 'trailer']    
         });    
             
@@ -96,6 +87,7 @@
                     transform: scale(0.98) !important;    
                 }    
                     
+                /* Кольорові кнопки (за замовчуванням) */    
                 .full-start__button.view--online svg path {       
                     fill: #2196f3 !important;       
                 }    
@@ -107,6 +99,14 @@
                 }    
                 .full-start__button.button--play svg path {       
                     fill: #2196f3 !important;       
+                }    
+                    
+                /* Чорно-білі кнопки (коли colorful_buttons = false) */    
+                .full-start__button.monochrome .view--online svg path,    
+                .full-start__button.monochrome .view--torrent svg path,    
+                .full-start__button.monochrome .view--trailer svg path,    
+                .full-start__button.monochrome .button--play svg path {    
+                    fill: currentColor !important;    
                 }    
                     
                 .full-start__button svg {    
@@ -330,6 +330,17 @@
                 button.hide();    
             } else {    
                 button.show();    
+            }    
+        });    
+            
+        // Застосовуємо кольоровий режим    
+        const colorfulButtons = settings.colorful_buttons;    
+        $('.full-start__button').each(function() {    
+            const button = $(this);    
+            if (colorfulButtons) {    
+                button.removeClass('monochrome');    
+            } else {    
+                button.addClass('monochrome');    
             }    
         });    
             
@@ -630,45 +641,17 @@
             onChange: editButtons    
         });    
             
-        // Перемикач для кнопки "Торрент"    
+        // Перемикач для кольорових кнопок    
         Lampa.SettingsApi.addParam({    
             component: 'unified_button_manager',    
             param: {    
-                name: 'enable_torrent',    
+                name: 'colorful_buttons',    
                 type: 'trigger',    
                 default: true    
             },    
             field: {    
-                name: Lampa.Lang.translate('unified_button_manager_enable_torrent'),    
-            },    
-            onChange: applyCurrentSettings    
-        });    
-            
-        // Перемикач для кнопки "Трейлер"    
-        Lampa.SettingsApi.addParam({    
-            component: 'unified_button_manager',    
-            param: {    
-                name: 'enable_trailer',    
-                type: 'trigger',    
-                default: true    
-            },    
-            field: {    
-                name: Lampa.Lang.translate('unified_button_manager_enable_trailer'),    
-            },    
-            onChange: applyCurrentSettings    
-        });    
-            
-        // Перемикач для приховування кнопки "Джерела"    
-        Lampa.SettingsApi.addParam({    
-            component: 'unified_button_manager',    
-            param: {    
-                name: 'hide_sources',    
-                type: 'trigger',    
-                default: true    
-            },    
-            field: {    
-                name: Lampa.Lang.translate('unified_button_manager_hide_sources'),    
-                description: 'Приховує кнопку джерел на сторінці перегляду'    
+                name: Lampa.Lang.translate('unified_button_manager_colorful_buttons'),    
+                description: 'Вмикає/вимикає кольорові іконки кнопок'    
             },    
             onChange: applyCurrentSettings    
         });    
