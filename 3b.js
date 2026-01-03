@@ -184,7 +184,7 @@
         });  
     }  
       
-    // Основна функція для застосування розкладки  
+    // Основна функція для застосування розкладки (з діагностикою)  
     function applyLayout(fullContainer) {  
         if (!fullContainer || !fullContainer.length) return;  
           
@@ -201,14 +201,28 @@
         var map = _scanButtons.map;  
         var targetContainer = _scanButtons.targetContainer;  
           
-        var order = normalizeOrder(readArray(ORDER_KEY), items);  
+        var savedOrder = readArray(ORDER_KEY);  
+        var savedHidden = readArray(HIDE_KEY);  
+          
+        console.log('Застосування налаштувань:', {  
+            availableItems: items,  
+            savedOrder: savedOrder,  
+            savedHidden: savedHidden  
+        });  
+          
+        var order = normalizeOrder(savedOrder, items);  
           
         targetContainer.empty();  
           
         if (priority.length) targetContainer.append(priority);  
           
         order.forEach(function (id) {  
-            if (map[id]) targetContainer.append(map[id]);  
+            if (map[id]) {  
+                targetContainer.append(map[id]);  
+                console.log('Додано кнопку:', id);  
+            } else {  
+                console.log('Кнопку не знайдено:', id);  
+            }  
         });  
           
         targetContainer.toggleClass('lme-button-text-hidden', Lampa.Storage.get('button_editor_hide_text') == true);  
@@ -223,7 +237,7 @@
             if (firstButton.length) lastStartInstance.last = firstButton[0];  
         }  
     }
-    // Функція для відкриття редактора  
+    // Функція для відкриття редактора (виправлена версія)  
     function openEditor(fullContainer) {  
         if (!fullContainer || !fullContainer.length) return;  
           
@@ -284,15 +298,25 @@
                     if ($(this).hasClass('lme-button-hidden')) newHidden.push(id);  
                 });  
                   
+                // Зберігаємо налаштування з перевіркою  
+                console.log('Збереження налаштувань:', {order: newOrder, hidden: newHidden});  
+                  
                 Lampa.Storage.set(ORDER_KEY, newOrder);  
                 Lampa.Storage.set(HIDE_KEY, newHidden);  
+                  
+                // Перевіряємо, що налаштування збережені  
+                var savedOrder = Lampa.Storage.get(ORDER_KEY, []);  
+                var savedHidden = Lampa.Storage.get(HIDE_KEY, []);  
+                  
+                console.log('Перевірка збереження:', {order: savedOrder, hidden: savedHidden});  
+                  
                 Lampa.Modal.close();  
                 applyLayout(fullContainer);  
             }  
         });  
     }  
       
-    // Функція для відкриття редактора з налаштувань  
+    // Функція для відкриття редактора з налаштувань (виправлена версія)  
     function openEditorFromSettings() {  
         if (!lastFullContainer || !lastFullContainer.length || !document.body.contains(lastFullContainer[0])) {  
             var current = resolveActiveFullContainer();  
@@ -312,12 +336,24 @@
                 scroll_to_center: true,  
                 onBack: function onBack() {  
                     Lampa.Modal.close();  
+                    // Повертаємо контролер до налаштувань  
+                    Lampa.Controller.toggle('settings_component');  
                 }  
             });  
             return;  
         }  
           
+        // Зберігаємо поточний контролер  
+        var enabledController = Lampa.Controller.enabled().name;  
+          
         openEditor(lastFullContainer);  
+          
+        // Переконуємось, що модальне вікно закриється правильно  
+        Lampa.Modal.listener.follow('close', function() {  
+            setTimeout(function() {  
+                Lampa.Controller.toggle(enabledController);  
+            }, 100);  
+        });  
     }  
       
     // Основна функція плагіна  
@@ -402,8 +438,7 @@
                 openEditorFromSettings();  
             }  
         });  
-     }  
-      
+    }
     // Маніфест плагіна  
     var manifest = {  
         type: "other",  
