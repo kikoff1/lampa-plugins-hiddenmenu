@@ -1,7 +1,7 @@
 (function() {  
     'use strict';  
       
-    //в1 Константи для зберігання налаштувань  
+    // Константи для зберігання налаштувань  
     var ORDER_KEY = 'button_editor_order';  
     var HIDE_KEY = 'button_editor_hide';  
       
@@ -17,7 +17,7 @@
         }  
     }  
       
-    // Функція для отримання заголовка кнопки  
+    // Функція для отримання заголовка кнопки (покращена версія)  
     function getButtonTitle(id, $btn) {  
         var title = $btn.find('.full-start__button-text').text().trim();  
         if (!title) {  
@@ -26,6 +26,16 @@
         if (!title) {  
             var iconTitle = $btn.find('svg').attr('title') || '';  
             title = iconTitle;  
+        }  
+        if (!title) {  
+            // Якщо тексту немає, спробуємо отримати з ID  
+            if (id.startsWith('text_')) {  
+                title = id.replace('text_', '').replace(/_/g, ' ');  
+            } else if (id.startsWith('class_')) {  
+                title = id.replace('class_', '').replace(/_/g, ' ');  
+            } else {  
+                title = id;  
+            }  
         }  
         return title || id;  
     }  
@@ -90,7 +100,7 @@
         }  
     }  
       
-    // Функція для сканування кнопок  
+    // Функція для сканування кнопок (виправлена версія)  
     function scanButtons(fullContainer, detach) {  
         var items = [];  
         var map = {};  
@@ -100,7 +110,27 @@
         function collect(container) {  
             container.find('.full-start__button').each(function () {  
                 var $btn = $(this);  
-                var id = $btn.attr('data-action') || $btn.attr('data-id') || 'button_' + Math.random().toString(36).substr(2, 9);  
+                var id;  
+                  
+                // Спробуємо отримати стабільний ID з різних джерел  
+                if ($btn.attr('data-action')) {  
+                    id = $btn.attr('data-action');  
+                } else if ($btn.attr('data-id')) {  
+                    id = $btn.attr('data-id');  
+                } else if ($btn.attr('class')) {  
+                    // Використовуємо клас як ID  
+                    id = 'class_' + $btn.attr('class').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');  
+                } else {  
+                    // Використовуємо текст кнопки як ID  
+                    var text = $btn.find('.full-start__button-text').text().trim();  
+                    if (text) {  
+                        id = 'text_' + text.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');  
+                    } else {  
+                        // Як fallback - використовуємо позицію кнопки  
+                        id = 'pos_' + $btn.index();  
+                    }  
+                }  
+                  
                 map[id] = detach ? $btn.detach() : $btn;  
                 items.push(id);  
             });  
@@ -312,7 +342,7 @@
         });  
     }  
       
-    // Функція для налаштувань  
+    // Функція для налаштувань (з оновленою назвою)  
     function settings() {  
         Lampa.SettingsApi.addComponent({  
             component: "button_editor",  
@@ -320,7 +350,7 @@
             icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 15.5A3.5 3.5 0 0 1 8.5 12A3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5a3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97c0-.33-.03-.65-.07-.97l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.08-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.32-.07.64-.07.97c0 .33.03.65.07.97l-2.11 1.63c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.39 1.06.73 1.69.98l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.25 1.17-.59 1.69-.98l2.49 1c.22.08.49 0 .61-.22l2-3.46c.13-.22.07-.49-.12-.64l-2.11-1.63Z" fill="currentColor"/></svg>'  
         });  
           
-        // Основний перемикач  
+        // Основний перемикач (з оновленою назвою)  
         Lampa.SettingsApi.addParam({  
             component: "button_editor",  
             param: {  
@@ -329,7 +359,7 @@
                 "default": false  
             },  
             field: {  
-                name: 'Увімкнути редактор кнопок',  
+                name: 'Розділити всі кнопки',  
                 description: 'Дозволяє змінювати порядок та приховувати кнопки в картках'  
             },  
             onChange: function onChange(value) {  
@@ -372,7 +402,7 @@
                 openEditorFromSettings();  
             }  
         });  
-    }
+     }  
       
     // Маніфест плагіна  
     var manifest = {  
