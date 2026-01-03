@@ -1,7 +1,7 @@
 (function() {  
     'use strict';  
       
-    // Константи для зберігання налаштувань  
+    //в1 Константи для зберігання налаштувань  
     var ORDER_KEY = 'button_editor_order';  
     var HIDE_KEY = 'button_editor_hide';  
       
