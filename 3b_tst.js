@@ -1,213 +1,397 @@
 (function() {  
     'use strict';  
       
-    const PLUGIN_NAME = 'ButtonManager';  
-    let observer = null;  
+    // Константи для зберігання налаштувань  
+    var ORDER_KEY = 'button_editor_order';  
+    var HIDE_KEY = 'button_editor_hide';  
       
-    // Перевірка доступності Lampa  
-    function checkLampaReady() {  
-        return typeof Lampa !== 'undefined' && Lampa.Listener && Lampa.Storage;  
+    var lastFullContainer = null;  
+    var lastStartInstance = null;  
+      
+    // Функція для зчитування масиву зі сховища  
+    function readArray(key) {  
+        try {  
+            return Lampa.Storage.get(key, []);  
+        } catch (e) {  
+            return [];  
+        }  
     }  
       
-    // Функція додавання стилів  
-    function addStyles() {  
-        if (!document.getElementById('button-manager-style')) {  
-            const style = document.createElement('style');  
-            style.id = 'button-manager-style';  
-            style.textContent = `  
-                .full-start__button {  
-                    position: relative !important;  
-                    transition: transform 0.2s ease !important;  
-                }  
-                .full-start__button:active {  
-                    transform: scale(0.98) !important;  
-                }  
-                  
-                .full-start__button.view--online svg path {     
-                    fill: var(--button-online-color, #2196f3) !important;     
-                }  
-                .full-start__button.view--torrent svg path {     
-                    fill: var(--button-torrent-color, lime) !important;     
-                }  
-                .full-start__button.view--trailer svg path {     
-                    fill: var(--button-trailer-color, #f44336) !important;     
-                }  
-                .full-start__button.button--play svg path {     
-                    fill: var(--button-play-color, #2196f3) !important;     
-                }  
-                  
-                .full-start__button svg {  
-                    width: var(--button-icon-size, 1.5em) !important;  
-                    height: var(--button-icon-size, 1.5em) !important;  
-                }  
-                  
-                .button-split .full-start__button {  
-                    margin: 0.2em !important;  
-                }  
+    // Функція для отримання заголовка кнопки  
+    function getButtonTitle(id, $btn) {  
+        var title = $btn.find('.full-start__button-text').text().trim();  
+        if (!title) {  
+            title = $btn.attr('title') || '';  
+        }  
+        if (!title) {  
+            var iconTitle = $btn.find('svg').attr('title') || '';  
+            title = iconTitle;  
+        }  
+        return title || id;  
+    }  
+      
+    // Функція для отримання активного контейнера  
+    function resolveActiveFullContainer() {  
+        var active = Lampa.Activity.active();  
+        if (active && active.activity && active.activity.render) {  
+            var render = active.activity.render();  
+            return render.find('.full-start-new').first();  
+        }  
+        return null;  
+    }  
+      
+    // Функція для отримання повного контейнера  
+    function getFullContainer(e) {  
+        if (e.object && e.object.activity && e.object.activity.render) {  
+            return e.object.activity.render().find('.full-start-new').first();  
+        }  
+        return null;  
+    }  
+      
+    // Функція для забезпечення стилів  
+    function ensureStyles() {  
+        if (!$('#button-editor-styles').length) {  
+            var styles = `  
+                <style id="button-editor-styles">  
+                    .lme-button-hide { display: none !important; }  
+                    .lme-button-text-hidden .full-start__button-text { display: none !important; }  
+                    .lme-buttons { display: flex; flex-wrap: wrap; gap: 0.5em; }  
+                    .menu-edit-list { max-height: 70vh; overflow-y: auto; }  
+                    .menu-edit-list__item {   
+                        display: flex;   
+                        align-items: center;   
+                        padding: 0.8em;   
+                        border-bottom: 1px solid rgba(255,255,255,0.1);  
+                        cursor: pointer;  
+                    }  
+                    .menu-edit-list__item:hover { background: rgba(255,255,255,0.05); }  
+                    .menu-edit-list__icon { width: 2em; height: 2em; margin-right: 1em; }  
+                    .menu-edit-list__title { flex: 1; }  
+                    .menu-edit-list__move {   
+                        width: 2em;   
+                        height: 2em;   
+                        margin: 0 0.2em;   
+                        cursor: pointer;  
+                        opacity: 0.7;  
+                    }  
+                    .menu-edit-list__move:hover { opacity: 1; }  
+                    .menu-edit-list__toggle {   
+                        width: 2em;   
+                        height: 2em;   
+                        margin-left: 0.5em;   
+                        cursor: pointer;  
+                        opacity: 0.7;  
+                    }  
+                    .menu-edit-list__toggle:hover { opacity: 1; }  
+                    .lme-button-hidden { opacity: 0.3; }  
+                </style>  
             `;  
-            document.head.appendChild(style);  
+            $('head').append(styles);  
         }  
     }  
       
-    // Основна функція обробки кнопок  
-    function processButtons(event) {  
-        try {  
-            if (!event || !event.object || !event.object.activity) return;  
-              
-            const render = event.object.activity.render();  
-            if (!render) return;  
-              
-            let mainContainer = render.find('.full-start-new__buttons');  
-            if (!mainContainer.length) {  
-                mainContainer = render.find('.full-start__buttons');  
-            }  
-              
-            if (!mainContainer.length) {  
-                console.warn(`${PLUGIN_NAME}: Контейнер кнопок не знайдено`);  
-                return;  
-            }  
-              
-            applyButtonVisibility(mainContainer);  
-            reorderButtons(mainContainer);  
-            updateButtons();  
-              
-        } catch (error) {  
-            console.error(`${PLUGIN_NAME}: Помилка обробки кнопок`, error);  
+    // Функція для сканування кнопок  
+    function scanButtons(fullContainer, detach) {  
+        var items = [];  
+        var map = {};  
+        var targetContainer = fullContainer.find('.full-start-new__buttons');  
+        var extraContainer = fullContainer.find('.full-start-new__extra');  
+          
+        function collect(container) {  
+            container.find('.full-start__button').each(function () {  
+                var $btn = $(this);  
+                var id = $btn.attr('data-action') || $btn.attr('data-id') || 'button_' + Math.random().toString(36).substr(2, 9);  
+                map[id] = detach ? $btn.detach() : $btn;  
+                items.push(id);  
+            });  
+        }  
+          
+        collect(targetContainer);  
+        collect(extraContainer);  
+          
+        return {  
+            items: items,  
+            map: map,  
+            targetContainer: targetContainer,  
+            extraContainer: extraContainer  
+        };  
+    }  
+      
+    // Функція для нормалізації порядку  
+    function normalizeOrder(order, ids) {  
+        var result = [];  
+        var known = new Set(ids);  
+          
+        order.forEach(function (id) {  
+            if (known.has(id)) result.push(id);  
+        });  
+          
+        ids.forEach(function (id) {  
+            if (!result.includes(id)) result.push(id);  
+        });  
+          
+        return result;  
+    }  
+      
+    // Функція для застосування прихованих кнопок  
+    function applyHidden(map) {  
+        var hidden = new Set(readArray(HIDE_KEY));  
+        Object.keys(map).forEach(function (id) {  
+            map[id].toggleClass('lme-button-hide', hidden.has(id));  
+        });  
+    }  
+      
+    // Основна функція для застосування розкладки  
+    function applyLayout(fullContainer) {  
+        if (!fullContainer || !fullContainer.length) return;  
+          
+        ensureStyles();  
+          
+        var priority = fullContainer.find('.full-start-new__buttons .button--priority').detach();  
+        fullContainer.find('.full-start-new__buttons .button--play').remove();  
+          
+        var _scanButtons = scanButtons(fullContainer, true);  
+        var items = _scanButtons.items;  
+        var map = _scanButtons.map;  
+        var targetContainer = _scanButtons.targetContainer;  
+          
+        var order = normalizeOrder(readArray(ORDER_KEY), items);  
+          
+        targetContainer.empty();  
+          
+        if (priority.length) targetContainer.append(priority);  
+          
+        order.forEach(function (id) {  
+            if (map[id]) targetContainer.append(map[id]);  
+        });  
+          
+        targetContainer.toggleClass('lme-button-text-hidden', Lampa.Storage.get('button_editor_hide_text') == true);  
+        targetContainer.addClass('lme-buttons');  
+          
+        applyHidden(map);  
+          
+        Lampa.Controller.toggle("full_start");  
+          
+        if (lastStartInstance && lastStartInstance.html && fullContainer[0] === lastStartInstance.html[0]) {  
+            var firstButton = targetContainer.find('.full-start__button.selector').not('.hide').not('.lme-button-hide').first();  
+            if (firstButton.length) lastStartInstance.last = firstButton[0];  
         }  
     }  
       
-    // Застосування видимості кнопок  
-    function applyButtonVisibility(container) {  
-        try {  
-            const hiddenButtons = Lampa.Storage.get('button_manager_hidden', []);  
-            const splitButtons = Lampa.Storage.get('button_manager_split', false);  
+    // Функція для відкриття редактора  
+    function openEditor(fullContainer) {  
+        if (!fullContainer || !fullContainer.length) return;  
+          
+        var _scanButtons = scanButtons(fullContainer, false);  
+        var items = _scanButtons.items;  
+        var map = _scanButtons.map;  
+          
+        var order = normalizeOrder(readArray(ORDER_KEY), items);  
+        var hidden = new Set(readArray(HIDE_KEY));  
+          
+        var list = $('<div class="menu-edit-list"></div>');  
+          
+        order.forEach(function (id) {  
+            var $btn = map[id];  
+            if (!$btn || !$btn.length) return;  
               
-            if (splitButtons) {  
-                container.addClass('button-split');  
-            } else {  
-                container.removeClass('button-split');  
+            var title = getButtonTitle(id, $btn);  
+            var icon = $btn.find('svg').first().prop('outerHTML') || '';  
+              
+            var item = $("<div class=\"menu-edit-list__item\" data-id=\"".concat(id, "\">\n                <div class=\"menu-edit-list__icon\"></div>\n                <div class=\"menu-edit-list__title\">").concat(title, "</div>\n                <div class=\"menu-edit-list__move move-up selector\">\n                    <svg width=\"22\" height=\"14\" viewBox=\"0 0 22 14\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                        <path d=\"M2 12L11 3L20 12\" stroke=\"currentColor\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n                    </svg>\n                </div>\n                <div class=\"menu-edit-list__move move-down selector\">\n                    <svg width=\"22\" height=\"14\" viewBox=\"0 0 22 14\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                        <path d=\"M2 2L11 11L20 2\" stroke=\"currentColor\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n                    </svg>\n                </div>\n                <div class=\"menu-edit-list__toggle toggle selector\">\n                    <svg width=\"26\" height=\"26\" viewBox=\"0 0 26 26\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                        <rect x=\"1.89111\" y=\"1.78369\" width=\"21.793\" height=\"21.793\" rx=\"3.5\" stroke=\"currentColor\" stroke-width=\"3\"/>\n                        <path d=\"M7.44873 12.9658L10.8179 16.3349L18.1269 9.02588\" stroke=\"currentColor\" stroke-width=\"3\" class=\"dot\" opacity=\"0\" stroke-linecap=\"round\"/>\n                    </svg>\n                </div>\n            </div>"));  
+              
+            if (icon) item.find('.menu-edit-list__icon').append(icon);  
+              
+            item.toggleClass('lme-button-hidden', hidden.has(id));  
+            item.find('.dot').attr('opacity', hidden.has(id) ? 0 : 1);  
+              
+            item.find('.move-up').on('hover:enter', function () {  
+                var prev = item.prev();  
+                if (prev.length) item.insertBefore(prev);  
+            });  
+              
+            item.find('.move-down').on('hover:enter', function () {  
+                var next = item.next();  
+                if (next.length) item.insertAfter(next);  
+            });  
+              
+            item.find('.toggle').on('hover:enter', function () {  
+                item.toggleClass('lme-button-hidden');  
+                item.find('.dot').attr('opacity', item.hasClass('lme-button-hidden') ? 0 : 1);  
+            });  
+              
+            list.append(item);  
+        });  
+          
+        Lampa.Modal.open({  
+            title: 'Редагування кнопок',  
+            html: list,  
+            size: 'small',  
+            scroll_to_center: true,  
+            onBack: function onBack() {  
+                var newOrder = [];  
+                var newHidden = [];  
+                  
+                list.find('.menu-edit-list__item').each(function () {  
+                    var id = $(this).data('id');  
+                    if (!id) return;  
+                    newOrder.push(id);  
+                    if ($(this).hasClass('lme-button-hidden')) newHidden.push(id);  
+                });  
+                  
+                Lampa.Storage.set(ORDER_KEY, newOrder);  
+                Lampa.Storage.set(HIDE_KEY, newHidden);  
+                Lampa.Modal.close();  
+                applyLayout(fullContainer);  
             }  
-              
-            container.find('.full-start__button').each(function() {  
-                const button = $(this);  
-                const classes = button.attr('class') || '';  
-                  
-                let buttonId = '';  
-                if (classes.includes('view--online')) buttonId = 'online';  
-                else if (classes.includes('view--torrent')) buttonId = 'torrent';  
-                else if (classes.includes('view--trailer')) buttonId = 'trailer';  
-                else if (classes.includes('button--play')) buttonId = 'play';  
-                  
-                if (buttonId && hiddenButtons.includes(buttonId)) {  
-                    button.addClass('hide');  
-                } else {  
-                    button.removeClass('hide');  
+        });  
+    }  
+      
+    // Функція для відкриття редактора з налаштувань  
+    function openEditorFromSettings() {  
+        if (!lastFullContainer || !lastFullContainer.length || !document.body.contains(lastFullContainer[0])) {  
+            var current = resolveActiveFullContainer();  
+            if (current) {  
+                lastFullContainer = current;  
+            }  
+        }  
+          
+        if (!lastFullContainer || !lastFullContainer.length || !document.body.contains(lastFullContainer[0])) {  
+            Lampa.Modal.open({  
+                title: Lampa.Lang.translate('title_error'),  
+                html: Lampa.Template.get('error', {  
+                    title: Lampa.Lang.translate('title_error'),  
+                    text: 'Відкрийте картку фільму для редагування кнопок'  
+                }),  
+                size: 'small',  
+                scroll_to_center: true,  
+                onBack: function onBack() {  
+                    Lampa.Modal.close();  
                 }  
             });  
-        } catch (error) {  
-            console.error(`${PLUGIN_NAME}: Помилка видимості кнопок`, error);  
-        }  
-    }  
-      
-    // Перевпорядкування кнопок  
-    function reorderButtons(container) {  
-        try {  
-            container.css('display', 'flex');  
-              
-            const buttonOrder = Lampa.Storage.get('button_manager_order', ['play', 'online', 'torrent', 'trailer']);  
-              
-            container.find('.full-start__button').each(function() {  
-                const button = $(this);  
-                const classes = button.attr('class') || '';  
-                  
-                let buttonId = '';  
-                if (classes.includes('button--play')) buttonId = 'play';  
-                else if (classes.includes('view--online')) buttonId = 'online';  
-                else if (classes.includes('view--torrent')) buttonId = 'torrent';  
-                else if (classes.includes('view--trailer')) buttonId = 'trailer';  
-                  
-                const order = buttonOrder.indexOf(buttonId);  
-                button.css('order', order >= 0 ? order : 999);  
-            });  
-        } catch (error) {  
-            console.error(`${PLUGIN_NAME}: Помилка порядку кнопок`, error);  
-        }  
-    }  
-      
-    // Оновлення стилів кнопок  
-    function updateButtons() {  
-        try {  
-            const customColors = Lampa.Storage.get('button_manager_colors', {  
-                online: '#2196f3',  
-                torrent: 'lime',  
-                trailer: '#f44336',  
-                play: '#2196f3'  
-            });  
-              
-            const iconSize = Lampa.Storage.get('button_manager_icon_size', '1.5em');  
-              
-            document.documentElement.style.setProperty('--button-online-color', customColors.online);  
-            document.documentElement.style.setProperty('--button-torrent-color', customColors.torrent);  
-            document.documentElement.style.setProperty('--button-trailer-color', customColors.trailer);  
-            document.documentElement.style.setProperty('--button-play-color', customColors.play);  
-            document.documentElement.style.setProperty('--button-icon-size', iconSize);  
-        } catch (error) {  
-            console.error(`${PLUGIN_NAME}: Помилка оновлення кнопок`, error);  
-        }  
-    }  
-      
-    // Ініціалізація плагіна  
-    function initPlugin() {  
-        if (!checkLampaReady()) {  
-            setTimeout(initPlugin, 100);  
             return;  
         }  
           
-        try {  
-            addStyles();  
-              
-            Lampa.Listener.follow('full', function(event) {  
-                if (event.type === 'complite') {  
-                    setTimeout(() => {  
-                        processButtons(event);  
-                    }, 500);  
-                }  
-            });  
-              
-            console.log(`${PLUGIN_NAME}: Плагін успішно ініціалізовано`);  
-        } catch (error) {  
-            console.error(`${PLUGIN_NAME}: Помилка ініціалізації`, error);  
-        }  
+        openEditor(lastFullContainer);  
     }  
       
-    // Запуск плагіна  
+    // Основна функція плагіна  
+    function main() {  
+        Lampa.Listener.follow('full', function (e) {  
+            if (e.type === 'build' && e.name === 'start' && e.item && e.item.html) {  
+                lastStartInstance = e.item;  
+            }  
+              
+            if (e.type === 'complite') {  
+                var fullContainer = getFullContainer(e);  
+                if (!fullContainer) return;  
+                  
+                lastFullContainer = fullContainer;  
+                  
+                setTimeout(function () {  
+                    if (Lampa.Storage.get('button_editor_enabled') == true) {  
+                        applyLayout(fullContainer);  
+                    }  
+                }, 0);  
+            }  
+        });  
+    }  
+      
+    // Функція для налаштувань  
+    function settings() {  
+        Lampa.SettingsApi.addComponent({  
+            component: "button_editor",  
+            name: 'Редактор кнопок',  
+            icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 15.5A3.5 3.5 0 0 1 8.5 12A3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5a3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97c0-.33-.03-.65-.07-.97l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.08-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.32-.07.64-.07.97c0 .33.03.65.07.97l-2.11 1.63c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.39 1.06.73 1.69.98l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.25 1.17-.59 1.69-.98l2.49 1c.22.08.49 0 .61-.22l2-3.46c.13-.22.07-.49-.12-.64l-2.11-1.63Z" fill="currentColor"/></svg>'  
+        });  
+          
+        // Основний перемикач  
+        Lampa.SettingsApi.addParam({  
+            component: "button_editor",  
+            param: {  
+                name: "button_editor_enabled",  
+                type: "trigger",  
+                "default": false  
+            },  
+            field: {  
+                name: 'Увімкнути редактор кнопок',  
+                description: 'Дозволяє змінювати порядок та приховувати кнопки в картках'  
+            },  
+            onChange: function onChange(value) {  
+                Lampa.Settings.update();  
+            }  
+        });  
+          
+        // Приховати текст кнопок  
+        Lampa.SettingsApi.addParam({  
+            component: "button_editor",  
+            param: {  
+                name: "button_editor_hide_text",  
+                type: "trigger",  
+                "default": false  
+            },  
+            field: {  
+                name: 'Приховати текст кнопок',  
+                description: 'Показувати тільки іконки кнопок для компактності'  
+            },  
+            onChange: function onChange(value) {  
+                Lampa.Settings.update();  
+                if (lastFullContainer) {  
+                    applyLayout(lastFullContainer);  
+                }  
+            }  
+        });  
+          
+        // Кнопка редактора  
+        Lampa.SettingsApi.addParam({  
+            component: "button_editor",  
+            param: {  
+                name: "button_editor_open",  
+                type: "button"  
+            },  
+            field: {  
+                name: 'Відкрити редактор кнопок',  
+                description: 'Редагувати порядок та видимість кнопок'  
+            },  
+            onChange: function onChange() {  
+                openEditorFromSettings();  
+            }  
+        });  
+    }  
+      
+    // Маніфест плагіна  
+    var manifest = {  
+        type: "other",  
+        version: "1.0.0",  
+        author: 'Button Editor Plugin',  
+        name: "Редактор кнопок",  
+        description: "Плагін для управління кнопками в картках фільмів",  
+        component: "button_editor"  
+    };  
+      
+    // Функція ініціалізації плагіна  
+    function add() {  
+        Lampa.Manifest.plugins = manifest;  
+        settings();  
+        main();  
+    }  
+      
+    // Функція запуску плагіна  
     function startPlugin() {  
-        if (window.plugin_button_manager_ready) return;  
-          
-        window.plugin_button_manager_ready = true;  
-          
-        if (window.plugin) {  
-            window.plugin('button_manager', {  
-                type: 'component',  
-                name: 'Button Manager',  
-                version: '1.0.0',  
-                author: 'Custom Plugin',  
-                description: 'Менеджер кнопок з налаштуваннями стилів та порядку'  
-            });  
-        }  
-          
+        window.plugin_button_editor_ready = true;  
         if (window.appready) {  
-            initPlugin();  
+            add();  
         } else {  
-            Lampa.Listener.follow('app', function (e) {  
-                if (e.type === 'ready') {  
-                    initPlugin();  
+            Lampa.Listener.follow("app", function (e) {  
+                if (e.type === "ready") {  
+                    add();  
                 }  
             });  
         }  
     }  
       
-    // Запускаємо плагін  
-    startPlugin();  
-      
+    // Запуск плагіна якщо він ще не завантажений  
+    if (!window.plugin_button_editor_ready) {  
+        startPlugin();  
+    }  
 })();
