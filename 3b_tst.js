@@ -117,6 +117,19 @@
         };  
     }  
       
+    // Функція для переміщення всіх кнопок в основний контейнер  
+    function moveAllButtons(fullContainer) {  
+        if (!fullContainer || !fullContainer.length) return;  
+          
+        var mainContainer = fullContainer.find('.full-start-new__buttons');  
+        var hiddenContainer = fullContainer.find('.buttons--container');  
+          
+        if (hiddenContainer.length) {  
+            var buttons = hiddenContainer.find('.full-start__button').detach();  
+            mainContainer.append(buttons);  
+        }  
+    }  
+      
     // Функція для нормалізації порядку  
     function normalizeOrder(order, ids) {  
         var result = [];  
@@ -147,6 +160,9 @@
           
         ensureStyles();  
           
+        // Спочатку перемістити всі кнопки в основний контейнер  
+        moveAllButtons(fullContainer);  
+          
         var priority = fullContainer.find('.full-start-new__buttons .button--priority').detach();  
         fullContainer.find('.full-start-new__buttons .button--play').remove();  
           
@@ -176,8 +192,7 @@
             var firstButton = targetContainer.find('.full-start__button.selector').not('.hide').not('.lme-button-hide').first();  
             if (firstButton.length) lastStartInstance.last = firstButton[0];  
         }  
-    }  
-      
+    }
     // Функція для відкриття редактора  
     function openEditor(fullContainer) {  
         if (!fullContainer || !fullContainer.length) return;  
@@ -357,6 +372,7 @@
                 openEditorFromSettings();  
             }  
         });  
+    }
     }  
       
     // Маніфест плагіна  
