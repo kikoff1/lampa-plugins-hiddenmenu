@@ -89,17 +89,20 @@
                 s.name +  
                 (s.id === activeId ? ' ✔' : ''),  
             description: s.url,  
-            onClick: () => openServerMenu(s.id)  
+            onSelect: () => openServerMenu(s.id)  
         }));  
   
         items.push({  
             title: '+ Додати TorrServer',  
-            onClick: addServer  
+            onSelect: addServer  
         });  
   
         Lampa.Select.show({  
             title: 'TorrServer',  
-            items  
+            items,  
+            onBack: () => {  
+                Lampa.Controller.toggle('content');  
+            }  
         });  
     }  
   
@@ -113,42 +116,54 @@
             items: [  
                 {  
                     title: 'Зробити активним',  
-                    onClick: () => {  
+                    onSelect: () => {  
                         setActive(id);  
                         Lampa.Noty.show('TorrServer активовано');  
+                        Lampa.Controller.toggle('content');  
                     }  
                 },  
                 {  
                     title: 'Перевірити доступність',  
-                    onClick: async () => {  
+                    onSelect: async () => {  
                         Lampa.Noty.show('Перевірка...');  
                         let ok = await checkServer(s.url);  
                         Lampa.Noty.show(ok ? 'Сервер ONLINE 🟢' : 'Сервер OFFLINE 🔴');  
+                        Lampa.Controller.toggle('content');  
                     }  
                 },  
                 {  
                     title: 'Редагувати',  
-                    onClick: () => editServer(s)  
+                    onSelect: () => editServer(s)  
                 },  
                 {  
                     title: 'Видалити',  
-                    onClick: () => {  
+                    onSelect: () => {  
                         saveList(list.filter(i => i.id !== id));  
                         openManager();  
                     }  
                 }  
-            ]  
+            ],  
+            onBack: () => {  
+                Lampa.Controller.toggle('content');  
+            }  
         });  
     }  
   
     function addServer() {  
-        Lampa.Input.show({  
+        Lampa.Input.edit({  
             title: 'Назва TorrServer',  
-            onSubmit: name => {  
-                Lampa.Input.show({  
+            free: true,  
+            nosave: true,  
+            value: ''  
+        }, (name) => {  
+            if (name) {  
+                Lampa.Input.edit({  
                     title: 'URL TorrServer',  
-                    value: 'http://',  
-                    onSubmit: url => {  
+                    free: true,  
+                    nosave: true,  
+                    value: 'http://'  
+                }, (url) => {  
+                    if (url) {  
                         let list = getList();  
                         list.push({  
                             id: genId(),  
@@ -158,21 +173,31 @@
                         });  
                         saveList(list);  
                         openManager();  
+                    } else {  
+                        Lampa.Controller.toggle('content');  
                     }  
                 });  
+            } else {  
+                Lampa.Controller.toggle('content');  
             }  
         });  
     }  
   
     function editServer(server) {  
-        Lampa.Input.show({  
+        Lampa.Input.edit({  
             title: 'Назва TorrServer',  
-            value: server.name,  
-            onSubmit: name => {  
-                Lampa.Input.show({  
+            free: true,  
+            nosave: true,  
+            value: server.name  
+        }, (name) => {  
+            if (name) {  
+                Lampa.Input.edit({  
                     title: 'URL TorrServer',  
-                    value: server.url,  
-                    onSubmit: url => {  
+                    free: true,  
+                    nosave: true,  
+                    value: server.url  
+                }, (url) => {  
+                    if (url) {  
                         let list = getList();  
                         let s = list.find(i => i.id === server.id);  
                         if (s) {  
@@ -181,8 +206,12 @@
                         }  
                         saveList(list);  
                         openManager();  
+                    } else {  
+                        Lampa.Controller.toggle('content');  
                     }  
                 });  
+            } else {  
+                Lampa.Controller.toggle('content');  
             }  
         });  
     }  
