@@ -3,7 +3,7 @@
     
     if (!window.Lampa) return;    
     
-    /v1* ================== CONST ================== */    
+    /* ================== CONST ================== */    
     
     const STORAGE_LIST   = 'torrserver_multi_list';    
     const STORAGE_ACTIVE = 'torrserver_multi_active';    
