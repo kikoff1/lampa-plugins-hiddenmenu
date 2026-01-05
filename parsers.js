@@ -44,10 +44,10 @@
       }
   }, {
       // 2 парсер: Spawn UA (V2).
-      base: 'https://well-informed-normal-function.anvil.app/_/api/jackett_proxy?u=http://jackett.1337.cx', // Новий унікальний ідентифікатор
+      base: 'jackett.1337.cx', // Новий унікальний ідентифікатор
       name: 'Spawn UA (V2)', // Нова назва
       settings: {
-          url: 'jackett.1337.cx', // Нова адреса
+          url: 'https://well-informed-normal-function.anvil.app/_/api/jackett_proxy?u=http://jackett.1337.cx', // Нова адреса
           key: '7', // Новий ключ API
           parser_torrent_type: 'jackett' // Тип парсера
       }
