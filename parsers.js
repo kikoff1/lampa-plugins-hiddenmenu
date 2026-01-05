@@ -44,7 +44,7 @@
       }
   }, {
       // 2 парсер: Spawn UA (V2).
-      base: 'jackett.1337.cx', // Новий унікальний ідентифікатор
+      base: 'https://well-informed-normal-function.anvil.app/_/api/jackett_proxy?u=http://jackett.1337.cx', // Новий унікальний ідентифікатор
       name: 'Spawn UA (V2)', // Нова назва
       settings: {
           url: 'jackett.1337.cx', // Нова адреса
@@ -57,7 +57,7 @@
       base: 'spawnum_duckdns_org_49117', // Новий унікальний ідентифікатор
       name: 'Spawn UA (V3)', // Нова назва
       settings: {
-          url: 'spawnum.duckdns.org:49117', // Нова адреса
+          url: 'https://well-informed-normal-function.anvil.app/_/api/jackett_proxy?u=http://spawnum.duckdns.org:49117', // Нова адреса
           key: '2', // Новий ключ API
           parser_torrent_type: 'jackett' // Тип парсера
       }
