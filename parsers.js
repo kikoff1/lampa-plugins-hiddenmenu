@@ -38,7 +38,7 @@
       base: 'spawnum_duckdns_org_59117', // Унікальний ідентифікатор
       name: 'Spawn UA (V1)', // Назва, що відображається користувачу
       settings: {
-          url: 'spawnum.duckdns.org:59117', // Адреса сервера парсера
+          url: 'https://well-informed-normal-function.anvil.app/_/api/jackett_proxy?u=http://spawnum.duckdns.org:59117', // Адреса сервера парсера
           key: '2', // Ключ API
           parser_torrent_type: 'jackett' // Тип парсера
       }
