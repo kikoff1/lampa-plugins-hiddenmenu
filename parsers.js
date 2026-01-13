@@ -101,6 +101,26 @@
           key: '',
           parser_torrent_type: 'jackett'
       }
+  }, {
+      // 8 парсер: lampaua.mooo.com.
+      base: 'jackettua.mooo.com', // Новий унікальний ідентифікатор
+      name: 'jackettua.mooo.com', // Нова назва
+      settings: {
+          url: 'https://well-informed-normal-function.anvil.app/_/api/jackett_proxy?u=https://jackettua.mooo.com', // Нова адреса
+          key: 'ua', // Новий ключ API
+          parser_torrent_type: 'jackett' // Тип парсера
+      }
+
+}, {
+      // 9 парсер: lampaua.mooo.com 2.
+      base: 'prowlarrua.mooo.com', // Новий унікальний ідентифікатор
+      name: 'prowlarrua.mooo.com', // Нова назва
+      settings: {
+          url: 'https://well-informed-normal-function.anvil.app/_/api/jackett_proxy?u=https://prowlarrua.mooo.com', // Нова адреса
+          key: 'ua', // Новий ключ API
+          parser_torrent_type: 'prowlarr' // Тип парсера
+      }
+
   }];
 
   // Визначаємо протокол (http або https) залежно від поточного протоколу сторінки.
