@@ -38,7 +38,7 @@
       base: 'spawnum_duckdns_org_59117', // Унікальний ідентифікатор
       name: 'Spawn UA (V1)', // Назва, що відображається користувачу
       settings: {
-          url: 'https://well-informed-normal-function.anvil.app/_/api/jackett_proxy?u=http://spawnum.duckdns.org:59117', // Адреса сервера парсера
+          url: 'https://parserbridge.lampame.v6.rocks/http://spawnum.duckdns.org:59117', // Адреса сервера парсера
           key: '2', // Ключ API
           parser_torrent_type: 'jackett' // Тип парсера
       }
@@ -47,7 +47,7 @@
       base: 'jackett.1337.cx', // Новий унікальний ідентифікатор
       name: 'Spawn UA (V2)', // Нова назва
       settings: {
-          url: 'https://well-informed-normal-function.anvil.app/_/api/jackett_proxy?u=http://jackett.1337.cx', // Нова адреса
+          url: 'https://parserbridge.lampame.v6.rocks/http://jackett.1337.cx', // Нова адреса
           key: '7', // Новий ключ API
           parser_torrent_type: 'jackett' // Тип парсера
       }
