@@ -57,7 +57,7 @@
       base: 'spawnum_duckdns_org_49117', // Новий унікальний ідентифікатор
       name: 'Spawn UA (V3)', // Нова назва
       settings: {
-          url: 'https://well-informed-normal-function.anvil.app/_/api/jackett_proxy?u=http://spawnum.duckdns.org:49117', // Нова адреса
+          url: 'https://parserbridge.lampame.v6.rocks/http://spawnum.duckdns.org:49117', // Нова адреса
           key: '2', // Новий ключ API
           parser_torrent_type: 'jackett' // Тип парсера
       }
@@ -106,7 +106,7 @@
       base: 'jackettua.mooo.com', // Новий унікальний ідентифікатор
       name: 'jackettua.mooo.com', // Нова назва
       settings: {
-          url: 'https://well-informed-normal-function.anvil.app/_/api/jackett_proxy?u=https://jackettua.mooo.com', // Нова адреса
+          url: 'https://parserbridge.lampame.v6.rocks/https://jackettua.mooo.com', // Нова адреса
           key: 'ua', // Новий ключ API
           parser_torrent_type: 'jackett' // Тип парсера
       }
@@ -116,7 +116,7 @@
       base: 'prowlarrua.mooo.com', // Новий унікальний ідентифікатор
       name: 'prowlarrua.mooo.com', // Нова назва
       settings: {
-          url: 'https://well-informed-normal-function.anvil.app/_/api/jackett_proxy?u=https://prowlarrua.mooo.com', // Нова адреса
+          url: 'https://parserbridge.lampame.v6.rocks/https://prowlarrua.mooo.com', // Нова адреса
           key: 'ua', // Новий ключ API
           parser_torrent_type: 'prowlarr' // Тип парсера
       }
