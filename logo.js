@@ -2,7 +2,7 @@
 	"use strict";
 
 	/* =======================
-	   ЛОКАЛІЗАЦІЯ
+	   LOCALIZATION
 	======================= */
 
 	var LANG = {
@@ -43,7 +43,7 @@
 			logo_lang: "Мова логотипу",
 			logo_lang_desc: "Пріоритетна мова для пошуку логотипу",
 			size: "Розмір логотипу",
-			size_desc: "Роздільна здатність зображення",
+			size_desc: "Роздільна здатність завантажуваного зображення",
 			anim_type: "Тип анімації логотипів",
 			anim_type_desc: "Спосіб анімації логотипів",
 			text_height: "Логотип за висотою тексту",
@@ -65,7 +65,7 @@
 	}
 
 	/* =======================
-	   ОСНОВНИЙ ПЛАГІН
+	   ORIGINAL PLUGIN (1:1)
 	======================= */
 
 	var DISABLE_CACHE = false;
@@ -82,203 +82,228 @@
 
 		window.logoplugin = true;
 
+		function animateHeight(el, start, end, dur, cb) {
+			var st = null;
+			function step(ts) {
+				if (!st) st = ts;
+				var p = Math.min((ts - st) / dur, 1);
+				var e = 1 - Math.pow(1 - p, 3);
+				el.style.height = start + (end - start) * e + "px";
+				p < 1 ? requestAnimationFrame(step) : cb && cb();
+			}
+			requestAnimationFrame(step);
+		}
+
+		function animateOpacity(el, s, e, d, cb) {
+			var st = null;
+			function step(ts) {
+				if (!st) st = ts;
+				var p = Math.min((ts - st) / d, 1);
+				var k = 1 - Math.pow(1 - p, 3);
+				el.style.opacity = s + (e - s) * k;
+				p < 1 ? requestAnimationFrame(step) : cb && cb();
+			}
+			requestAnimationFrame(step);
+		}
+
 		function getCacheKey(type, id, lang) {
 			return "logo_cache_width_based_v1_" + type + "_" + id + "_" + lang;
 		}
 
+		function applyFinalStyles(img, cont, has_tagline, text_h) {
+			if (cont) {
+				cont.style.height = "";
+				cont.style.overflow = "";
+				cont.style.display = "";
+				cont.style.transition = "none";
+				cont.style.boxSizing = "";
+			}
+
+			img.style.margin = "0";
+			img.style.paddingTop = PADDING_TOP_EM + "em";
+
+			var pb = window.innerWidth < 768 && has_tagline ? 0.5 : PADDING_BOTTOM_EM;
+			img.style.paddingBottom = pb + "em";
+
+			var use_text_h = Lampa.Storage.get("logo_use_text_height", false);
+
+			if (use_text_h && text_h) {
+				img.style.height = text_h + "px";
+				img.style.width = "auto";
+			} else {
+				img.style.width = window.innerWidth < 768 ? "100%" : TARGET_WIDTH;
+				img.style.height = "auto";
+			}
+
+			img.style.maxWidth = "100%";
+			img.style.objectFit = "contain";
+			img.style.objectPosition = "left bottom";
+			img.style.opacity = "1";
+		}
+
 		Lampa.Listener.follow("full", function (e) {
-			if (e.type == "complite" && Lampa.Storage.get("logo_glav") != "1") {
-				var data = e.data.movie;
-				var type = data.name ? "tv" : "movie";
+			if (e.type !== "complite" || Lampa.Storage.get("logo_glav") == "1") return;
 
-				var title_elem = e.object.activity.render().find(".full-start-new__title");
-				var dom_title = title_elem[0];
+			var data = e.data.movie;
+			var type = data.name ? "tv" : "movie";
 
-				var target_lang =
-					Lampa.Storage.get("logo_lang") ||
-					Lampa.Storage.get("language");
+			var title = e.object.activity.render().find(".full-start-new__title");
+			var dom = title[0];
+			if (!dom) return;
 
-				var size = Lampa.Storage.get("logo_size", "original");
-				var cache_key = getCacheKey(type, data.id, target_lang);
+			var lang =
+				Lampa.Storage.get("logo_lang") ||
+				Lampa.Storage.get("language");
 
-				function showLogo(img_url, save) {
-					if (save && !DISABLE_CACHE)
-						Lampa.Storage.set(cache_key, img_url);
+			var size = Lampa.Storage.get("logo_size", "original");
+			var cache = getCacheKey(type, data.id, lang);
 
-					var img = new Image();
-					img.src = img_url;
-					img.style.maxWidth = "100%";
-					img.style.height = "auto";
+			function startAnim(url, save) {
+				if (save && !DISABLE_CACHE) Lampa.Storage.set(cache, url);
 
-					img.onload = function () {
-						title_elem.empty().append(img);
-					};
+				var img = new Image();
+				img.src = url;
+				img.style.opacity = "0";
 
-					img.onerror = function () {
-						if (!DISABLE_CACHE)
-							Lampa.Storage.set(cache_key, "none");
-					};
-				}
+				var start_h = dom.getBoundingClientRect().height;
 
-				var cached = Lampa.Storage.get(cache_key);
-				if (cached && cached !== "none") {
-					showLogo(cached, false);
-					return;
-				}
+				img.onload = function () {
+					setTimeout(function () {
+						var anim = Lampa.Storage.get("logo_animation_type", "css");
 
-				if (!data.id) return;
+						if (anim === "js") {
+							animateOpacity(dom, 1, 0, FADE_OUT_TEXT, function () {
+								title.empty().append(img);
+								dom.style.height = start_h + "px";
 
-				var url = Lampa.TMDB.api(
+								var target_h = dom.getBoundingClientRect().height;
+
+								animateHeight(dom, start_h, target_h, MORPH_HEIGHT, function () {
+									applyFinalStyles(img, dom, false, start_h);
+								});
+
+								setTimeout(function () {
+									animateOpacity(img, 0, 1, FADE_IN_IMG);
+								}, MORPH_HEIGHT - 100);
+							});
+						} else {
+							title.css({ opacity: "0" });
+							setTimeout(function () {
+								title.empty().append(img).css({ opacity: "1" });
+								applyFinalStyles(img, dom, false, start_h);
+								img.style.transition =
+									"opacity " + FADE_IN_IMG / 1000 + "s";
+								img.style.opacity = "1";
+							}, FADE_OUT_TEXT);
+						}
+					}, SAFE_DELAY);
+				};
+			}
+
+			var cached = Lampa.Storage.get(cache);
+			if (cached && cached !== "none") {
+				startAnim(cached, false);
+				return;
+			}
+
+			if (!data.id) return;
+
+			$.get(
+				Lampa.TMDB.api(
 					type +
 						"/" +
 						data.id +
 						"/images?api_key=" +
 						Lampa.TMDB.key() +
 						"&include_image_language=" +
-						target_lang +
+						lang +
 						",en,null"
-				);
+				),
+				function (api) {
+					if (!api.logos || !api.logos.length) return;
 
-				$.get(url, function (api) {
-					var logo = null;
+					var logo =
+						api.logos.find(function (l) {
+							return l.iso_639_1 === lang;
+						}) ||
+						api.logos.find(function (l) {
+							return l.iso_639_1 === "en";
+						}) ||
+						api.logos[0];
 
-					if (api.logos && api.logos.length) {
-						api.logos.some(function (l) {
-							if (l.iso_639_1 === target_lang) {
-								logo = l.file_path;
-								return true;
-							}
-						});
-
-						if (!logo) {
-							api.logos.some(function (l) {
-								if (l.iso_639_1 === "en") {
-									logo = l.file_path;
-									return true;
-								}
-							});
-						}
-
-						if (!logo) logo = api.logos[0].file_path;
-					}
-
-					if (logo) {
-						showLogo(
-							Lampa.TMDB.image(
-								"/t/p/" + size + logo.replace(".svg", ".png")
-							),
-							true
-						);
-					}
-				});
-			}
+					startAnim(
+						Lampa.TMDB.image(
+							"/t/p/" + size + logo.file_path.replace(".svg", ".png")
+						),
+						true
+					);
+				}
+			);
 		});
 	}
 
 	/* =======================
-	   НАЛАШТУВАННЯ
+	   SETTINGS
 	======================= */
 
-	var LOGO_COMPONENT = "logo_settings_nested";
+	var C = "logo_settings_nested";
 
 	Lampa.Settings.listener.follow("open", function (e) {
-		if (e.name == "main") {
-			Lampa.SettingsApi.addComponent({
-				component: LOGO_COMPONENT,
-				name: t("logos")
-			});
+		if (e.name === "main") {
+			Lampa.SettingsApi.addComponent({ component: C, name: t("logos") });
 			Lampa.Settings.main().update();
 		}
 	});
 
 	Lampa.SettingsApi.addParam({
 		component: "interface",
-		param: { name: "logo_settings_entry", type: "static" },
+		param: { type: "static" },
 		field: { name: t("logos"), description: t("logos_desc") },
-		onRender: function (item) {
-			item.on("hover:enter", function () {
-				Lampa.Settings.create(LOGO_COMPONENT);
+		onRender: function (i) {
+			i.on("hover:enter", function () {
+				Lampa.Settings.create(C);
 			});
 		}
 	});
 
 	Lampa.SettingsApi.addParam({
-		component: LOGO_COMPONENT,
-		param: { name: "logo_back", type: "static" },
-		field: { name: t("back"), description: t("back_desc") },
-		onRender: function (item) {
-			item.on("hover:enter", function () {
-				Lampa.Settings.create("interface");
-			});
-		}
+		component: C,
+		param: { name: "logo_glav", type: "select", values: { 0: t("enable"), 1: t("disable") }, default: "0" },
+		field: { name: t("logos_instead"), description: t("logos_instead_desc") }
 	});
 
 	Lampa.SettingsApi.addParam({
-		component: LOGO_COMPONENT,
-		param: {
-			name: "logo_glav",
-			type: "select",
-			values: { 0: t("enable"), 1: t("disable") },
-			default: "0"
-		},
-		field: {
-			name: t("logos_instead"),
-			description: t("logos_instead_desc")
-		}
+		component: C,
+		param: { name: "logo_lang", type: "select", values: { "": t("as_lampa"), ru: "Русский", uk: "Українська", en: "English" } },
+		field: { name: t("logo_lang"), description: t("logo_lang_desc") }
 	});
 
 	Lampa.SettingsApi.addParam({
-		component: LOGO_COMPONENT,
-		param: {
-			name: "logo_lang",
-			type: "select",
-			values: {
-				"": t("as_lampa"),
-				ru: "Русский",
-				uk: "Українська",
-				en: "English"
-			},
-			default: ""
-		},
-		field: {
-			name: t("logo_lang"),
-			description: t("logo_lang_desc")
-		}
+		component: C,
+		param: { name: "logo_size", type: "select", values: { w300: "w300", w500: "w500", w780: "w780", original: t("original") }, default: "original" },
+		field: { name: t("size"), description: t("size_desc") }
 	});
 
 	Lampa.SettingsApi.addParam({
-		component: LOGO_COMPONENT,
-		param: {
-			name: "logo_size",
-			type: "select",
-			values: {
-				w300: "w300",
-				w500: "w500",
-				w780: "w780",
-				original: t("original")
-			},
-			default: "original"
-		},
-		field: {
-			name: t("size"),
-			description: t("size_desc")
-		}
+		component: C,
+		param: { name: "logo_animation_type", type: "select", values: { js: "JavaScript", css: "CSS" }, default: "css" },
+		field: { name: t("anim_type"), description: t("anim_type_desc") }
 	});
 
 	Lampa.SettingsApi.addParam({
-		component: LOGO_COMPONENT,
-		param: { name: "logo_clear_cache", type: "button" },
-		field: {
-			name: t("clear_cache"),
-			description: t("clear_cache_desc")
-		},
+		component: C,
+		param: { name: "logo_use_text_height", type: "trigger" },
+		field: { name: t("text_height"), description: t("text_height_desc") }
+	});
+
+	Lampa.SettingsApi.addParam({
+		component: C,
+		param: { type: "button" },
+		field: { name: t("clear_cache"), description: t("clear_cache_desc") },
 		onChange: function () {
 			Lampa.Select.show({
 				title: t("clear_confirm"),
-				items: [
-					{ title: t("yes"), confirm: true },
-					{ title: t("no") }
-				],
+				items: [{ title: t("yes"), confirm: true }, { title: t("no") }],
 				onSelect: function (a) {
 					if (a.confirm) {
 						Object.keys(localStorage).forEach(function (k) {
