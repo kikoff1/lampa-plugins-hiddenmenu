@@ -1,74 +1,128 @@
 (function () {  
 	"use strict";  
   
-	/* =======================  
-	   LOCALIZATION  
-	======================= */  
-  
-	var LANG = {  
-		ru: {  
-			logos: "Логотипы",  
-			logos_desc: "Настройки отображения логотипов",  
-			back: "Назад",  
-			back_desc: "Вернуться в настройки интерфейса",  
-			enable: "Отображать",  
-			disable: "Скрыть",  
-			logos_instead: "Логотипы вместо названий",  
-			logos_instead_desc: "Отображает логотипы фильмов вместо текста",  
-			logo_lang: "Язык логотипа",  
-			logo_lang_desc: "Приоритетный язык для поиска логотипа",  
-			size: "Размер логотипа",  
-			size_desc: "Разрешение загружаемого изображения",  
-			anim_type: "Тип анимации логотипов",  
-			anim_type_desc: "Способ анимации логотипов",  
-			text_height: "Логотип по высоте текста",  
-			text_height_desc: "Размер логотипа равен высоте текста",  
-			clear_cache: "Сбросить кеш логотипов",  
-			clear_cache_desc: "Нажмите для очистки кеша изображений",  
-			clear_confirm: "Сбросить кеш?",  
-			yes: "Да",  
-			no: "Нет",  
-			original: "Оригинал",  
-			as_lampa: "Как в Lampa"  
-		},  
-		uk: {  
-			logos: "Логотипи",  
-			logos_desc: "Налаштування відображення логотипів",  
-			back: "Назад",  
-			back_desc: "Повернутися до налаштувань інтерфейсу",  
-			enable: "Показувати",  
-			disable: "Приховати",  
-			logos_instead: "Логотипи замість назв",  
-			logos_instead_desc: "Відображає логотипи фільмів замість тексту",  
-			logo_lang: "Мова логотипу",  
-			logo_lang_desc: "Пріоритетна мова для пошуку логотипу",  
-			size: "Розмір логотипу",  
-			size_desc: "Роздільна здатність завантажуваного зображення",  
-			anim_type: "Тип анімації логотипів",  
-			anim_type_desc: "Спосіб анімації логотипів",  
-			text_height: "Логотип за висотою тексту",  
-			text_height_desc: "Розмір логотипу дорівнює висоті тексту",  
-			clear_cache: "Очистити кеш логотипів",  
-			clear_cache_desc: "Натисніть для очищення кешу",  
-			clear_confirm: "Очистити кеш?",  
-			yes: "Так",  
-			no: "Ні",  
-			original: "Оригінал",  
-			as_lampa: "Як у Lampa"  
-		}  
-	};  
-  
-	function t(key) {  
-		var lang = Lampa.Storage.get("language", "ru");  
-		if (!LANG[lang]) lang = "ru";  
-		return LANG[lang][key] || key;  
-	}  
-  
-	/* =======================  
-	   ORIGINAL PLUGIN (1:1)  
-	======================= */  
-  
 	var DISABLE_CACHE = false;  
+  
+	// Додаємо українську локалізацію  
+	if (typeof Lampa !== 'undefined' && Lampa.Lang) {  
+		Lampa.Lang.add({  
+			logo_settings_name: {  
+				ru: "Логотипы",  
+				uk: "Логотипи",  
+				en: "Logos"  
+			},  
+			logo_settings_descr: {  
+				ru: "Настройки отображения логотипов",  
+				uk: "Налаштування відображення логотипів",  
+				en: "Logo display settings"  
+			},  
+			logo_back: {  
+				ru: "Назад",  
+				uk: "Назад",  
+				en: "Back"  
+			},  
+			logo_back_descr: {  
+				ru: "Вернуться в настройки интерфейса",  
+				uk: "Повернутися до налаштувань інтерфейсу",  
+				en: "Return to interface settings"  
+			},  
+			logo_hide: {  
+				ru: "Скрыть",  
+				uk: "Сховати",  
+				en: "Hide"  
+			},  
+			logo_show: {  
+				ru: "Отображать",  
+				uk: "Відображати",  
+				en: "Show"  
+			},  
+			logo_instead_titles: {  
+				ru: "Логотипы вместо названий",  
+				uk: "Логотипи замість назв",  
+				en: "Logos instead of titles"  
+			},  
+			logo_instead_titles_descr: {  
+				ru: "Отображает логотипы фильмов вместо текста",  
+				uk: "Відображає логотипи фільмів замість тексту",  
+				en: "Displays movie logos instead of text"  
+			},  
+			logo_language: {  
+				ru: "Язык логотипа",  
+				uk: "Мова логотипа",  
+				en: "Logo language"  
+			},  
+			logo_language_descr: {  
+				ru: "Приоритетный язык для поиска логотипа",  
+				uk: "Пріоритетна мова для пошуку логотипа",  
+				en: "Priority language for logo search"  
+			},  
+			logo_like_lampa: {  
+				ru: "Как в Lampa",  
+				uk: "Як в Lampa",  
+				en: "Like in Lampa"  
+			},  
+			logo_size: {  
+				ru: "Размер логотипа",  
+				uk: "Розмір логотипа",  
+				en: "Logo size"  
+			},  
+			logo_size_descr: {  
+				ru: "Разрешение загружаемого изображения",  
+				uk: "Роздільна здатність завантажуваного зображення",  
+				en: "Resolution of the downloaded image"  
+			},  
+			logo_original: {  
+				ru: "Оригинал",  
+				uk: "Оригінал",  
+				en: "Original"  
+			},  
+			logo_animation_type: {  
+				ru: "Тип анимации логотипов",  
+				uk: "Тип анімації логотипів",  
+				en: "Logo animation type"  
+			},  
+			logo_animation_type_descr: {  
+				ru: "Способ анимации логотипов",  
+				uk: "Спосіб анімації логотипів",  
+				en: "Logo animation method"  
+			},  
+			logo_text_height: {  
+				ru: "Логотип по высоте текста",  
+				uk: "Логотип за висотою тексту",  
+				en: "Logo by text height"  
+			},  
+			logo_text_height_descr: {  
+				ru: "Размер логотипа равен высоте текста",  
+				uk: "Розмір логотипа дорівнює висоті тексту",  
+				en: "Logo size equals text height"  
+			},  
+			logo_clear_cache: {  
+				ru: "Сбросить кеш логотипов",  
+				uk: "Скинути кеш логотипів",  
+				en: "Clear logo cache"  
+			},  
+			logo_clear_cache_descr: {  
+				ru: "Нажмите для очистки кеша изображений",  
+				uk: "Натисніть для очищення кешу зображень",  
+				en: "Click to clear image cache"  
+			},  
+			logo_reset_cache: {  
+				ru: "Сбросить кеш?",  
+				uk: "Скинути кеш?",  
+				en: "Clear cache?"  
+			},  
+			logo_yes: {  
+				ru: "Да",  
+				uk: "Так",  
+				en: "Yes"  
+			},  
+			logo_no: {  
+				ru: "Нет",  
+				uk: "Ні",  
+				en: "No"  
+			}  
+		});  
+	}  
   
 	function startPlugin() {  
 		var SAFE_DELAY = 200;  
@@ -77,31 +131,42 @@
 		var FADE_IN_IMG = 400;  
   
 		var TARGET_WIDTH = "7em";  
+  
 		var PADDING_TOP_EM = 0;  
 		var PADDING_BOTTOM_EM = 0.2;  
   
 		window.logoplugin = true;  
   
-		function animateHeight(el, start, end, dur, cb) {  
-			var st = null;  
-			function step(ts) {  
-				if (!st) st = ts;  
-				var p = Math.min((ts - st) / dur, 1);  
-				var e = 1 - Math.pow(1 - p, 3);  
-				el.style.height = start + (end - start) * e + "px";  
-				p < 1 ? requestAnimationFrame(step) : cb && cb();  
+		function animateHeight(element, start, end, duration, callback) {  
+			var startTime = null;  
+			function step(timestamp) {  
+				if (!startTime) startTime = timestamp;  
+				var progress = timestamp - startTime;  
+				var percent = Math.min(progress / duration, 1);  
+				var ease = 1 - Math.pow(1 - percent, 3);  
+				element.style.height = start + (end - start) * ease + "px";  
+				if (progress < duration) {  
+					requestAnimationFrame(step);  
+				} else {  
+					if (callback) callback();  
+				}  
 			}  
 			requestAnimationFrame(step);  
 		}  
   
-		function animateOpacity(el, s, e, d, cb) {  
-			var st = null;  
-			function step(ts) {  
-				if (!st) st = ts;  
-				var p = Math.min((ts - st) / d, 1);  
-				var k = 1 - Math.pow(1 - p, 3);  
-				el.style.opacity = s + (e - s) * k;  
-				p < 1 ? requestAnimationFrame(step) : cb && cb();  
+		function animateOpacity(element, start, end, duration, callback) {  
+			var startTime = null;  
+			function step(timestamp) {  
+				if (!startTime) startTime = timestamp;  
+				var progress = timestamp - startTime;  
+				var percent = Math.min(progress / duration, 1);  
+				var ease = 1 - Math.pow(1 - percent, 3);  
+				element.style.opacity = start + (end - start) * ease;  
+				if (progress < duration) {  
+					requestAnimationFrame(step);  
+				} else {  
+					if (callback) callback();  
+				}  
 			}  
 			requestAnimationFrame(step);  
 		}  
@@ -110,212 +175,466 @@
 			return "logo_cache_width_based_v1_" + type + "_" + id + "_" + lang;  
 		}  
   
-		function applyFinalStyles(img, cont, has_tagline, text_h) {  
-			if (cont) {  
-				cont.style.height = "";  
-				cont.style.overflow = "";  
-				cont.style.display = "";  
-				cont.style.transition = "none";  
-				cont.style.boxSizing = "";  
+		function applyFinalStyles(img, container, has_tagline, text_height) {  
+			if (container) {  
+				container.style.height = "";  
+				container.style.overflow = "";  
+				container.style.display = "";  
+				container.style.transition = "none";  
+				container.style.boxSizing = "";  
 			}  
   
-			img.style.margin = "0";  
+			img.style.marginTop = "0";  
+			img.style.marginLeft = "0";  
+  
 			img.style.paddingTop = PADDING_TOP_EM + "em";  
   
-			var pb = window.innerWidth < 768 && has_tagline ? 0.5 : PADDING_BOTTOM_EM;  
+			var pb = PADDING_BOTTOM_EM;  
+			if (window.innerWidth < 768 && has_tagline) pb = 0.5;  
 			img.style.paddingBottom = pb + "em";  
   
-			var use_text_h = Lampa.Storage.get("logo_use_text_height", false);  
+			var use_text_height = Lampa.Storage.get("logo_use_text_height", false);  
   
-			if (use_text_h && text_h) {  
-				img.style.height = text_h + "px";  
+			if (use_text_height && text_height) {  
+				img.style.height = text_height + "px";  
 				img.style.width = "auto";  
+				img.style.maxWidth = "100%";  
+				img.style.maxHeight = "none";  
 			} else {  
-				img.style.width = window.innerWidth < 768 ? "100%" : TARGET_WIDTH;  
-				img.style.height = "auto";  
+				if (window.innerWidth < 768) {  
+					img.style.width = "100%";  
+					img.style.height = "auto";  
+					img.style.maxWidth = "100%";  
+					img.style.maxHeight = "none";  
+				} else {  
+					img.style.width = TARGET_WIDTH;  
+					img.style.height = "auto";  
+					img.style.maxHeight = "none";  
+					img.style.maxWidth = "100%";  
+				}  
 			}  
   
-			img.style.maxWidth = "100%";  
+			img.style.boxSizing = "border-box";  
+			img.style.display = "block";  
 			img.style.objectFit = "contain";  
 			img.style.objectPosition = "left bottom";  
 			img.style.opacity = "1";  
-		}  
-  
+			img.style.transition = "none";  
+		}
+		// Основна логіка обробки логотипів  
 		Lampa.Listener.follow("full", function (e) {  
-			if (e.type !== "complite" || Lampa.Storage.get("logo_glav") == "1") return;  
+			if (e.type == "complite" && Lampa.Storage.get("logo_glav") != "1") {  
+				var data = e.data.movie;  
+				var type = data.name ? "tv" : "movie";  
   
-			var data = e.data.movie;  
-			var type = data.name ? "tv" : "movie";  
+				var title_elem = e.object.activity  
+					.render()  
+					.find(".full-start-new__title");  
+				var head_elem = e.object.activity  
+					.render()  
+					.find(".full-start-new__head");  
+				var details_elem = e.object.activity  
+					.render()  
+					.find(".full-start-new__details");  
+				var tagline_elem = e.object.activity  
+					.render()  
+					.find(".full-start-new__tagline");  
+				var has_tagline =  
+					tagline_elem.length > 0 && tagline_elem.text().trim() !== "";  
+				var dom_title = title_elem[0];  
   
-			var title = e.object.activity.render().find(".full-start-new__title");  
-			var dom = title[0];  
-			if (!dom) return;  
+				var user_lang = Lampa.Storage.get("logo_lang", "");  
+				var target_lang = user_lang ? user_lang : Lampa.Storage.get("language");  
+				var size = Lampa.Storage.get("logo_size", "original");  
   
-			var lang =  
-				Lampa.Storage.get("logo_lang") ||  
-				Lampa.Storage.get("language");  
+				var cache_key = getCacheKey(type, data.id, target_lang);  
   
-			var size = Lampa.Storage.get("logo_size", "original");  
-			var cache = getCacheKey(type, data.id, lang);  
+				function moveHeadToDetails() {  
+					if (!head_elem.length || !details_elem.length) return;  
+					if (details_elem.find(".logo-moved-head").length > 0) return;  
   
-			function startAnim(url, save) {  
-				if (save && !DISABLE_CACHE) Lampa.Storage.set(cache, url);  
+					var content = head_elem.html();  
+					if (!content) return;  
   
-				var img = new Image();  
-				img.src = url;  
-				img.style.opacity = "0";  
+					var new_item = $(  
+						'<span class="logo-moved-head">' + content + "</span>"  
+					);  
+					var separator = $(  
+						'<span class="full-start-new__split logo-moved-separator">●</span>'  
+					);  
   
-				var start_h = dom.getBoundingClientRect().height;  
+					head_elem.css({ opacity: "0", transition: "none" });  
+					if (details_elem.children().length > 0)  
+						details_elem.append(separator);  
+					details_elem.append(new_item);  
+				}  
   
-				img.onload = function () {  
-					setTimeout(function () {  
-						var anim = Lampa.Storage.get("logo_animation_type", "css");  
+				moveHeadToDetails();  
   
-						if (anim === "js") {  
-							animateOpacity(dom, 1, 0, FADE_OUT_TEXT, function () {  
-								title.empty().append(img);  
-								dom.style.height = start_h + "px";  
+				function startLogoAnimation(img_url, save_to_cache) {  
+					if (save_to_cache && !DISABLE_CACHE)  
+						Lampa.Storage.set(cache_key, img_url);  
   
-								var target_h = dom.getBoundingClientRect().height;  
+					var img = new Image();  
+					img.src = img_url;  
   
-								animateHeight(dom, start_h, target_h, MORPH_HEIGHT, function () {  
-									applyFinalStyles(img, dom, false, start_h);  
+					var start_text_height = 0;  
+					if (dom_title)  
+						start_text_height = dom_title.getBoundingClientRect().height;  
+  
+					applyFinalStyles(img, null, has_tagline, start_text_height);  
+					img.style.opacity = "0";  
+  
+					var animation_type = Lampa.Storage.get("logo_animation_type", "css");  
+  
+					img.onload = function () {  
+						setTimeout(function () {  
+							if (dom_title)  
+								start_text_height = dom_title.getBoundingClientRect().height;  
+  
+							if (animation_type === "js") {  
+								title_elem.css({ transition: "none" });  
+								animateOpacity(dom_title, 1, 0, FADE_OUT_TEXT, function () {  
+									title_elem.empty();  
+									title_elem.append(img);  
+									title_elem.css({ opacity: "1", transition: "none" });  
+  
+									var target_container_height =  
+										dom_title.getBoundingClientRect().height;  
+  
+									dom_title.style.height = start_text_height + "px";  
+									dom_title.style.display = "block";  
+									dom_title.style.overflow = "hidden";  
+									dom_title.style.boxSizing = "border-box";  
+  
+									void dom_title.offsetHeight;  
+  
+									dom_title.style.transition = "none";  
+  
+									animateHeight(  
+										dom_title,  
+										start_text_height,  
+										target_container_height,  
+										MORPH_HEIGHT,  
+										function () {  
+											setTimeout(function () {  
+												applyFinalStyles(  
+													img,  
+													dom_title,  
+													has_tagline,  
+													start_text_height  
+												);  
+											}, FADE_IN_IMG + 50);  
+										}  
+									);  
+  
+									setTimeout(  
+										function () {  
+											img.style.transition = "none";  
+											animateOpacity(img, 0, 1, FADE_IN_IMG);  
+										},  
+										Math.max(0, MORPH_HEIGHT - 100)  
+									);  
+								});  
+							} else {  
+								title_elem.css({  
+									transition: "opacity " + FADE_OUT_TEXT / 1000 + "s ease",  
+									opacity: "0"  
 								});  
   
 								setTimeout(function () {  
-									animateOpacity(img, 0, 1, FADE_IN_IMG);  
-								}, MORPH_HEIGHT - 100);  
-							});  
-						} else {  
-							title.css({ opacity: "0" });  
-							setTimeout(function () {  
-								title.empty().append(img).css({ opacity: "1" });  
-								applyFinalStyles(img, dom, false, start_h);  
-								img.style.transition =  
-									"opacity " + FADE_IN_IMG / 1000 + "s";  
-								img.style.opacity = "1";  
-							}, FADE_OUT_TEXT);  
-						}  
-					}, SAFE_DELAY);  
-				};  
-			}  
+									title_elem.empty();  
+									title_elem.append(img);  
+									title_elem.css({ opacity: "1", transition: "none" });  
   
-			var cached = Lampa.Storage.get(cache);  
-			if (cached && cached !== "none") {  
-				startAnim(cached, false);  
-				return;  
-			}  
+									var target_container_height =  
+										dom_title.getBoundingClientRect().height;  
   
-			if (!data.id) return;  
+									dom_title.style.height = start_text_height + "px";  
+									dom_title.style.display = "block";  
+									dom_title.style.overflow = "hidden";  
+									dom_title.style.boxSizing = "border-box";  
   
-			$.get(  
-				Lampa.TMDB.api(  
-					type +  
-						"/" +  
-						data.id +  
-						"/images?api_key=" +  
-						Lampa.TMDB.key() +  
-						"&include_image_language=" +  
-						lang +  
-						",en,null"  
-				),  
-				function (api) {  
-					if (!api.logos || !api.logos.length) return;  
+									void dom_title.offsetHeight;  
   
-					var logo =  
-						api.logos.find(function (l) {  
-							return l.iso_639_1 === lang;  
-						}) ||  
-						api.logos.find(function (l) {  
-							return l.iso_639_1 === "en";  
-						}) ||  
-						api.logos[0];  
+									dom_title.style.transition =  
+										"height " +  
+										MORPH_HEIGHT / 1000 +  
+										"s cubic-bezier(0.4, 0, 0.2, 1)";  
   
-					startAnim(  
-						Lampa.TMDB.image(  
-							"/t/p/" + size + logo.file_path.replace(".svg", ".png")  
-						),  
-						true  
-					);  
+									requestAnimationFrame(function () {  
+										dom_title.style.height = target_container_height + "px";  
+  
+										setTimeout(  
+											function () {  
+												img.style.transition =  
+													"opacity " + FADE_IN_IMG / 1000 + "s ease";  
+												img.style.opacity = "1";  
+											},  
+											Math.max(0, MORPH_HEIGHT - 100)  
+										);  
+  
+										setTimeout(  
+											function () {  
+												applyFinalStyles(  
+													img,  
+													dom_title,  
+													has_tagline,  
+													start_text_height  
+												);  
+											},  
+											MORPH_HEIGHT + FADE_IN_IMG + 50  
+										);  
+									});  
+								}, FADE_OUT_TEXT);  
+							}  
+						}, SAFE_DELAY);  
+					};  
+  
+					img.onerror = function () {  
+						if (!DISABLE_CACHE) Lampa.Storage.set(cache_key, "none");  
+						title_elem.css({ opacity: "1", transition: "none" });  
+					};  
 				}  
-			);  
+  
+				var cached_url = Lampa.Storage.get(cache_key);  
+				if (!DISABLE_CACHE && cached_url && cached_url !== "none") {  
+					var img_cache = new Image();  
+					img_cache.src = cached_url;  
+  
+					if (img_cache.complete) {  
+						var start_text_height = 0;  
+						if (dom_title)  
+							start_text_height = dom_title.getBoundingClientRect().height;  
+						applyFinalStyles(img_cache, null, has_tagline, start_text_height);  
+						title_elem.empty().append(img_cache);  
+						title_elem.css({ opacity: "1", transition: "none" });  
+						return;  
+					} else {  
+						startLogoAnimation(cached_url, false);  
+						return;  
+					}  
+				}  
+  
+				title_elem.css({ opacity: "1", transition: "none" });  
+  
+				if (data.id != "") {  
+					var start_text_height = 0;  
+					requestAnimationFrame(function () {  
+						if (dom_title)  
+							start_text_height = dom_title.getBoundingClientRect().height;  
+					});  
+  
+					var url = Lampa.TMDB.api(  
+						type +  
+							"/" +  
+							data.id +  
+							"/images?api_key=" +  
+							Lampa.TMDB.key() +  
+							"&include_image_language=" +  
+							target_lang +  
+							",en,null"  
+					);  
+  
+					$.get(url, function (data_api) {  
+						var final_logo = null;  
+						if (data_api.logos && data_api.logos.length > 0) {  
+							for (var i = 0; i < data_api.logos.length; i++) {  
+								if (data_api.logos[i].iso_639_1 == target_lang) {  
+									final_logo = data_api.logos[i].file_path;  
+									break;  
+								}  
+							}  
+							if (!final_logo) {  
+								for (var j = 0; j < data_api.logos.length; j++) {  
+									if (data_api.logos[j].iso_639_1 == "en") {  
+										final_logo = data_api.logos[j].file_path;  
+										break;  
+									}  
+								}  
+							}  
+							if (!final_logo) final_logo = data_api.logos[0].file_path;  
+						}  
+  
+						if (final_logo) {  
+							var img_url = Lampa.TMDB.image(  
+								"/t/p/" + size + final_logo.replace(".svg", ".png")  
+							);  
+							startLogoAnimation(img_url, true);  
+						} else {  
+							if (!DISABLE_CACHE) Lampa.Storage.set(cache_key, "none");  
+						}  
+					}).fail(function () {});  
+				}  
+			}  
 		});  
-	}  
-  
-	/* =======================  
-	   SETTINGS  
-	======================= */  
-  
-	var C = "logo_settings_nested";  
+	}
+	var LOGO_COMPONENT = "logo_settings_nested";  
   
 	Lampa.Settings.listener.follow("open", function (e) {  
-		if (e.name === "main") {  
-			Lampa.SettingsApi.addComponent({   
-				component: C,   
-				name: t("logos"),  
-				icon: '<svg height="36" viewBox="0 0 38 36" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="8" width="34" height="21" rx="3" stroke="white" stroke-width="3"/><path d="M10 15h18v2H10z" fill="white"/></svg>'  
-			});  
+		if (e.name == "main") {  
+			var render = Lampa.Settings.main().render();  
+			if (  
+				render.find('[data-component="' + LOGO_COMPONENT + '"]').length == 0  
+			) {  
+				Lampa.SettingsApi.addComponent({  
+					component: LOGO_COMPONENT,  
+					name: Lampa.Lang.translate("logo_settings_name")  
+				});  
+			}  
 			Lampa.Settings.main().update();  
+			render.find('[data-component="' + LOGO_COMPONENT + '"]').addClass("hide");  
 		}  
 	});  
   
 	Lampa.SettingsApi.addParam({  
 		component: "interface",  
-		param: { type: "static" },  
-		field: { name: t("logos"), description: t("logos_desc") },  
-		onRender: function (i) {  
-			i.on("hover:enter", function () {  
-				Lampa.Settings.create(C);  
+		param: { name: "logo_settings_entry", type: "static" },  
+		field: {   
+			name: Lampa.Lang.translate("logo_settings_name"),   
+			description: Lampa.Lang.translate("logo_settings_descr")   
+		},  
+		onRender: function (item) {  
+			item.on("hover:enter", function () {  
+				Lampa.Settings.create(LOGO_COMPONENT);  
+				Lampa.Controller.enabled().controller.back = function () {  
+					Lampa.Settings.create("interface");  
+				};  
 			});  
 		}  
 	});  
   
 	Lampa.SettingsApi.addParam({  
-		component: C,  
-		param: { name: "logo_glav", type: "select", values: { 0: t("enable"), 1: t("disable") }, default: "0" },  
-		field: { name: t("logos_instead"), description: t("logos_instead_desc") }  
+		component: LOGO_COMPONENT,  
+		param: { name: "logo_back_to_int", type: "static" },  
+		field: {   
+			name: Lampa.Lang.translate("logo_back"),   
+			description: Lampa.Lang.translate("logo_back_descr")   
+		},  
+		onRender: function (item) {  
+			item.on("hover:enter", function () {  
+				Lampa.Settings.create("interface");  
+			});  
+		}  
 	});  
   
 	Lampa.SettingsApi.addParam({  
-		component: C,  
-		param: { name: "logo_lang", type: "select", values: { "": t("as_lampa"), ru: "Русский", uk: "Українська", en: "English" } },  
-		field: { name: t("logo_lang"), description: t("logo_lang_desc") }  
+		component: LOGO_COMPONENT,  
+		param: {  
+			name: "logo_glav",  
+			type: "select",  
+			values: { 1: Lampa.Lang.translate("logo_hide"), 0: Lampa.Lang.translate("logo_show") },  
+			default: "0"  
+		},  
+		field: {  
+			name: Lampa.Lang.translate("logo_instead_titles"),  
+			description: Lampa.Lang.translate("logo_instead_titles_descr")  
+		}  
 	});  
   
 	Lampa.SettingsApi.addParam({  
-		component: C,  
-		param: { name: "logo_size", type: "select", values: { w300: "w300", w500: "w500", w780: "w780", original: t("original") }, default: "original" },  
-		field: { name: t("size"), description: t("size_desc") }  
+		component: LOGO_COMPONENT,  
+		param: {  
+			name: "logo_lang",  
+			type: "select",  
+			values: {  
+				"": Lampa.Lang.translate("logo_like_lampa"),  
+				ru: "Русский",  
+				en: "English",  
+				uk: "Українська",  
+				be: "Беларуская",  
+				kz: "Қазақша",  
+				pt: "Português",  
+				es: "Español",  
+				fr: "Français",  
+				de: "Deutsch",  
+				it: "Italiano"  
+			},  
+			default: ""  
+		},  
+		field: {  
+			name: Lampa.Lang.translate("logo_language"),  
+			description: Lampa.Lang.translate("logo_language_descr")  
+		}  
 	});  
   
 	Lampa.SettingsApi.addParam({  
-		component: C,  
-		param: { name: "logo_animation_type", type: "select", values: { js: "JavaScript", css: "CSS" }, default: "css" },  
-		field: { name: t("anim_type"), description: t("anim_type_desc") }  
+		component: LOGO_COMPONENT,  
+		param: {  
+			name: "logo_size",  
+			type: "select",  
+			values: {  
+				w300: "w300",  
+				w500: "w500",  
+				w780: "w780",  
+				original: Lampa.Lang.translate("logo_original")  
+			},  
+			default: "original"  
+		},  
+		field: {  
+			name: Lampa.Lang.translate("logo_size"),  
+			description: Lampa.Lang.translate("logo_size_descr")  
+		}  
 	});  
   
 	Lampa.SettingsApi.addParam({  
-		component: C,  
-		param: { name: "logo_use_text_height", type: "trigger" },  
-		field: { name: t("text_height"), description: t("text_height_desc") }  
+		component: LOGO_COMPONENT,  
+		param: {  
+			name: "logo_animation_type",  
+			type: "select",  
+			values: { js: "JavaScript", css: "CSS" },  
+			default: "css"  
+		},  
+		field: {  
+			name: Lampa.Lang.translate("logo_animation_type"),  
+			description: Lampa.Lang.translate("logo_animation_type_descr")  
+		}  
 	});  
   
 	Lampa.SettingsApi.addParam({  
-		component: C,  
-		param: { type: "button" },  
-		field: { name: t("clear_cache"), description: t("clear_cache_desc") },  
+		component: LOGO_COMPONENT,  
+		param: { name: "logo_use_text_height", type: "trigger", default: false },  
+		field: {  
+			name: Lampa.Lang.translate("logo_text_height"),  
+			description: Lampa.Lang.translate("logo_text_height_descr")  
+		}  
+	});  
+  
+	Lampa.SettingsApi.addParam({  
+		component: LOGO_COMPONENT,  
+		param: { name: "logo_clear_cache", type: "button" },  
+		field: {  
+			name: Lampa.Lang.translate("logo_clear_cache"),  
+			description: Lampa.Lang.translate("logo_clear_cache_descr")  
+		},  
 		onChange: function () {  
 			Lampa.Select.show({  
-				title: t("clear_confirm"),  
-				items: [{ title: t("yes"), confirm: true }, { title: t("no") }],  
+				title: Lampa.Lang.translate("logo_reset_cache"),  
+				items: [{   
+					title: Lampa.Lang.translate("logo_yes"),   
+					confirm: true   
+				}, {   
+					title: Lampa.Lang.translate("logo_no")   
+				}],  
 				onSelect: function (a) {  
 					if (a.confirm) {  
-						Object.keys(localStorage).forEach(function (k) {  
-							if (k.indexOf("logo_cache_width_based_v1_") === 0)  
-								localStorage.removeItem(k);  
+						var keys = [];  
+						for (var i = 0; i < localStorage.length; i++) {  
+							var key = localStorage.key(i);  
+							if (key.indexOf("logo_cache_width_based_v1_") !== -1) {  
+								keys.push(key);  
+							}  
+						}  
+						keys.forEach(function (key) {  
+							localStorage.removeItem(key);  
 						});  
-						location.reload();  
+						window.location.reload();  
+					} else {  
+						Lampa.Controller.toggle("settings_component");  
 					}  
+				},  
+				onBack: function () {  
+					Lampa.Controller.toggle("settings_component");  
 				}  
 			});  
 		}  
