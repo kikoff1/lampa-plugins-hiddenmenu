@@ -452,7 +452,6 @@
 										break;  
 									}  
 								}  
-
 							}  
 							if (!final_logo) final_logo = data_api.logos[0].file_path;  
 						}  
@@ -482,18 +481,8 @@
 		}  
 	}  
   
-	// Видаляємо автоматичну реєстрацію компонента в головному меню  
-	Lampa.Settings.listener.follow("open", function (e) {  
-		if (e.name == "main") {  
-			var render = Lampa.Settings.main().render();  
-			// Перевіряємо, чи існує компонент, і якщо так - видаляємо його з головного меню  
-			var logoComponent = render.find('[data-component="' + LOGO_COMPONENT + '"]');  
-			if (logoComponent.length > 0) {  
-				logoComponent.remove();  
-			}  
-			Lampa.Settings.main().update();  
-		}  
-	});  
+	// Не реєструємо компонент автоматично в головному меню  
+	// Він буде створений тільки при доступі через розділ "Інтерфейс"  
   
 	Lampa.SettingsApi.addParam({  
 		component: "interface",  
