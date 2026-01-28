@@ -243,14 +243,18 @@
 	}
 
 	/* =======================
-	   SETTINGS
+	   SETTINGS (ICON FIXED)
 	======================= */
 
 	var C = "logo_settings_nested";
 
 	Lampa.Settings.listener.follow("open", function (e) {
 		if (e.name === "main") {
-			Lampa.SettingsApi.addComponent({ component: C, name: t("logos") });
+			Lampa.SettingsApi.addComponent({
+				component: C,
+				name: t("logos"),
+				icon: "image"
+			});
 			Lampa.Settings.main().update();
 		}
 	});
@@ -258,7 +262,11 @@
 	Lampa.SettingsApi.addParam({
 		component: "interface",
 		param: { type: "static" },
-		field: { name: t("logos"), description: t("logos_desc") },
+		field: {
+			name: t("logos"),
+			description: t("logos_desc"),
+			icon: "image"
+		},
 		onRender: function (i) {
 			i.on("hover:enter", function () {
 				Lampa.Settings.create(C);
