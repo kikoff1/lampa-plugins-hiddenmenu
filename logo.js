@@ -59,8 +59,8 @@
 	};
 
 	function t(key) {
-		var lang = Lampa.Storage.get("language", "uk");
-		if (!LANG[lang]) lang = "uk";
+		var lang = Lampa.Storage.get("language", "ru");
+		if (!LANG[lang]) lang = "ru";
 		return LANG[lang][key] || key;
 	}
 
@@ -258,7 +258,9 @@
 	Lampa.SettingsApi.addParam({
 		component: "interface",
 		param: { type: "static" },
-		field: { name: t("logos"), description: t("logos_desc") },
+		field: { name: t("logos"), description: t("logos_desc") 
+  icon: "picture" 
+},
 		onRender: function (i) {
 			i.on("hover:enter", function () {
 				Lampa.Settings.create(C);
