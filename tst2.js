@@ -662,7 +662,7 @@
                     },            
                     field: {            
                         name: Lampa.Lang.translate('menu_editor_hide_nav'),            
-                        description: 'Приховує нижню панель навігації'            
+                        description: 'Приховує нижню панель навігації на телефоні'            
                     },            
                     onChange: function(value) {            
                         if (Lampa.Storage.field('hide_navigation_bar') == true) {            
