@@ -19,15 +19,15 @@
             uk: 'Виберіть домен Lampa',    
             en: 'Choose Lampa domain'    
         },  
-        location_redirect_add_custom: {  
-            ru: 'Добавить свой сервер',  
-            uk: 'Додати свій сервер',   
-            en: 'Add custom server'  
+        location_redirect_server_address: {  
+            ru: 'Адрес сервера',  
+            uk: 'Адреса сервера',  
+            en: 'Server address'  
         },  
-        location_redirect_custom_server: {  
-            ru: 'Введите адрес сервера',  
-            uk: 'Введіть адресу сервера',  
-            en: 'Enter server address'  
+        location_redirect_server_descr: {  
+            ru: 'Нажмите для ввода, смену сервера можно сделать кнопкой в верхнем баре',  
+            uk: 'Натисніть для вводу, зміну сервера можна зробити кнопкою у верхньому барі',  
+            en: 'Click to enter, server change can be done with button in top bar'  
         }  
     });     
         
@@ -39,34 +39,31 @@
         <circle cx="19" cy="18" r="3" stroke="white" stroke-width="2"/>    
     </svg>`;    
         
-    function getServerValues() {  
-        let values = {     
-            '-': Lampa.Lang.translate('location_redirect_current'),     
-            'lampaua.mooo.com': 'lampaua.mooo.com',     
-            'lampa.mx': 'lampa.mx'     
-        };  
-          
-        // Додаємо кастомні сервери  
-        let customServers = Lampa.Storage.get('location_custom_servers', []);  
-        customServers.forEach(server => {  
-            values[server] = server;  
-        });  
-          
-        // Додаємо опцію для додавання нового сервера  
-        values['add_custom'] = Lampa.Lang.translate('location_redirect_add_custom');  
-          
-        return values;  
-    }  
+    var server_protocol = location.protocol === "https:" ? 'https://' : 'http://'  
         
     function startMe() {     
         if (window.location.search!='?redirect=1') {     
             if(window.location.hostname!=Lampa.Storage.get('location_server')) {     
                 if (Lampa.Storage.get('location_server')!='-' && Lampa.Storage.get('location_server')!='')     
-                    window.location.href = 'http://'+Lampa.Storage.get('location_server')+'?redirect=1';     
+                    window.location.href = server_protocol + Lampa.Storage.get('location_server')+'?redirect=1';     
             }     
         } else {     
             Lampa.Storage.set('location_server','-');     
         }     
+            
+        // Видаляємо стару кнопку якщо є  
+        $('#REDIRECT').remove()  
+          
+        // Додаємо кнопку в хедер  
+        if(Lampa.Storage.get('location_server') && Lampa.Storage.get('location_server') != '-') {  
+            var domainBUTT = '<div id="REDIRECT" class="head__action selector redirect-screen">' + icon_server_redirect + '</div>';  
+            $('#app > div.head > div > div.head__actions').append(domainBUTT);  
+            $('#REDIRECT').insertAfter('div[class="head__action selector open--settings"]');  
+              
+            $('#REDIRECT').on('hover:enter hover:click hover:touch', function() {  
+                window.location.href = server_protocol + Lampa.Storage.get('location_server')  
+            });  
+        }  
             
         Lampa.SettingsApi.addComponent({     
             component: 'location_redirect',     
@@ -78,42 +75,18 @@
             component: 'location_redirect',     
             param: {     
                 name: 'location_server',     
-                type: 'select',     
-                values: getServerValues(),     
-                default: '-'     
+                type: 'input',   
+                values: '',  
+                placeholder: 'lampaua.mooo.com або lampa.mx',  
+                default: ''  
             },     
             field: {     
-                name: Lampa.Lang.translate('location_redirect_select_domain')     
+                name: Lampa.Lang.translate('location_redirect_server_address'),    
+                description: Lampa.Lang.translate('location_redirect_server_descr')  
             },     
             onChange: function (value) {     
-                if (value === 'add_custom') {  
-                    Lampa.Input.edit({  
-                        title: Lampa.Lang.translate('location_redirect_custom_server'),  
-                        free: true,  
-                        nosave: true,  
-                        value: ''  
-                    }, (newServer) => {  
-                        if (newServer) {  
-                            // Зберігаємо новий сервер  
-                            let customServers = Lampa.Storage.get('location_custom_servers', []);  
-                            if (customServers.indexOf(newServer) === -1) {  
-                                customServers.push(newServer);  
-                                Lampa.Storage.set('location_custom_servers', customServers);  
-                            }  
-                              
-                            // Встановлюємо новий сервер  
-                            Lampa.Storage.set('location_server', newServer);  
-                              
-                            // Оновлюємо список значень  
-                            Lampa.SettingsApi.updateParam('location_redirect', 'location_server', {  
-                                values: getServerValues()  
-                            });  
-                              
-                            startMe();  
-                        } else {  
-                            Lampa.Controller.toggle('content');  
-                        }  
-                    });  
+                if (value == '') {  
+                    $('#REDIRECT').remove()  
                 } else {  
                     startMe();  
                 }  
