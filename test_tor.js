@@ -1,637 +1,265 @@
-// в2 IIFE - самовикликаюча функція для ізоляції плагіна    
-(function () {    
-  'use strict';    
-    
-  /* =========================    
-   * 1) Локалізація    
-   * ========================= */    
-  function translate() {    
-    Lampa.Lang.add({    
-      bat_torrserver: {    
-        ru: 'Каталог TorrServers',    
-        en: 'TorrServers catalog',    
-        uk: 'Каталог TorrServers',    
-        zh: 'TorrServer目录'    
-      },    
-      bat_torrserver_description: {    
-        ru: 'Нажмите для выбора TorrServer из',    
-        en: 'Click to select TorrServer from',    
-        uk: 'Натисніть для вибору TorrServer з',    
-        zh: '点击从目录中选择TorrServer'    
-      },    
-      bat_torrserver_current: {    
-        ru: 'Текущий выбор:',    
-        en: 'Current selection:',    
-        uk: 'Поточний вибір:',    
-        zh: '当前选择：'    
-      },    
-      bat_torrserver_none: {    
-        ru: 'Не выбран',    
-        en: 'Not selected',    
-        uk: 'Не вибрано',    
-        zh: '未选择'    
-      },    
-      bat_torrserver_selected_label: {    
-        ru: 'Выбрано:',    
-        en: 'Selected:',    
-        uk: 'Обрано:',    
-        zh: '已选择：'    
-      },    
-    
-      bat_check_servers: {    
-        ru: 'Проверить доступность серверов',    
-        en: 'Check servers availability',    
-        uk: 'Перевірити доступність серверів',    
-        zh: '检查服务器可用性'    
-      },    
-      bat_check_servers_desc: {    
-        ru: 'Выполняет проверку доступности TorrServers',    
-        en: 'Checks TorrServers availability',    
-        uk: 'Виконує перевірку доступності TorrServers',    
-        zh: '执行TorrServer可用性检查'    
-      },    
-    
-      bat_check_done: {    
-        ru: 'Проверку завершено',    
-        en: 'Check completed',    
-        uk: 'Перевірку завершено',    
-        zh: '检查完成'    
-      },    
-    
-      // Швидкість    
-      bat_speed_mbps: {    
-        ru: 'Мбит/с',    
-        en: 'Mbps',    
-        uk: 'Мбіт/с',    
-        zh: 'Mbps'    
-      },    
-      bat_speed_testing: {    
-        ru: 'Тест швидкості…',    
-        en: 'Speed test…',    
-        uk: 'Тест швидкості…',    
-        zh: '速度测试…'    
-      },    
-    
-      // HEALTH (сервер)    
-      bat_status_checking_server: {    
-        ru: 'Проверка сервера…',    
-        en: 'Checking server…',    
-        uk: 'Перевірка сервера…',    
-        zh: '检查服务器…'    
-      },    
-      bat_status_server_ok: {    
-        ru: 'Сервер доступен',    
-        en: 'Server available',    
-        uk: 'Сервер доступний',    
-        zh: '服务器可用'    
-      },    
-      bat_status_server_warn: {    
-        ru: 'Сервер отвечает (ограничения)',    
-        en: 'Server responds (restrictions)',    
-        uk: 'Сервер відповідає (обмеження)',    
-        zh: '服务器有响应（受限）'    
-      },    
-          
-      bat_status_server_bad: {    
-        ru: 'Сервер недоступен',    
-        en: 'Server unavailable',    
-        uk: 'Сервер недоступний',    
-        zh: '服务器不可用'    
-      },    
-    
-      bat_status_unknown: {    
-        ru: 'Не проверен',    
-        en: 'Unchecked',    
-        uk: 'Не перевірено',    
-        zh: '未检查'    
-      }    
-    });    
-  }    
-    
-  var Lang = { translate: translate };    
-    
-  /* =========================    
-   * 2) Список TorrServers    
-   * ========================= */    
-  var serversInfo = [    
-    {    
-      base: 'ts_maxvol_pro',    
-      name: 'ts.maxvol.pro',    
-      settings: { url: 'ts.maxvol.pro', login: '', password: '' }    
-    },    
-    {    
-      base: 'lam_maxvol_pro_ts',    
-      name: 'lam.maxvol.pro/ts',    
-      settings: { url: 'lam.maxvol.pro/ts', login: '', password: '' }    
-    },    
-    {    
-      base: 'tytowqus_deploy_cx_ts',    
-      name: 'tytowqus.deploy.cx/ts',    
-      settings: { url: 'tytowqus.deploy.cx/ts', login: '', password: '' }    
-    },    
-    {    
-      base: '109_120_158_107_8090',    
-      name: '109.120.158.107:8090',    
-      settings: { url: '109.120.158.107:8090', login: '', password: '' }    
-    },    
-    {    
-      base: '185_252_215_15_8080',    
-      name: '185.252.215.15:8080',    
-      settings: { url: '185.252.215.15:8080', login: '', password: '' }    
-    },    
-    {    
-      base: '78_40_195_218_9118_ts',    
-      name: '78.40.195.218:9118/ts',    
-      settings: { url: '78.40.195.218:9118/ts', login: '', password: '' }    
-    },    
-    {    
-      base: '45_144_154_144_8090',    
-      name: '45.144.154.144:8090',    
-      settings: { url: '45.144.154.144:8090', login: '', password: '' }    
-    },    
-    {    
-      base: '77_238_228_41_8290',    
-      name: '77.238.228.41:8290',    
-      settings: { url: '77.238.228.41:8290', login: '', password: '' }    
-    },    
-    {    
-      base: '178_150_255_251_8090',    
-      name: '178.150.255.251:8090',    
-      settings: { url: '178.150.255.251:8090', login: '', password: '' }    
-    },    
-    {    
-      base: '46_174_120_237_8090',    
-      name: '46.174.120.237:8090',    
-      settings: { url: '46.174.120.237:8090', login: '', password: '' }    
-    }    
-  ];    
-    
-  /* =========================    
-   * 3) Константи/хелпери    
-   * ========================= */    
-  var STORAGE_KEY = 'bat_torrserver_selected';    
-  var NO_SERVER = 'no_server';    
-    
-  // Кольори    
-  var COLOR_OK = '#1aff00';    
-  var COLOR_BAD = '#ff2e36';    
-  var COLOR_WARN = '#f3d900';    
-  var COLOR_UNKNOWN = '#8c8c8c';    
-    
-  // Кеш: health 30 сек    
-  var cache = {    
-    data: {},    
-    ttlHealth: 30 * 1000,    
-    get: function (key) {    
-      var v = this.data[key];    
-      if (v && Date.now() < v.expiresAt) return v;    
-      return null;    
-    },    
-    set: function (key, value, ttl) {    
-      this.data[key] = { value: value, expiresAt: Date.now() + ttl };    
-    }    
-  };    
-    
-  function notifyDone() {    
-    var text = Lampa.Lang.translate('bat_check_done');    
-    try {    
-      if (Lampa.Noty && typeof Lampa.Noty.show === 'function') {    
-        Lampa.Noty.show(text);    
-        return;    
-      }    
-      if (Lampa.Toast && typeof Lampa.Toast.show === 'function') {    
-        Lampa.Toast.show(text);    
-        return;    
-      }    
-    } catch (e) {}    
-    alert(text);    
-  }    
-    
-  function getSelectedBase() {    
-    return Lampa.Storage.get(STORAGE_KEY, NO_SERVER);    
-  }    
-    
-  function getServerByBase(base) {    
-    return serversInfo.find(function (s) { return s.base === base; });    
-  }    
-    
-  function applySelectedServer(base) {    
-    if (!base || base === NO_SERVER) return false;    
-    
-    var s = getServerByBase(base);    
-    if (!s || !s.settings) return false;    
-    
-    var settings = s.settings;    
-    
-    Lampa.Storage.set('torrserver_url', settings.url);    
-    Lampa.Storage.set('torrserver_login', settings.login || '');    
-    Lampa.Storage.set('torrserver_password', settings.password || '');    
-    
-    return true;    
-  }    
-    
-  function updateSelectedLabelInSettings() {    
-    var base = getSelectedBase();    
-    var server = getServerByBase(base);    
-    var name = server ? server.name : Lampa.Lang.translate('bat_torrserver_none');    
-    var text = Lampa.Lang.translate('bat_torrserver_selected_label') + " " + name;    
-    $('.bat-torrserver-selected').text(text);    
-  }    
-    
-  // Протоколи: якщо протокол вже заданий у url — лише ""    
-  function protocolCandidatesFor(url) {    
-    if (/^https?:\/\//i.test(url)) return [''];    
-    return ['http://', 'https://']; // спочатку http для TorrServer    
-  }    
-    
-  // Послідовно пробуємо URL і повертаємо перший результат з дебагінгом    
-  function ajaxTryUrls(urls, timeout) {    
-    return new Promise(function (resolve) {    
-      var idx = 0;    
-    
-      function attempt() {    
-        if (idx >= urls.length) {    
-          console.log('bat-torrserver: All URLs failed for', urls);    
-          resolve({ ok: false, xhr: null, url: null, network: true });    
-          return;    
-        }    
-    
-        var url = urls[idx++];    
-        console.log('bat-torrserver: Trying URL:', url);    
-          
-        $.ajax({    
-          url: url,    
-          method: 'GET',    
-          timeout: timeout,    
-          success: function (data, textStatus, xhr) {    
-            console.log('bat-torrserver: Success for URL:', url, 'Status:', xhr.status);    
-            resolve({ ok: true, xhr: xhr, url: url, data: data });    
-          },    
-          error: function (xhr) {    
-            var status = xhr && typeof xhr.status === 'number' ? xhr.status : 0;    
-            console.log('bat-torrserver: Error for URL:', url, 'Status:', status);    
-            var isNetwork = (status === 0);    
-            if (isNetwork) attempt();    
-            else resolve({ ok: false, xhr: xhr, url: url, network: false });    
-          }    
-        });    
-      }    
-    
-      attempt();    
-    });    
+// v2 IIFE
+(function () {
+  'use strict';
+
+  /* =========================
+   * 1) Локалізація
+   * ========================= */
+  function translate() {
+    Lampa.Lang.add({
+      bat_torrserver: {
+        ru: 'Каталог TorrServers',
+        en: 'TorrServers catalog',
+        uk: 'Каталог TorrServers',
+        zh: 'TorrServer目录'
+      },
+      bat_torrserver_description: {
+        ru: 'Нажмите для выбора TorrServer из',
+        en: 'Click to select TorrServer from',
+        uk: 'Натисніть для вибору TorrServer з',
+        zh: '点击从目录中选择TorrServer'
+      },
+      bat_torrserver_current: {
+        ru: 'Текущий выбор:',
+        en: 'Current selection:',
+        uk: 'Поточний вибір:',
+        zh: '当前选择：'
+      },
+      bat_torrserver_none: {
+        ru: 'Не выбран',
+        en: 'Not selected',
+        uk: 'Не вибрано',
+        zh: '未选择'
+      },
+      bat_torrserver_selected_label: {
+        ru: 'Выбрано:',
+        en: 'Selected:',
+        uk: 'Обрано:',
+        zh: '已选择：'
+      },
+      bat_check_servers: {
+        ru: 'Проверить серверы',
+        en: 'Check servers',
+        uk: 'Перевірити сервери',
+        zh: '检查服务器'
+      },
+      bat_check_done: {
+        ru: 'Проверка завершена',
+        en: 'Check completed',
+        uk: 'Перевірку завершено',
+        zh: '检查完成'
+      },
+      bat_speed_mbps: {
+        ru: 'Мбит/с',
+        en: 'Mbps',
+        uk: 'Мбіт/с',
+        zh: 'Mbps'
+      },
+      bat_status_checking_server: {
+        ru: 'Проверка…',
+        en: 'Checking…',
+        uk: 'Перевірка…',
+        zh: '检查中…'
+      },
+      bat_status_server_ok: {
+        ru: 'Сервер доступен',
+        en: 'Server available',
+        uk: 'Сервер доступний',
+        zh: '服务器可用'
+      },
+      bat_status_server_warn: {
+        ru: 'Сервер отвечает (ограничения)',
+        en: 'Server responds (restricted)',
+        uk: 'Сервер відповідає (обмеження)',
+        zh: '服务器响应（受限）'
+      },
+      bat_status_server_bad: {
+        ru: 'Сервер недоступен',
+        en: 'Server unavailable',
+        uk: 'Сервер недоступний',
+        zh: '服务器不可用'
+      },
+      bat_status_unknown: {
+        ru: 'Не проверен',
+        en: 'Unchecked',
+        uk: 'Не перевірено',
+        zh: '未检查'
+      }
+    });
   }
-      /* =========================    
-   * 4) Перевірки (послідовно для стабільності)    
-   * ========================= */    
-    
-  // HEALTH candidates для TorrServer - використовуємо ендпоінт тесту швидкості    
-  function healthUrlCandidates(server) {    
-    var url = server.settings.url;    
-    var protos = protocolCandidatesFor(url);    
-    
-    // Використовуємо ендпоінт тесту швидкості замість /config [1](#20-0)   
-    return protos.map(function (p) { return p + url + '/download/300'; });    
-  }    
-    
-  // HEALTH 3-статуси для TorrServer - послідовна перевірка    
-  function runHealthChecks(servers) {    
-    var map = {}; // base -> {color,labelKey,speed}    
-      
-    return new Promise(function (resolve) {    
-      var index = 0;    
-        
-      function checkNext() {    
-        if (index >= servers.length) {    
-          resolve(map);    
-          return;    
-        }    
-          
-        var server = servers[index];    
-        var urls = healthUrlCandidates(server);    
-        var cacheKey = 'health::' + server.base + '::' + urls.join('|');    
-        var cached = cache.get(cacheKey);    
-          
-        if (cached) {    
-          map[server.base] = cached.value;    
-          updateServerItemStatus(server.base, cached.value);    
-          index++;    
-          checkNext();    
-          return;    
-        }    
-          
-        console.log('bat-torrserver: Checking server:', server.name, 'URLs:', urls);    
-          
-        // Перевіряємо один сервер за раз    
-        ajaxTryUrls(urls, 5000).then(function (res) {    
-          var val;    
-            
-          console.log('bat-torrserver: Result for', server.name, ':', res);    
-            
-          if (res.ok) {    
-            // Якщо є відповідь - сервер доступний    
-            val = {    
-              color: COLOR_OK,    
-              labelKey: 'bat_status_server_ok',    
-              speed: '0.0'    
-            };    
-          } else if (res.network === false) {    
-            // Сервер відповідає, але з помилкою HTTP    
-            val = {    
-              color: COLOR_WARN,    
-              labelKey: 'bat_status_server_warn',    
-              speed: null    
-            };    
-          } else {    
-            // Немає відповіді - сервер недоступний    
-            val = {    
-              color: COLOR_BAD,    
-              labelKey: 'bat_status_server_bad',    
-              speed: null    
-            };    
-          }    
-            
-          console.log('bat-torrserver: Final status for', server.name, ':', val);    
-            
-          map[server.base] = val;    
-          cache.set(cacheKey, val, cache.ttlHealth);    
-          updateServerItemStatus(server.base, val);    
-          index++;    
-            
-          // Невелика затримка між запитами    
-          setTimeout(checkNext, 100);    
-        });    
-      }    
-        
-      checkNext();    
-    });    
-  }    
-    
-  // Додаткова функція для оновлення статусу окремого сервера    
-  function updateServerItemStatus(base, status) {    
-    var item = $('.bat-torrserver-modal__item[data-base="' + base + '"]');    
-    if (item.length) {    
-      setItemStatus(item, status.color, status.labelKey, status.speed);    
-    }    
-  }    
-    
-    /* =========================    
-   * 5) Модалка (UI) з відображенням швидкості    
-   * ========================= */    
-    
-  function injectStyleOnce() {    
-    if (window.__bat_torrserver_modal_style__) return;    
-    window.__bat_torrserver_modal_style__ = true;    
-    
-    var css =    
-      ".bat-torrserver-modal{display:flex;flex-direction:column;gap:1em}" +    
-      ".bat-torrserver-modal__head{display:flex;align-items:center;justify-content:space-between;gap:1em}" +    
-      ".bat-torrserver-modal__current-label{font-size:.9em;opacity:.7}" +    
-      ".bat-torrserver-modal__current-value{font-size:1.1em}" +    
-    
-      ".bat-torrserver-modal__list{display:flex;flex-direction:column;gap:.6em}" +    
-      ".bat-torrserver-modal__item{display:flex;align-items:center;justify-content:space-between;gap:1em;padding:.8em 1em;border-radius:.7em;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}" +    
-      ".bat-torrserver-modal__item.is-selected,.bat-torrserver-modal__item.focus{border-color:#fff}" +    
-    
-      ".bat-torrserver-modal__left{display:flex;align-items:center;gap:.65em;min-width:0}" +    
-      ".bat-torrserver-modal__dot{width:.55em;height:.55em;border-radius:50%;background:" + COLOR_UNKNOWN + ";box-shadow:0 0 .6em rgba(0,0,0,.35);flex:0 0 auto}" +    
-      ".bat-torrserver-modal__name{font-size:1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}" +    
-      ".bat-torrserver-modal__speed{font-size:.85em;opacity:.8;margin-left:.3em;color:" + COLOR_UNKNOWN + "}" +    
-      ".bat-torrserver-modal__status{font-size:.85em;opacity:.75;text-align:right;flex:0 0 auto}" +    
-    
-      ".bat-torrserver-modal__actions{display:flex;gap:.6em;flex-wrap:wrap}" +    
-      ".bat-torrserver-modal__action{padding:.55em .9em;border-radius:.6em;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2)}" +    
-      ".bat-torrserver-modal__action.focus{border-color:#fff}";    
-    
-    var style = document.createElement('style');    
-    style.type = 'text/css';    
-    style.appendChild(document.createTextNode(css));    
-    document.head.appendChild(style);    
-  }    
-    
-  function buildServerItem(base, name) {    
-    var item = $(    
-      "<div class='bat-torrserver-modal__item selector' data-base='" + base + "'>" +    
-        "<div class='bat-torrserver-modal__left'>" +    
-          "<span class='bat-torrserver-modal__dot'></span>" +    
-          "<div class='bat-torrserver-modal__name'></div>" +    
-          "<div class='bat-torrserver-modal__speed'></div>" +    
-        "</div>" +    
-        "<div class='bat-torrserver-modal__status'></div>" +    
-      "</div>"    
-    );    
-    
-    item.find('.bat-torrserver-modal__name').text(name);    
-    item.find('.bat-torrserver-modal__status').text(Lampa.Lang.translate('bat_status_unknown'));    
-    item.find('.bat-torrserver-modal__dot').css('background-color', COLOR_UNKNOWN);    
-    
-    return item;    
-  }    
-    
-  function setItemStatus(item, color, labelKey, speed) {    
-    item.find('.bat-torrserver-modal__dot').css('background-color', color);    
-    item.find('.bat-torrserver-modal__status').text(Lampa.Lang.translate(labelKey));    
-      
-    var speedElement = item.find('.bat-torrserver-modal__speed');    
-    if (speed !== null && speed !== undefined) {    
-      speedElement.text(' - ' + speed + ' ' + Lampa.Lang.translate('bat_speed_mbps'));    
-      // Змінено колір швидкості залежно від статусу    
-      if (speed === '0.0') {    
-        speedElement.css('opacity', '0.6').css('color', COLOR_WARN);    
-      } else {    
-        speedElement.css('opacity', '0.8').css('color', COLOR_OK);    
-      }    
-    } else {    
-      speedElement.text('');    
-    }    
-  }    
-    
-  function applySelection(list, base) {    
-    list.find('.bat-torrserver-modal__item').removeClass('is-selected');    
-    list.find("[data-base='" + base + "']").addClass('is-selected');    
-  }    
-    
-  function updateCurrentLabel(wrapper, base) {    
-    var server = getServerByBase(base);    
-    var label = server ? server.name : Lampa.Lang.translate('bat_torrserver_none');    
-    wrapper.find('.bat-torrserver-modal__current-value').text(label);    
+
+  /* =========================
+   * 2) Список серверів
+   * ========================= */
+  var serversInfo = [
+    { base: 'ts_maxvol_pro', name: 'ts.maxvol.pro', settings: { url: 'ts.maxvol.pro' } },
+    { base: 'lam_maxvol_pro_ts', name: 'lam.maxvol.pro/ts', settings: { url: 'lam.maxvol.pro/ts' } },
+    { base: 'tytowqus_deploy_cx_ts', name: 'tytowqus.deploy.cx/ts', settings: { url: 'tytowqus.deploy.cx/ts' } },
+    { base: '109_120_158_107_8090', name: '109.120.158.107:8090', settings: { url: '109.120.158.107:8090' } },
+    { base: '185_252_215_15_8080', name: '185.252.215.15:8080', settings: { url: '185.252.215.15:8080' } }
+  ];
+
+  var STORAGE_KEY = 'bat_torrserver_selected';
+  var NO_SERVER = 'no_server';
+
+  var COLOR_OK = '#1aff00';
+  var COLOR_BAD = '#ff2e36';
+  var COLOR_WARN = '#f3d900';
+  var COLOR_UNKNOWN = '#8c8c8c';
+
+  var cache = { data: {}, ttl: 30000 };
+
+  function protocolCandidates(url) {
+    if (/^https?:\/\//i.test(url)) return [''];
+    return ['http://', 'https://'];
   }
-    function openTorrServerModal() {    
-    injectStyleOnce();    
-    
-    var selected = getSelectedBase();    
-    
-    var modal = $(    
-      "<div class='bat-torrserver-modal'>" +    
-        "<div class='bat-torrserver-modal__head'>" +    
-          "<div class='bat-torrserver-modal__current'>" +    
-            "<div class='bat-torrserver-modal__current-label'></div>" +    
-            "<div class='bat-torrserver-modal__current-value'></div>" +    
-          "</div>" +    
-        "</div>" +    
-        "<div class='bat-torrserver-modal__list'></div>" +    
-        "<div class='bat-torrserver-modal__actions'></div>" +    
-      "</div>"    
-    );    
-    
-    modal.find('.bat-torrserver-modal__current-label').text(Lampa.Lang.translate('bat_torrserver_current'));    
-    updateCurrentLabel(modal, selected);    
-    
-    var list = modal.find('.bat-torrserver-modal__list');    
-    
-    // "Не вибрано"    
-    var noneItem = buildServerItem(NO_SERVER, Lampa.Lang.translate('bat_torrserver_none'));    
-    noneItem.on('hover:enter', function () {    
-      Lampa.Storage.set(STORAGE_KEY, NO_SERVER);    
-      applySelection(list, NO_SERVER);    
-      updateCurrentLabel(modal, NO_SERVER);    
-      updateSelectedLabelInSettings();    
-    });    
-    list.append(noneItem);    
-    
-    // Сервери    
-    serversInfo.forEach(function (s) {    
-      var item = buildServerItem(s.base, s.name);    
-    
-      item.on('hover:enter', function () {    
-        Lampa.Storage.set(STORAGE_KEY, s.base);    
-        applySelectedServer(s.base);    
-        applySelection(list, s.base);    
-        updateCurrentLabel(modal, s.base);    
-        updateSelectedLabelInSettings();    
-      });    
-    
-      list.append(item);    
-    });    
-    
-    applySelection(list, selected);    
-    
-    // Кнопки - тільки перевірка доступності (видалено кнопку підключення)    
-    var actions = modal.find('.bat-torrserver-modal__actions');    
-    
-    var btnHealth = $("<div class='bat-torrserver-modal__action selector'></div>");    
-    btnHealth.text(Lampa.Lang.translate('bat_check_servers'));    
-    
-    actions.append(btnHealth); // Тільки одна кнопка    
-    
-    function applyMapToList(statusMap) {    
-      list.find('.bat-torrserver-modal__item').each(function () {    
-        var it = $(this);    
-        var base = it.data('base');    
-    
-        if (base === NO_SERVER) {    
-          setItemStatus(it, COLOR_UNKNOWN, 'bat_status_unknown', null);    
-          return;    
-        }    
-    
-        var st = statusMap[base];    
-        if (!st) {    
-          setItemStatus(it, COLOR_UNKNOWN, 'bat_status_unknown', null);    
-          return;    
-        }    
-    
-        setItemStatus(it, st.color, st.labelKey, st.speed);    
-      });    
-    }    
-    
-    // HEALTH UI з послідовною перевіркою та дебагінгом    
-    function runHealthUI() {    
-      list.find('.bat-torrserver-modal__item').each(function () {    
-        var it = $(this);    
-        var base = it.data('base');    
-        if (base === NO_SERVER) setItemStatus(it, COLOR_UNKNOWN, 'bat_status_unknown', null);    
-        else setItemStatus(it, COLOR_WARN, 'bat_status_checking_server', null);    
-      });    
-    
-      return runHealthChecks(serversInfo).then(function (map) {    
-        applyMapToList(map);    
-        notifyDone();    
-      });    
-    }    
-    
-    btnHealth.on('hover:enter', function () {    
-      runHealthUI();    
-    });    
-    
-    // Відкрити модалку    
-    var firstSelectable = list.find('.bat-torrserver-modal__item').first();    
-    
-    Lampa.Modal.open({    
-      title: Lampa.Lang.translate('bat_torrserver'),    
-      html: modal,    
-      size: 'medium',    
-      scroll_to_center: true,    
-      select: firstSelectable,    
-      onBack: function () {    
-        Lampa.Modal.close();    
-        Lampa.Controller.toggle('settings_component');    
-      }    
-    });    
-    
-    // Авто: перевірка при відкритті    
-    runHealthUI();    
-  }    
-    
-  /* =========================    
-   * 6) Інтеграція в Налаштування → TorrServer    
-   * ========================= */    
-  function torrserverSetting() {    
-    applySelectedServer(getSelectedBase());    
-    
-    // Використовуємо listener для додавання в розділ TorrServer    
-    Lampa.Settings.listener.follow('open', function (e) {    
-      if (e.name === 'server') {    
-        // Видаляємо існуючу кнопку якщо є    
-        $('.bat-torrserver-catalog-btn').remove();    
-    
-        var btn = $('<div class="settings-param selector bat-torrserver-catalog-btn" data-type="button">' +    
-          '<div class="settings-param__name">' + Lampa.Lang.translate('bat_torrserver') + '</div>' +    
-          '<div class="settings-param__descr">' +     
-            Lampa.Lang.translate('bat_torrserver_description') + " " + serversInfo.length +    
-            '<div class="bat-torrserver-selected" style="margin-top:.35em;opacity:.85"></div>' +    
-          '</div>' +    
-        '</div>');    
-    
-        btn.on('hover:enter', function () {    
-          openTorrServerModal();    
-        });    
-    
-        // Додаємо після основного посилання TorrServer [1](#21-0)   
-        $('[data-name="torrserver_url"]', e.body).after(btn);    
-            
-        // Оновлюємо мітку вибраного сервера    
-        updateSelectedLabelInSettings();    
-            
-        // Показуємо/ховаємо залежно від налаштувань    
-        if (Lampa.Storage.field('torrserver_use_link')) {    
-          btn.show();    
-        } else {    
-          btn.hide();    
-        }    
-      }    
-    });    
-  }    
-    
-  /* =========================    
-   * 7) Запуск плагіна    
-   * ========================= */    
-  Lampa.Platform.tv();    
-    
-  function add() {    
-    Lang.translate();    
-    torrserverSetting();    
-  }    
-    
-  function startPlugin() {    
-    window.plugin_bat_torrserver_ready = true;    
-    
-    if (window.appready) add();    
-    else {    
-      Lampa.Listener.follow('app', function (e) {    
-        if (e.type === 'ready') add();    
-      });    
-    }    
-  }    
-    
-  if (!window.plugin_bat_torrserver_ready) startPlugin();    
-    
+
+  /* =========================
+   * 3) SPEED TEST (як у Lampa)
+   * ========================= */
+  function speedTest(url, timeout) {
+    return new Promise(function (resolve) {
+      var start = Date.now();
+      var last = start;
+      var loaded = 0;
+      var maxSpeed = 0;
+
+      Lampa.Request.get(
+        url,
+        {},
+        function () {
+          resolve({ ok: true, speed: maxSpeed.toFixed(1) });
+        },
+        function () {
+          resolve({ ok: false });
+        },
+        {
+          timeout: timeout || 8000,
+          onprogress: function (e) {
+            if (!e || !e.loaded) return;
+
+            var now = Date.now();
+            var dt = (now - last) / 1000;
+            var db = e.loaded - loaded;
+
+            if (dt > 0) {
+              var mbps = (db * 8) / (1024 * 1024 * dt);
+              maxSpeed = Math.max(maxSpeed, mbps);
+            }
+
+            loaded = e.loaded;
+            last = now;
+          }
+        }
+      );
+    });
+  }
+
+  /* =========================
+   * 4) HEALTH + SPEED
+   * ========================= */
+  function checkServer(server) {
+    var protos = protocolCandidates(server.settings.url);
+    var size = 5242880; // 5MB
+    var urls = protos.map(p => p + server.settings.url + '/download/' + size);
+
+    return new Promise(function (resolve) {
+      var i = 0;
+
+      function next() {
+        if (i >= urls.length) {
+          resolve({ color: COLOR_BAD, labelKey: 'bat_status_server_bad', speed: null });
+          return;
+        }
+
+        speedTest(urls[i++], 8000).then(function (res) {
+          if (res.ok && res.speed) {
+            resolve({
+              color: COLOR_OK,
+              labelKey: 'bat_status_server_ok',
+              speed: res.speed
+            });
+          } else {
+            next();
+          }
+        });
+      }
+
+      next();
+    });
+  }
+
+  /* =========================
+   * 5) UI helpers
+   * ========================= */
+  function setItemStatus(item, color, labelKey, speed) {
+    item.find('.bat-dot').css('background', color);
+    item.find('.bat-status').text(Lampa.Lang.translate(labelKey));
+
+    if (speed) {
+      item.find('.bat-speed')
+        .text(' - ' + speed + ' ' + Lampa.Lang.translate('bat_speed_mbps'))
+        .css('color', COLOR_OK);
+    } else {
+      item.find('.bat-speed').text('');
+    }
+  }
+
+  /* =========================
+   * 6) Modal
+   * ========================= */
+  function openModal() {
+    var modal = $('<div></div>');
+    var list = $('<div></div>');
+    modal.append(list);
+
+    serversInfo.forEach(function (s) {
+      var item = $(
+        "<div class='selector' data-base='" + s.base + "'>" +
+        "<span class='bat-dot'></span> " +
+        s.name +
+        "<span class='bat-speed'></span> " +
+        "<span class='bat-status'></span>" +
+        "</div>"
+      );
+
+      setItemStatus(item, COLOR_WARN, 'bat_status_checking_server');
+
+      list.append(item);
+
+      checkServer(s).then(function (res) {
+        setItemStatus(item, res.color, res.labelKey, res.speed);
+      });
+    });
+
+    Lampa.Modal.open({
+      title: Lampa.Lang.translate('bat_torrserver'),
+      html: modal,
+      size: 'medium'
+    });
+  }
+
+  /* =========================
+   * 7) Init
+   * ========================= */
+  function start() {
+    translate();
+
+    Lampa.Settings.listener.follow('open', function (e) {
+      if (e.name === 'server') {
+        var btn = $('<div class="settings-param selector"></div>');
+        btn.text(Lampa.Lang.translate('bat_torrserver'));
+        btn.on('hover:enter', openModal);
+        e.body.append(btn);
+      }
+    });
+  }
+
+  if (window.appready) start();
+  else {
+    Lampa.Listener.follow('app', function (e) {
+      if (e.type === 'ready') start();
+    });
+  }
+
 })();
