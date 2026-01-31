@@ -1,4 +1,4 @@
-// в3 IIFE - самовикликаюча функція для ізоляції плагіна      
+// в2 IIFE - самовикликаюча функція для ізоляції плагіна      
 (function () {      
   'use strict';      
       
@@ -88,21 +88,7 @@
         en: 'Unchecked',      
         uk: 'Не перевірено',      
         zh: '未检查'      
-      },  
-        
-      // Нові ключі для швидкості  
-      bat_speed_testing: {  
-        ru: 'Тест скорости…',  
-        en: 'Speed testing…',  
-        uk: 'Тест швидкості…',  
-        zh: '速度测试中…'  
-      },  
-      bat_speed_result: {  
-        ru: '{speed} Мбит/с',  
-        en: '{speed} Mbps',  
-        uk: '{speed} Мбіт/с',  
-        zh: '{speed} Mbps'  
-      }  
+      }      
     });      
   }      
       
@@ -273,27 +259,20 @@
       attempt();      
     });      
   }
-   /* =========================      
-   * 4) Перевірки (двоетапна: доступність + швидкість)      
+    /* =========================      
+   * 4) Перевірки (лише доступність)      
    * ========================= */      
       
-  // URL для перевірки доступності через /echo (виправлено з /settings)      
+  // URL для перевірки доступності через /echo      
   function healthUrlCandidates(server) {      
     var url = server.settings.url;      
     var protos = protocolCandidatesFor(url);      
     return protos.map(function (p) { return p + url + '/echo'; });      
   }      
       
-  // URL для тестування швидкості через /download/300      
-  function speedUrlCandidates(server) {      
-    var url = server.settings.url;      
-    var protos = protocolCandidatesFor(url);      
-    return protos.map(function (p) { return p + url + '/download/300'; });      
-  }      
-      
-  // Основна функція двоетапної перевірки з валідацією /echo      
+  // Спрощена функція перевірки доступності      
   function runHealthChecks(servers) {      
-    var map = {}; // base -> {color,labelKey,speed,speedText}      
+    var map = {}; // base -> {color,labelKey}      
       
     var requests = servers.map(function (server) {      
       return new Promise(function (resolve) {      
@@ -307,7 +286,7 @@
           return;      
         }      
       
-        // Етап 1: Перевірка доступності через /echo      
+        // Перевірка доступності через /echo      
         ajaxTryUrls(healthUrls, 5000).then(function (res) {      
           var val;      
       
@@ -316,31 +295,18 @@
               // Перевіряємо чи є відповідь валідною від TorrServer (має містити "MatriX")      
               var data = typeof res.data === 'string' ? res.data : '';      
               if (data && data.toLowerCase().indexOf('matrix') !== -1) {      
-                // Сервер доступний - тепер тестуємо швидкість      
-                setItemStatusForServer(server.base, COLOR_WARN, 'bat_speed_testing');      
-                testServerSpeed(server).then(function (speedResult) {      
-                  val = speedResult;      
-                  map[server.base] = val;      
-                  cache.set(healthCacheKey, val, cache.ttlHealth);      
-                  resolve();      
-                }).catch(function () {      
-                  // Якщо тест швидкості не вдався, все одно сервер доступний      
-                  val = { color: COLOR_OK, labelKey: 'bat_status_server_ok', speed: null, speedText: null };      
-                  map[server.base] = val;      
-                  cache.set(healthCacheKey, val, cache.ttlHealth);      
-                  resolve();      
-                });      
-                return; // Вихід, чекаємо на тест швидкості      
+                // Сервер доступний      
+                val = { color: COLOR_OK, labelKey: 'bat_status_server_ok' };      
               } else {      
-                val = { color: COLOR_WARN, labelKey: 'bat_status_server_warn', speed: null, speedText: null };      
+                val = { color: COLOR_WARN, labelKey: 'bat_status_server_warn' };      
               }      
             } catch (e) {      
-              val = { color: COLOR_WARN, labelKey: 'bat_status_server_warn', speed: null, speedText: null };      
+              val = { color: COLOR_WARN, labelKey: 'bat_status_server_warn' };      
             }      
           } else if (res.network === false) {      
-            val = { color: COLOR_WARN, labelKey: 'bat_status_server_warn', speed: null, speedText: null };      
+            val = { color: COLOR_WARN, labelKey: 'bat_status_server_warn' };      
           } else {      
-            val = { color: COLOR_BAD, labelKey: 'bat_status_server_bad', speed: null, speedText: null };      
+            val = { color: COLOR_BAD, labelKey: 'bat_status_server_bad' };      
           }      
       
           map[server.base] = val;      
@@ -351,53 +317,9 @@
     });      
       
     return Promise.all(requests).then(function () { return map; });      
-  }      
-      
-  // Функція тестування швидкості окремого сервера      
-  function testServerSpeed(server) {      
-    return new Promise(function (resolve, reject) {      
-      var speedUrls = speedUrlCandidates(server);      
-      var startTime = Date.now();      
-      
-      ajaxTryUrls(speedUrls, 10000).then(function (res) {      
-        if (res.ok) {      
-          var endTime = Date.now();      
-          var duration = (endTime - startTime) / 1000; // в секундах      
-          var speed = calculateSpeed(duration);      
-          var speedText = Lampa.Lang.translate('bat_speed_result').replace('{speed}', speed.toFixed(1));      
-      
-          resolve({      
-            color: COLOR_OK,      
-            labelKey: 'bat_speed_result',      
-            speed: speed,      
-            speedText: speedText      
-          });      
-        } else {      
-          reject();      
-        }      
-      }).catch(reject);      
-    });      
-  }      
-      
-  // Розрахунок швидкості на основі часу завантаження 300MB      
-  function calculateSpeed(duration) {      
-    if (duration <= 0) return 0;      
-    var fileSizeMB = 300; // 300 MB      
-    var speedMbps = (fileSizeMB * 8) / duration; // Перетворення в Mbps      
-    return Math.min(speedMbps, 1000); // Обмежуємо максимум 1000 Mbps      
-  }      
-      
-  // Допоміжна функція для оновлення статусу під час тестування      
-  function setItemStatusForServer(base, color, labelKey) {      
-    if (window.currentModalList) {      
-      var item = window.currentModalList.find("[data-base='" + base + "']");      
-      if (item.length) {      
-        setItemStatus(item, color, labelKey);      
-      }      
-    }      
   }
     /* =========================      
-   * 5) Модалка (UI) з підтримкою швидкості      
+   * 5) Модалка (UI) - спрощена без швидкості      
    * ========================= */      
       
   function injectStyleOnce() {      
@@ -417,8 +339,7 @@
       ".bat-torrserver-modal__left{display:flex;align-items:center;gap:.65em;min-width:0}" +      
       ".bat-torrserver-modal__dot{width:.55em;height:.55em;border-radius:50%;background:" + COLOR_UNKNOWN + ";box-shadow:0 0 .6em rgba(0,0,0,.35);flex:0 0 auto}" +      
       ".bat-torrserver-modal__name{font-size:1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}" +      
-      ".bat-torrserver-modal__status{display:flex;flex-direction:column;align-items:flex-end;gap:.2em;font-size:.85em;opacity:.75;text-align:right;flex:0 0 auto}" +      
-      ".bat-torrserver-modal__speed{font-weight:bold;color:#1aff00}" +      
+      ".bat-torrserver-modal__status{font-size:.85em;opacity:.75;text-align:right;flex:0 0 auto}" +      
       
       ".bat-torrserver-modal__actions{display:flex;gap:.6em;flex-wrap:wrap}" +      
       ".bat-torrserver-modal__action{padding:.55em .9em;border-radius:.6em;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2)}" +      
@@ -437,30 +358,20 @@
           "<span class='bat-torrserver-modal__dot'></span>" +      
           "<div class='bat-torrserver-modal__name'></div>" +      
         "</div>" +      
-        "<div class='bat-torrserver-modal__status'>" +      
-          "<div class='bat-torrserver-modal__status-text'></div>" +      
-          "<div class='bat-torrserver-modal__speed'></div>" +      
-        "</div>" +      
+        "<div class='bat-torrserver-modal__status'></div>" +      
       "</div>"      
     );      
       
     item.find('.bat-torrserver-modal__name').text(name);      
-    item.find('.bat-torrserver-modal__status-text').text(Lampa.Lang.translate('bat_status_unknown'));      
+    item.find('.bat-torrserver-modal__status').text(Lampa.Lang.translate('bat_status_unknown'));      
     item.find('.bat-torrserver-modal__dot').css('background-color', COLOR_UNKNOWN);      
-    item.find('.bat-torrserver-modal__speed').hide();      
       
     return item;      
   }      
       
-  function setItemStatus(item, color, labelKey, speedText) {      
+  function setItemStatus(item, color, labelKey) {      
     item.find('.bat-torrserver-modal__dot').css('background-color', color);      
-    item.find('.bat-torrserver-modal__status-text').text(Lampa.Lang.translate(labelKey));      
-      
-    if (speedText) {      
-      item.find('.bat-torrserver-modal__speed').text(speedText).show();      
-    } else {      
-      item.find('.bat-torrserver-modal__speed').hide();      
-    }      
+    item.find('.bat-torrserver-modal__status').text(Lampa.Lang.translate(labelKey));      
   }      
       
   function applySelection(list, base) {      
@@ -490,7 +401,7 @@
         return;      
       }      
       
-      setItemStatus(it, st.color, st.labelKey, st.speedText);      
+      setItemStatus(it, st.color, st.labelKey);      
     });      
   }      
       
@@ -552,7 +463,7 @@
     btnHealth.text(Lampa.Lang.translate('bat_check_servers'));      
     actions.append(btnHealth);      
       
-    // HEALTH UI з двоетапною перевіркою      
+    // HEALTH UI з перевіркою доступності      
     function runHealthUI() {      
       list.find('.bat-torrserver-modal__item').each(function () {      
         var it = $(this);      
