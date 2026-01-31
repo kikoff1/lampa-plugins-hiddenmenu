@@ -1,4 +1,4 @@
-// v3 IIFE - самовикликаюча функція для ізоляції плагіна    
+// в2 IIFE - самовикликаюча функція для ізоляції плагіна    
 (function () {    
   'use strict';    
     
@@ -276,7 +276,7 @@
     });    
   }
       /* =========================    
-   * 4) Перевірки (модифіковано для тесту швидкості)    
+   * 4) Перевірки (спрощено для швидкості)    
    * ========================= */    
     
   // HEALTH candidates для TorrServer - використовуємо ендпоінт тесту швидкості    
@@ -284,11 +284,11 @@
     var url = server.settings.url;    
     var protos = protocolCandidatesFor(url);    
     
-    // Використовуємо ендпоінт тесту швидкості замість /config [1](#8-0)   
+    // Використовуємо ендпоінт тесту швидкості замість /config [1](#12-0)   
     return protos.map(function (p) { return p + url + '/download/300'; });    
   }    
     
-  // HEALTH 3-статуси для TorrServer з вимірюванням швидкості    
+  // HEALTH 3-статуси для TorrServer - спрощена логіка    
   function runHealthChecks(servers) {    
     var map = {}; // base -> {color,labelKey,speed}    
     
@@ -304,43 +304,19 @@
           return;    
         }    
     
-        // Вимірюємо швидкість через XMLHttpRequest    
-        var xhr = new XMLHttpRequest();    
-        var startTime, maxSpeed = 0;    
-          
-        xhr.open('GET', urls[0] + '?vr=' + Date.now(), true);    
-        xhr.responseType = 'arraybuffer';    
-        xhr.timeout = 10000;    
-    
-        xhr.onprogress = function(e) {    
-          if (startTime && e.loaded > 0) {    
-            var currentTime = e.timeStamp || Date.now();    
-            var elapsed = (currentTime - startTime) / 1000; // секунди    
-            var speedBps = (e.loaded * 8) / elapsed; // біт/секунду    
-            var speedMbps = speedBps / 1000000; // Мбіт/секунду    
-              
-            if (speedMbps > maxSpeed) {    
-              maxSpeed = speedMbps;    
-            }    
-          }    
-        };    
-    
-        xhr.onloadstart = function() {    
-          startTime = Date.now();    
-        };    
-    
-        xhr.onload = function() {    
+        // Використовуємо просту перевірку з таймаутом 5 секунд [2](#12-1)   
+        ajaxTryUrls(urls, 5000).then(function (res) {    
           var val;    
-            
-          if (xhr.status === 200) {    
-            // Сервер відповів 200 - доступний, навіть якщо швидкість 0    
+    
+          if (res.ok) {    
+            // Сервер доступний - показуємо 0.0 Мбіт/с    
             val = {    
-              color: maxSpeed > 0 ? COLOR_OK : COLOR_WARN,    
+              color: COLOR_OK,    
               labelKey: 'bat_status_server_ok',    
-              speed: maxSpeed > 0 ? maxSpeed.toFixed(1) : '0.0'    
+              speed: '0.0'    
             };    
-          } else if (xhr.status > 0) {    
-            // Сервер відповідає, але з помилкою    
+          } else if (res.network === false) {    
+            // Сервер відповідає, але з обмеженнями    
             val = {    
               color: COLOR_WARN,    
               labelKey: 'bat_status_server_warn',    
@@ -358,21 +334,7 @@
           map[server.base] = val;    
           cache.set(cacheKey, val, cache.ttlHealth);    
           resolve();    
-        };    
-    
-        xhr.onerror = function() {    
-          var val = {    
-            color: COLOR_BAD,    
-            labelKey: 'bat_status_server_bad',    
-            speed: null    
-          };    
-            
-          map[server.base] = val;    
-          cache.set(cacheKey, val, cache.ttlHealth);    
-          resolve();    
-        };    
-    
-        xhr.send();    
+        });    
       });    
     });    
     
@@ -600,7 +562,7 @@
           openTorrServerModal();    
         });    
     
-        // Додаємо після основного посилання TorrServer [1](#9-0)   
+        // Додаємо після основного посилання TorrServer [1](#13-0)   
         $('[data-name="torrserver_url"]', e.body).after(btn);    
             
         // Оновлюємо мітку вибраного сервера    
