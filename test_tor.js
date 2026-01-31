@@ -1,4 +1,4 @@
-// в2 IIFE - самовикликаюча функція для ізоляції плагіна    
+// в3 IIFE - самовикликаюча функція для ізоляції плагіна    
 (function () {    
   'use strict';    
     
@@ -276,7 +276,7 @@
     });    
   }
       /* =========================    
-   * 4) Перевірки (спрощено для швидкості)    
+   * 4) Перевірки (послідовно для стабільності)    
    * ========================= */    
     
   // HEALTH candidates для TorrServer - використовуємо ендпоінт тесту швидкості    
@@ -284,61 +284,80 @@
     var url = server.settings.url;    
     var protos = protocolCandidatesFor(url);    
     
-    // Використовуємо ендпоінт тесту швидкості замість /config [1](#12-0)   
+    // Використовуємо ендпоінт тесту швидкості замість /config [1](#16-0)   
     return protos.map(function (p) { return p + url + '/download/300'; });    
   }    
     
-  // HEALTH 3-статуси для TorrServer - спрощена логіка    
+  // HEALTH 3-статуси для TorrServer - послідовна перевірка    
   function runHealthChecks(servers) {    
     var map = {}; // base -> {color,labelKey,speed}    
-    
-    var requests = servers.map(function (server) {    
-      return new Promise(function (resolve) {    
+      
+    return new Promise(function (resolve) {    
+      var index = 0;    
+        
+      function checkNext() {    
+        if (index >= servers.length) {    
+          resolve(map);    
+          return;    
+        }    
+          
+        var server = servers[index];    
         var urls = healthUrlCandidates(server);    
         var cacheKey = 'health::' + server.base + '::' + urls.join('|');    
         var cached = cache.get(cacheKey);    
-    
+          
         if (cached) {    
           map[server.base] = cached.value;    
-          resolve();    
+          updateServerItemStatus(server.base, cached.value);    
+          index++;    
+          checkNext();    
           return;    
         }    
-    
-        // Використовуємо просту перевірку з таймаутом 5 секунд [2](#12-1)   
+          
+        // Перевіряємо один сервер за раз з таймаутом 5 секунд    
         ajaxTryUrls(urls, 5000).then(function (res) {    
           var val;    
-    
+            
           if (res.ok) {    
-            // Сервер доступний - показуємо 0.0 Мбіт/с    
             val = {    
               color: COLOR_OK,    
               labelKey: 'bat_status_server_ok',    
               speed: '0.0'    
             };    
           } else if (res.network === false) {    
-            // Сервер відповідає, але з обмеженнями    
             val = {    
               color: COLOR_WARN,    
               labelKey: 'bat_status_server_warn',    
               speed: null    
             };    
           } else {    
-            // Немає відповіді - сервер недоступний    
             val = {    
               color: COLOR_BAD,    
               labelKey: 'bat_status_server_bad',    
               speed: null    
             };    
           }    
-    
+            
           map[server.base] = val;    
           cache.set(cacheKey, val, cache.ttlHealth);    
-          resolve();    
+          updateServerItemStatus(server.base, val);    
+          index++;    
+            
+          // Невелика затримка між запитами    
+          setTimeout(checkNext, 100);    
         });    
-      });    
+      }    
+        
+      checkNext();    
     });    
+  }    
     
-    return Promise.all(requests).then(function () { return map; });    
+  // Додаткова функція для оновлення статусу окремого сервера    
+  function updateServerItemStatus(base, status) {    
+    var item = $('.bat-torrserver-modal__item[data-base="' + base + '"]');    
+    if (item.length) {    
+      setItemStatus(item, status.color, status.labelKey, status.speed);    
+    }    
   }    
     
     /* =========================    
@@ -500,7 +519,7 @@
       });    
     }    
     
-    // HEALTH UI з логікою тесту швидкості    
+    // HEALTH UI з послідовною перевіркою    
     function runHealthUI() {    
       list.find('.bat-torrserver-modal__item').each(function () {    
         var it = $(this);    
@@ -562,7 +581,7 @@
           openTorrServerModal();    
         });    
     
-        // Додаємо після основного посилання TorrServer [1](#13-0)   
+        // Додаємо після основного посилання TorrServer [1](#17-0)   
         $('[data-name="torrserver_url"]', e.body).after(btn);    
             
         // Оновлюємо мітку вибраного сервера    
