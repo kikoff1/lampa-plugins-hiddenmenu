@@ -1,4 +1,4 @@
-// в3 IIFE - самовикликаюча функція для ізоляції плагіна    
+// в2 IIFE - самовикликаюча функція для ізоляції плагіна    
 (function () {    
   'use strict';    
     
@@ -244,27 +244,32 @@
     return ['http://', 'https://']; // спочатку http для TorrServer    
   }    
     
-  // Послідовно пробуємо URL і повертаємо перший результат    
+  // Послідовно пробуємо URL і повертаємо перший результат з дебагінгом    
   function ajaxTryUrls(urls, timeout) {    
     return new Promise(function (resolve) {    
       var idx = 0;    
     
       function attempt() {    
         if (idx >= urls.length) {    
+          console.log('bat-torrserver: All URLs failed for', urls);    
           resolve({ ok: false, xhr: null, url: null, network: true });    
           return;    
         }    
     
         var url = urls[idx++];    
+        console.log('bat-torrserver: Trying URL:', url);    
+          
         $.ajax({    
           url: url,    
           method: 'GET',    
           timeout: timeout,    
           success: function (data, textStatus, xhr) {    
+            console.log('bat-torrserver: Success for URL:', url, 'Status:', xhr.status);    
             resolve({ ok: true, xhr: xhr, url: url, data: data });    
           },    
           error: function (xhr) {    
             var status = xhr && typeof xhr.status === 'number' ? xhr.status : 0;    
+            console.log('bat-torrserver: Error for URL:', url, 'Status:', status);    
             var isNetwork = (status === 0);    
             if (isNetwork) attempt();    
             else resolve({ ok: false, xhr: xhr, url: url, network: false });    
@@ -284,7 +289,7 @@
     var url = server.settings.url;    
     var protos = protocolCandidatesFor(url);    
     
-    // Використовуємо ендпоінт тесту швидкості замість /config [1](#16-0)   
+    // Використовуємо ендпоінт тесту швидкості замість /config [1](#20-0)   
     return protos.map(function (p) { return p + url + '/download/300'; });    
   }    
     
@@ -314,29 +319,38 @@
           return;    
         }    
           
-        // Перевіряємо один сервер за раз з таймаутом 5 секунд    
+        console.log('bat-torrserver: Checking server:', server.name, 'URLs:', urls);    
+          
+        // Перевіряємо один сервер за раз    
         ajaxTryUrls(urls, 5000).then(function (res) {    
           var val;    
             
+          console.log('bat-torrserver: Result for', server.name, ':', res);    
+            
           if (res.ok) {    
+            // Якщо є відповідь - сервер доступний    
             val = {    
               color: COLOR_OK,    
               labelKey: 'bat_status_server_ok',    
               speed: '0.0'    
             };    
           } else if (res.network === false) {    
+            // Сервер відповідає, але з помилкою HTTP    
             val = {    
               color: COLOR_WARN,    
               labelKey: 'bat_status_server_warn',    
               speed: null    
             };    
           } else {    
+            // Немає відповіді - сервер недоступний    
             val = {    
               color: COLOR_BAD,    
               labelKey: 'bat_status_server_bad',    
               speed: null    
             };    
           }    
+            
+          console.log('bat-torrserver: Final status for', server.name, ':', val);    
             
           map[server.base] = val;    
           cache.set(cacheKey, val, cache.ttlHealth);    
@@ -519,7 +533,7 @@
       });    
     }    
     
-    // HEALTH UI з послідовною перевіркою    
+    // HEALTH UI з послідовною перевіркою та дебагінгом    
     function runHealthUI() {    
       list.find('.bat-torrserver-modal__item').each(function () {    
         var it = $(this);    
@@ -581,7 +595,7 @@
           openTorrServerModal();    
         });    
     
-        // Додаємо після основного посилання TorrServer [1](#17-0)   
+        // Додаємо після основного посилання TorrServer [1](#21-0)   
         $('[data-name="torrserver_url"]', e.body).after(btn);    
             
         // Оновлюємо мітку вибраного сервера    
