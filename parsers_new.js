@@ -136,27 +136,27 @@
     {
       base: 'lampa_ua',
       name: 'LampaUA jackett (toloka, mazepa)',
-      settings: { url: 'https://parserbridge.lampame.v6.rocks/jackettua.mooo.com', key: 'ua', parser_torrent_type: 'jackett' }
+      settings: { url: 'https://parserbridge.lampame.v6.rocks/https://jackettua.mooo.com', key: 'ua', parser_torrent_type: 'jackett' }
     },
         {
       base: 'lampa_ua2',
       name: 'LampaUA prowlarrua (toloka, mazepa)',
-      settings: { url: 'https://parserbridge.lampame.v6.rocks/prowlarrua.mooo.com', key: 'ua', parser_torrent_type: 'prowlarr' }
+      settings: { url: 'prowlarrua.mooo.com', key: 'ua', parser_torrent_type: 'prowlarr' }
     },
     {
       base: 'spawnum_duckdns_org_59117',
       name: 'SpawnUA (toloka, mazepa)',
-      settings: { url: 'https://parserbridge.lampame.v6.rocks/spawnum.duckdns.org:59117', key: '2', parser_torrent_type: 'jackett' }
+      settings: { url: 'https://parserbridge.lampame.v6.rocks/http://spawnum.duckdns.org:59117', key: '2', parser_torrent_type: 'jackett' }
     },
     {
-      base: 'spawnum_duckdns_org_59117',
+      base: 'jackett.1337.cx',
       name: 'SpawnUA 2 (toloka, mazepa)',
-      settings: { url: 'https://parserbridge.lampame.v6.rocks/jackett.1337.cx', key: '7', parser_torrent_type: 'jackett' }
+      settings: { url: 'https://parserbridge.lampame.v6.rocks/http://jackett.1337.cx', key: '7', parser_torrent_type: 'jackett' }
     },
         {
-      base: 'spawnum_duckdns_org_59117',
+      base: 'spawnum.duckdns.org:49117',
       name: 'SpawnUA 3 (toloka, mazepa)',
-      settings: { url: 'https://parserbridge.lampame.v6.rocks/spawnum.duckdns.org:49117', key: '2', parser_torrent_type: 'jackett' }
+      settings: { url: 'https://parserbridge.lampame.v6.rocks/http://spawnum.duckdns.org:49117', key: '2', parser_torrent_type: 'jackett' }
     },
     {
       base: 'jacred_pro',
