@@ -1,4 +1,4 @@
-// в2 IIFE - самовикликаюча функція для ізоляції плагіна  
+// IIFE - самовикликаюча функція для ізоляції плагіна  
 (function () {  
   'use strict';  
   
@@ -44,26 +44,12 @@
         uk: 'Перевірити доступність серверів',  
         zh: '检查服务器可用性'  
       },  
-      bat_check_servers_desc: {  
-        ru: 'Выполняет проверку доступности TorrServers',  
-        en: 'Checks TorrServers availability',  
-        uk: 'Виконує перевірку доступності TorrServers',  
-        zh: '执行TorrServer可用性检查'  
-      },  
-  
       bat_check_connection: {  
         ru: 'Проверить подключение',  
         en: 'Check connection',  
         uk: 'Перевірити підключення',  
         zh: '检查连接'  
       },  
-      bat_check_connection_desc: {  
-        ru: 'Выполняет проверку подключения к TorrServer',  
-        en: 'Checks TorrServer connection',  
-        uk: 'Виконує перевірку підключення до TorrServer',  
-        zh: '执行TorrServer连接检查'  
-      },  
-  
       bat_check_done: {  
         ru: 'Проверку завершено',  
         en: 'Check completed',  
@@ -71,7 +57,6 @@
         zh: '检查完成'  
       },  
   
-      // HEALTH (сервер)  
       bat_status_checking_server: {  
         ru: 'Проверка сервера…',  
         en: 'Checking server…',  
@@ -90,22 +75,18 @@
         uk: 'Сервер відповідає (обмеження)',  
         zh: '服务器有响应（受限）'  
       },  
-        
       bat_status_server_bad: {  
         ru: 'Сервер недоступен',  
         en: 'Server unavailable',  
         uk: 'Сервер недоступний',  
         zh: '服务器不可用'  
       },  
-  
       bat_status_unknown: {  
         ru: 'Не проверен',  
         en: 'Unchecked',  
         uk: 'Не перевірено',  
         zh: '未检查'  
       },  
-  
-      // CONNECTION (2 стани)  
       bat_status_checking_connection: {  
         ru: 'Проверка подключения…',  
         en: 'Checking connection…',  
@@ -295,7 +276,7 @@
       attempt();  
     });  
   }  
-    * 4) Перевірки  
+     * 4) Перевірки  
    * ========================= */  
   
   // HEALTH candidates для TorrServer  
@@ -464,41 +445,19 @@
       "</div>"  
     );  
   
-    modal.find('.bat-torrserver-modal__current-label').text(Lampa.Lang.translate('bat_torrserver_current'));  
-    updateCurrentLabel(modal, selected);  
-  
+    var head = modal.find('.bat-torrserver-modal__head');  
     var list = modal.find('.bat-torrserver-modal__list');  
-  
-    // "Не вибрано"  
-    var noneItem = buildServerItem(NO_SERVER, Lampa.Lang.translate('bat_torrserver_none'));  
-    noneItem.on('hover:enter', function () {  
-      Lampa.Storage.set(STORAGE_KEY, NO_SERVER);  
-      applySelection(list, NO_SERVER);  
-      updateCurrentLabel(modal, NO_SERVER);  
-      updateSelectedLabelInSettings();  
-    });  
-    list.append(noneItem);  
-  
-    // Сервери  
-    serversInfo.forEach(function (s) {  
-      var item = buildServerItem(s.base, s.name);  
-  
-      item.on('hover:enter', function () {  
-        Lampa.Storage.set(STORAGE_KEY, s.base);  
-        applySelectedServer(s.base);  
-        applySelection(list, s.base);  
-        updateCurrentLabel(modal, s.base);  
-        updateSelectedLabelInSettings();  
-      });  
-  
-      list.append(item);  
-    });  
-  
-    applySelection(list, selected);  
-  
-    // Кнопки  
     var actions = modal.find('.bat-torrserver-modal__actions');  
   
+    // Додаємо "Не вибрано"  
+    list.append(buildServerItem(NO_SERVER, Lampa.Lang.translate('bat_torrserver_none')));  
+  
+    // Додаємо всі сервери  
+    serversInfo.forEach(function (server) {  
+      list.append(buildServerItem(server.base, server.name));  
+    });  
+  
+    // Кнопки дій  
     var btnHealth = $("<div class='bat-torrserver-modal__action selector'></div>");  
     btnHealth.text(Lampa.Lang.translate('bat_check_servers'));  
   
@@ -565,6 +524,25 @@
       runConnectionUI();  
     });  
   
+    // Вибір сервера  
+    list.on('hover:enter', '.bat-torrserver-modal__item', function () {  
+      var it = $(this);  
+      var base = it.data('base');  
+  
+      applySelection(list, base);  
+      updateCurrentLabel(head, base);  
+  
+      if (base !== NO_SERVER) {  
+        Lampa.Storage.set(STORAGE_KEY, base);  
+        applySelectedServer(base);  
+        updateSelectedLabelInSettings();  
+      }  
+    });  
+  
+    // Встановлюємо поточний вибір  
+    applySelection(list, selected);  
+    updateCurrentLabel(head, selected);  
+  
     // Відкрити модалку  
     var firstSelectable = list.find('.bat-torrserver-modal__item').first();  
   
@@ -585,75 +563,30 @@
   }  
   
   /* =========================  
-   * 6) Виправлена інтеграція в Налаштування → TorrServer  
+   * 6) Спрощена інтеграція в Налаштування → TorrServer (як у speedtest.js)  
    * ========================= */  
   function torrserverSetting() {  
     applySelectedServer(getSelectedBase());  
   
-    // Використовуємо listener для відстеження відкриття налаштувань  
     Lampa.Settings.listener.follow('open', function (e) {  
-      if (e.name === 'server') {  
-        console.log('TorrServer catalog: Server settings opened');  
+      if (e.name == 'server') {  
+        let btn = $(`<div class="settings-param selector" data-type="button">  
+          <div class="settings-param__name">📋 ${Lampa.Lang.translate('bat_torrserver')}</div>  
+          <div class="settings-param__descr">${Lampa.Lang.translate('bat_torrserver_description')} ${serversInfo.length}  
+            <div class="bat-torrserver-selected" style="margin-top:.35em;opacity:.85"></div>  
+          </div>  
+        </div>`)  
+  
+        btn.on('hover:enter', () => {  
+          openTorrServerModal()  
+        })  
+  
+        $('[data-name="torrserver_url_two"]',e.body).after(btn)  
           
-        // Затримка для забезпечення повного завантаження DOM  
-        setTimeout(function() {  
-          try {  
-            // Видаляємо існуючу кнопку якщо є  
-            $('.bat-torrserver-catalog-btn').remove();  
-  
-            // Шукаємо правильне місце для вставки - після другого посилання TorrServer  
-            var targetElement = $('[data-name="torrserver_url_two"]', e.body);  
-              
-            if (!targetElement.length) {  
-              // Якщо не знайдено, пробуємо після першого посилання  
-              targetElement = $('[data-name="torrserver_url"]', e.body);  
-            }  
-              
-            if (!targetElement.length) {  
-              // Якщо все ще не знайдено, шукаємо будь-який input в server settings  
-              targetElement = $('.settings-param[data-type="input"]', e.body).last();  
-            }  
-              
-            if (!targetElement.length) {  
-              console.warn('TorrServer catalog: No suitable target element found');  
-              return;  
-            }  
-  
-            console.log('TorrServer catalog: Found target element, inserting button');  
-  
-            var btn = $('<div class="settings-param selector bat-torrserver-catalog-btn" data-type="button" data-static="true">' +  
-              '<div class="settings-param__name">📋 ' + Lampa.Lang.translate('bat_torrserver') + '</div>' +  
-              '<div class="settings-param__descr">' +   
-                Lampa.Lang.translate('bat_torrserver_description') + " " + serversInfo.length +  
-                '<div class="bat-torrserver-selected" style="margin-top:.35em;opacity:.85"></div>' +  
-              '</div>' +  
-            '</div>');  
-  
-            btn.on('hover:enter', function () {  
-              console.log('TorrServer catalog: Button clicked');  
-              try {  
-                openTorrServerModal();  
-              } catch (error) {  
-                console.error('TorrServer catalog: Modal open error', error);  
-                Lampa.Noty.show('Помилка відкриття каталогу: ' + error.message);  
-              }  
-            });  
-  
-            // Вставляємо ПІСЛЯ цільового елемента  
-            targetElement.after(btn);  
-              
-            // Оновлюємо мітку вибраного сервера  
-            updateSelectedLabelInSettings();  
-              
-            console.log('TorrServer catalog: Button successfully added');  
-              
-          } catch (error) {  
-            console.error('TorrServer catalog: Initialization error', error);  
-            Lampa.Noty.show('Помилка ініціалізації каталогу: ' + error.message);  
-          }  
-        }, 300); // Збільшено затримку до 300мс  
+        // Оновлюємо мітку  
+        updateSelectedLabelInSettings()  
       }  
-    });  
+    })  
   }  
   
   /* =========================  
@@ -662,23 +595,8 @@
   Lampa.Platform.tv();  
   
   function add() {  
-    try {  
-      console.log('TorrServer catalog: Starting plugin initialization');  
-      Lang.translate();  
-        
-      // Перевіряємо, чи існують необхідні функції Lampa  
-      if (!Lampa.Settings || !Lampa.Settings.listener) {  
-        console.error('TorrServer catalog: Lampa.Settings.listener not available');  
-        return;  
-      }  
-        
-      console.log('TorrServer catalog: Lampa.Settings.listener available');  
-      torrserverSetting();  
-      console.log('TorrServer catalog: Plugin initialization completed');  
-    } catch (error) {  
-      console.error('TorrServer catalog: Plugin initialization error', error);  
-      Lampa.Noty.show('Критична помилка плагіна: ' + error.message);  
-    }  
+    Lang.translate();  
+    torrserverSetting();  
   }  
   
   function startPlugin() {  
