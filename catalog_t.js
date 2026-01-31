@@ -1,4 +1,4 @@
-// в1. IIFE - самовикликаюча функція для ізоляції плагіна  
+// IIFE - самовикликаюча функція для ізоляції плагіна  
 (function () {  
   'use strict';  
   
@@ -295,7 +295,7 @@
       attempt();  
     });  
   }  
-    * 4) Перевірки  
+     * 4) Перевірки  
    * ========================= */  
   
   // HEALTH candidates для TorrServer  
@@ -380,7 +380,7 @@
   
     return Promise.all(requests).then(function () { return map; });  
   }  
-    * 5) Модалка (UI) + "лампочка"  
+     * 5) Модалка (UI) + "лампочка"  
    * ========================= */  
   
   function injectStyleOnce() {  
@@ -585,68 +585,49 @@
   }  
   
   /* =========================  
-   * 6) Виправлена інтеграція в Налаштування → TorrServer  
+   * 6) Нова інтеграція в Налаштування → TorrServer через SettingsApi  
    * ========================= */  
   function torrserverSetting() {  
     applySelectedServer(getSelectedBase());  
   
-    // Використовуємо listener для додавання в розділ TorrServer  
-    Lampa.Settings.listener.follow('open', function (e) {  
-      if (e.name === 'server') {  
-        // Затримка для забезпечення завантаження DOM  
-        setTimeout(function() {  
-          try {  
-            // Видаляємо існуючу кнопку якщо є  
-            $('.bat-torrserver-catalog-btn').remove();  
+    // Спочатку додаємо компонент TorrServer, якщо він не існує  
+    if (!Lampa.SettingsApi.get('torrserver')) {  
+      Lampa.SettingsApi.addComponent({  
+        component: 'torrserver',  
+        name: 'TorrServer',  
+        icon: '<svg height="36" viewBox="0 0 38 36" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="8" width="34" height="21" rx="3" stroke="white" stroke-width="3"/><line x1="13.0925" y1="2.34874" x2="16.3487" y2="6.90754" stroke="white" stroke-width="3" stroke-linecap="round"/><line x1="1.5" y1="-1.5" x2="9.31665" y2="-1.5" transform="matrix(-0.757816 0.652468 0.652468 0.757816 26.197 2)" stroke="white" stroke-width="3" stroke-linecap="round"/><line x1="9.5" y1="34.5" x2="29.5" y2="34.5" stroke="white" stroke-width="3" stroke-linecap="round"/></svg>'  
+      });  
+    }  
   
-            // Шукаємо правильний елемент для вставки  
-            var targetElement = $('[data-name="torrserver_url"]', e.body);  
-              
-            // Якщо не знайдено, пробуємо інші варіанти  
-            if (!targetElement.length) {  
-              targetElement = $('.settings-param[data-type="input"]:first', e.body);  
-            }  
-              
-            if (!targetElement.length) {  
-              console.warn('TorrServer catalog: target element not found');  
-              return;  
-            }  
-  
-            var btn = $('<div class="settings-param selector bat-torrserver-catalog-btn" data-type="button">' +  
-              '<div class="settings-param__name">' + Lampa.Lang.translate('bat_torrserver') + '</div>' +  
-              '<div class="settings-param__descr">' +   
-                Lampa.Lang.translate('bat_torrserver_description') + " " + serversInfo.length +  
-                '<div class="bat-torrserver-selected" style="margin-top:.35em;opacity:.85"></div>' +  
-              '</div>' +  
-            '</div>');  
-  
-            btn.on('hover:enter', function () {  
-              try {  
-                openTorrServerModal();  
-              } catch (error) {  
-                console.error('TorrServer catalog: modal open error', error);  
-                Lampa.Noty.show('Помилка відкриття каталогу');  
-              }  
-            });  
-  
-            // Додаємо після знайденого елемента  
-            targetElement.after(btn);  
-              
-            // Оновлюємо мітку вибраного сервера  
-            updateSelectedLabelInSettings();  
-              
-            // Показуємо/ховаємо залежно від налаштувань  
-            var useLink = Lampa.Storage.field('torrserver_use_link');  
-            if (typeof useLink === 'boolean') {  
-              btn.toggle(useLink);  
-            } else {  
-              btn.show(); // Показуємо за замовчуванням, якщо налаштування не знайдено  
-            }  
-              
-          } catch (error) {  
-            console.error('TorrServer catalog: initialization error', error);  
+    // Додаємо наш параметр  
+    Lampa.SettingsApi.addParam({  
+      component: 'torrserver',  
+      param: {  
+        name: 'bat_torrserver_catalog',  
+        type: 'button'  
+      },  
+      field: {  
+        name: Lampa.Lang.translate('bat_torrserver'),  
+        description: Lampa.Lang.translate('bat_torrserver_description') + " " + serversInfo.length +  
+          "<div class='bat-torrserver-selected' style='margin-top:.35em;opacity:.85'></div>"  
+      },  
+      onChange: function () {  
+        openTorrServerModal();  
+      },  
+      onRender: function (item) {  
+        setTimeout(function () {  
+          // Жовтий колір для виділення  
+          $('.settings-param__name', item).css('color', COLOR_WARN);  
+            
+          // Оновлюємо мітку вибраного сервера  
+          updateSelectedLabelInSettings();  
+            
+          // Показуємо тільки якщо увімкнено використання посилання  
+          var useLink = Lampa.Storage.field('torrserver_use_link');  
+          if (typeof useLink === 'boolean') {  
+            item.toggle(useLink);  
           }  
-        }, 100); // Затримка 100мс  
+        }, 100);  
       }  
     });  
   }  
