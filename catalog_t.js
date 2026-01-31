@@ -1,4 +1,4 @@
-// в2 IIFE - самовикликаюча функція для ізоляції плагіна      
+// в3 IIFE - самовикликаюча функція для ізоляції плагіна      
 (function () {      
   'use strict';      
       
@@ -273,15 +273,15 @@
       attempt();      
     });      
   }
-      /* =========================      
+   /* =========================      
    * 4) Перевірки (двоетапна: доступність + швидкість)      
    * ========================= */      
       
-  // URL для перевірки доступності через /settings      
+  // URL для перевірки доступності через /echo (виправлено з /settings)      
   function healthUrlCandidates(server) {      
     var url = server.settings.url;      
     var protos = protocolCandidatesFor(url);      
-    return protos.map(function (p) { return p + url + '/settings'; });      
+    return protos.map(function (p) { return p + url + '/echo'; });      
   }      
       
   // URL для тестування швидкості через /download/300      
@@ -291,7 +291,7 @@
     return protos.map(function (p) { return p + url + '/download/300'; });      
   }      
       
-  // Основна функція двоетапної перевірки      
+  // Основна функція двоетапної перевірки з валідацією /echo      
   function runHealthChecks(servers) {      
     var map = {}; // base -> {color,labelKey,speed,speedText}      
       
@@ -307,15 +307,15 @@
           return;      
         }      
       
-        // Етап 1: Перевірка доступності через /settings      
+        // Етап 1: Перевірка доступності через /echo      
         ajaxTryUrls(healthUrls, 5000).then(function (res) {      
           var val;      
       
           if (res.ok) {      
             try {      
-              // Перевіряємо чи є відповідь валідними налаштуваннями TorrServer      
-              var data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;      
-              if (data && typeof data.CacheSize !== 'undefined') {      
+              // Перевіряємо чи є відповідь валідною від TorrServer (має містити "MatriX")      
+              var data = typeof res.data === 'string' ? res.data : '';      
+              if (data && data.toLowerCase().indexOf('matrix') !== -1) {      
                 // Сервер доступний - тепер тестуємо швидкість      
                 setItemStatusForServer(server.base, COLOR_WARN, 'bat_speed_testing');      
                 testServerSpeed(server).then(function (speedResult) {      
@@ -396,7 +396,7 @@
       }      
     }      
   }
-      /* =========================      
+    /* =========================      
    * 5) Модалка (UI) з підтримкою швидкості      
    * ========================= */      
       
