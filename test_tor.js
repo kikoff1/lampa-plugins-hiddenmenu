@@ -1,238 +1,333 @@
-// v2 IIFE - самовикликаюча функція для ізоляції плагіна
 (function () {
-  'use strict';
+    'use strict';
 
-  /* =========================
-   * 1) Локалізація
-   * ========================= */
-  function translate() {
-    Lampa.Lang.add({
-      bat_torrserver: {
-        ru: 'Каталог TorrServers',
-        en: 'TorrServers catalog',
-        uk: 'Каталог TorrServers',
-        zh: 'TorrServer目录'
-      },
-      bat_torrserver_description: {
-        ru: 'Нажмите для выбора TorrServer из',
-        en: 'Click to select TorrServer from',
-        uk: 'Натисніть для вибору TorrServer з',
-        zh: '点击从目录中选择TorrServer'
-      },
-      bat_torrserver_current: {
-        ru: 'Текущий выбор:',
-        en: 'Current selection:',
-        uk: 'Поточний вибір:',
-        zh: '当前选择：'
-      },
-      bat_torrserver_none: {
-        ru: 'Не выбран',
-        en: 'Not selected',
-        uk: 'Не вибрано',
-        zh: '未选择'
-      },
-      bat_torrserver_selected_label: {
-        ru: 'Выбрано:',
-        en: 'Selected:',
-        uk: 'Обрано:',
-        zh: '已选择：'
-      },
-      bat_check_servers: {
-        ru: 'Проверить доступность серверов',
-        en: 'Check servers availability',
-        uk: 'Перевірити доступність серверів',
-        zh: '检查服务器可用性'
-      },
-      bat_check_servers_desc: {
-        ru: 'Выполняет проверку доступности TorrServers',
-        en: 'Checks TorrServers availability',
-        uk: 'Виконує перевірку доступності TorrServers',
-        zh: '执行TorrServer可用性检查'
-      },
-      bat_check_done: {
-        ru: 'Проверку завершено',
-        en: 'Check completed',
-        uk: 'Перевірку завершено',
-        zh: '检查完成'
-      },
-      bat_speed_mbps: {
-        ru: 'Мбит/с',
-        en: 'Mbps',
-        uk: 'Мбіт/с',
-        zh: 'Mbps'
-      },
-      bat_speed_testing: {
-        ru: 'Тест швидкості…',
-        en: 'Speed test…',
-        uk: 'Тест швидкості…',
-        zh: '速度测试…'
-      },
-      bat_status_checking_server: {
-        ru: 'Проверка сервера…',
-        en: 'Checking server…',
-        uk: 'Перевірка сервера…',
-        zh: '检查服务器…'
-      },
-      bat_status_server_ok: {
-        ru: 'Сервер доступен',
-        en: 'Server available',
-        uk: 'Сервер доступний',
-        zh: '服务器可用'
-      },
-      bat_status_server_warn: {
-        ru: 'Сервер отвечает (ограничения)',
-        en: 'Server responds (restrictions)',
-        uk: 'Сервер відповідає (обмеження)',
-        zh: '服务器有响应（受限）'
-      },
-      bat_status_server_bad: {
-        ru: 'Сервер недоступен',
-        en: 'Server unavailable',
-        uk: 'Сервер недоступний',
-        zh: '服务器不可用'
-      },
-      bat_status_unknown: {
-        ru: 'Не проверен',
-        en: 'Unchecked',
-        uk: 'Не перевірено',
-        zh: '未检查'
-      }
-    });
-  }
+    /* =========================
+     * 1) Локалізація
+     * ========================= */
+    function translate() {
+        Lampa.Lang.add({
+            bat_torrserver: { ru: 'Каталог TorrServers', en: 'TorrServers catalog', uk: 'Каталог TorrServers', zh: 'TorrServer目录' },
+            bat_torrserver_description: { ru: 'Нажмите для выбора TorrServer из', en: 'Click to select TorrServer from', uk: 'Натисніть для вибору TorrServer з', zh: '点击从目录中选择TorrServer' },
+            bat_torrserver_current: { ru: 'Текущий выбор:', en: 'Current selection:', uk: 'Поточний вибір:', zh: '当前选择：' },
+            bat_torrserver_none: { ru: 'Не выбран', en: 'Not selected', uk: 'Не вибрано', zh: '未选择' },
+            bat_torrserver_selected_label: { ru: 'Выбрано:', en: 'Selected:', uk: 'Обрано:', zh: '已选择：' },
+            bat_check_servers: { ru: 'Проверить доступность серверов', en: 'Check servers availability', uk: 'Перевірити доступність серверів', zh: '检查服务器可用性' },
+            bat_check_servers_desc: { ru: 'Выполняет проверку доступности TorrServers', en: 'Checks TorrServers availability', uk: 'Виконує перевірку доступності TorrServers', zh: '执行TorrServer可用性检查' },
+            bat_check_done: { ru: 'Проверку завершено', en: 'Check completed', uk: 'Перевірку завершено', zh: '检查完成' },
+            bat_speed_mbps: { ru: 'Мбит/с', en: 'Mbps', uk: 'Мбіт/с', zh: 'Mbps' },
+            bat_speed_testing: { ru: 'Тест швидкості…', en: 'Speed test…', uk: 'Тест швидкості…', zh: '速度测试…' },
+            bat_status_checking_server: { ru: 'Проверка сервера…', en: 'Checking server…', uk: 'Перевірка сервера…', zh: '检查服务器…' },
+            bat_status_server_ok: { ru: 'Сервер доступен', en: 'Server available', uk: 'Сервер доступний', zh: '服务器可用' },
+            bat_status_server_warn: { ru: 'Сервер отвечает (ограничения)', en: 'Server responds (restrictions)', uk: 'Сервер відповідає (обмеження)', zh: '服务器有响应（受限）' },
+            bat_status_server_bad: { ru: 'Сервер недоступен', en: 'Server unavailable', uk: 'Сервер недоступний', zh: '服务器不可用' },
+            bat_status_unknown: { ru: 'Не проверен', en: 'Unchecked', uk: 'Не перевірено', zh: '未检查' }
+        });
+    }
 
-  var Lang = { translate: translate };
+    var Lang = { translate: translate };
 
-  /* =========================
-   * 2) Список TorrServers
-   * ========================= */
-  var serversInfo = [
-    { base: 'ts_maxvol_pro', name: 'ts.maxvol.pro', settings: { url: 'ts.maxvol.pro' } },
-    { base: 'lam_maxvol_pro_ts', name: 'lam.maxvol.pro/ts', settings: { url: 'lam.maxvol.pro/ts' } },
-    { base: 'tytowqus_deploy_cx_ts', name: 'tytowqus.deploy.cx/ts', settings: { url: 'tytowqus.deploy.cx/ts' } },
-    { base: '109_120_158_107_8090', name: '109.120.158.107:8090', settings: { url: '109.120.158.107:8090' } },
-    { base: '185_252_215_15_8080', name: '185.252.215.15:8080', settings: { url: '185.252.215.15:8080' } },
-    { base: '78_40_195_218_9118_ts', name: '78.40.195.218:9118/ts', settings: { url: '78.40.195.218:9118/ts' } }
-  ];
+    /* =========================
+     * 2) Список TorrServers
+     * ========================= */
+    var serversInfo = [
+        { base: 'ts_maxvol_pro', name: 'ts.maxvol.pro', settings: { url: 'ts.maxvol.pro', login: '', password: '' } },
+        { base: 'lam_maxvol_pro_ts', name: 'lam.maxvol.pro/ts', settings: { url: 'lam.maxvol.pro/ts', login: '', password: '' } },
+        { base: 'tytowqus_deploy_cx_ts', name: 'tytowqus.deploy.cx/ts', settings: { url: 'tytowqus.deploy.cx/ts', login: '', password: '' } },
+        { base: '109_120_158_107_8090', name: '109.120.158.107:8090', settings: { url: '109.120.158.107:8090', login: '', password: '' } },
+        { base: '185_252_215_15_8080', name: '185.252.215.15:8080', settings: { url: '185.252.215.15:8080', login: '', password: '' } },
+        { base: '78_40_195_218_9118_ts', name: '78.40.195.218:9118/ts', settings: { url: '78.40.195.218:9118/ts', login: '', password: '' } },
+        { base: '45_144_154_144_8090', name: '45.144.154.144:8090', settings: { url: '45.144.154.144:8090', login: '', password: '' } },
+        { base: '77_238_228_41_8290', name: '77.238.228.41:8290', settings: { url: '77.238.228.41:8290', login: '', password: '' } },
+        { base: '178_150_255_251_8090', name: '178.150.255.251:8090', settings: { url: '178.150.255.251:8090', login: '', password: '' } },
+        { base: '46_174_120_237_8090', name: '46.174.120.237:8090', settings: { url: '46.174.120.237:8090', login: '', password: '' } }
+    ];
 
-  /* =========================
-   * 3) Хелпери
-   * ========================= */
-  var STORAGE_KEY = 'bat_torrserver_selected';
-  var NO_SERVER = 'no_server';
+    /* =========================
+     * 3) Константи/хелпери
+     * ========================= */
+    var STORAGE_KEY = 'bat_torrserver_selected';
+    var NO_SERVER = 'no_server';
+    var COLOR_OK = '#1aff00';
+    var COLOR_BAD = '#ff2e36';
+    var COLOR_WARN = '#f3d900';
+    var COLOR_UNKNOWN = '#8c8c8c';
 
-  var COLOR_OK = '#1aff00';
-  var COLOR_BAD = '#ff2e36';
-  var COLOR_WARN = '#f3d900';
-  var COLOR_UNKNOWN = '#8c8c8c';
-
-  function protocolCandidatesFor(url) {
-    if (/^https?:\/\//i.test(url)) return [''];
-    return ['http://', 'https://'];
-  }
-
-  /* =========================
-   * 4) HEALTH (через проксі)
-   * ========================= */
-  function healthUrlCandidates(server) {
-    var url = server.settings.url;
-    var protos = protocolCandidatesFor(url);
-
-    // CORS workaround через проксі
-    return protos.map(function (p) {
-      return 'https://cub.red/proxy/' + p + url + '/download/300';
-    });
-  }
-
-  function ajaxTryUrls(urls, timeout) {
-    return new Promise(function (resolve) {
-      var i = 0;
-      function next() {
-        if (i >= urls.length) {
-          resolve({ ok: false, network: true });
-          return;
+    var cache = {
+        data: {},
+        ttlHealth: 30 * 1000,
+        get: function (key) {
+            var v = this.data[key];
+            if (v && Date.now() < v.expiresAt) return v;
+            return null;
+        },
+        set: function (key, value, ttl) {
+            this.data[key] = { value: value, expiresAt: Date.now() + ttl };
         }
-        $.ajax({
-          url: urls[i++],
-          timeout: timeout,
-          success: function () {
-            resolve({ ok: true });
-          },
-          error: function (xhr) {
-            if (xhr && xhr.status === 0) next();
-            else resolve({ ok: false, network: false });
-          }
+    };
+
+    function notifyDone() {
+        var text = Lampa.Lang.translate('bat_check_done');
+        try {
+            if (Lampa.Noty && typeof Lampa.Noty.show === 'function') { Lampa.Noty.show(text); return; }
+            if (Lampa.Toast && typeof Lampa.Toast.show === 'function') { Lampa.Toast.show(text); return; }
+        } catch (e) {}
+        alert(text);
+    }
+
+    function getSelectedBase() {
+        return Lampa.Storage.get(STORAGE_KEY, NO_SERVER);
+    }
+
+    function getServerByBase(base) {
+        return serversInfo.find(function (s) { return s.base === base; });
+    }
+
+    function applySelectedServer(base) {
+        if (!base || base === NO_SERVER) return false;
+        var s = getServerByBase(base);
+        if (!s || !s.settings) return false;
+        var settings = s.settings;
+        Lampa.Storage.set('torrserver_url', settings.url);
+        Lampa.Storage.set('torrserver_login', settings.login || '');
+        Lampa.Storage.set('torrserver_password', settings.password || '');
+        return true;
+    }
+
+    function updateSelectedLabelInSettings() {
+        var base = getSelectedBase();
+        var server = getServerByBase(base);
+        var name = server ? server.name : Lampa.Lang.translate('bat_torrserver_none');
+        var text = Lampa.Lang.translate('bat_torrserver_selected_label') + " " + name;
+        $('.bat-torrserver-selected').text(text);
+    }
+
+    function protocolCandidatesFor(url) {
+        if (/^https?:\/\//i.test(url)) return [''];
+        return ['http://', 'https://'];
+    }
+
+    /* =========================
+     * 4) AJAX через Lampa.Request для CORS
+     * ========================= */
+    function ajaxTryUrls(urls, timeout) {
+        return new Promise(function (resolve) {
+            var idx = 0;
+
+            function attempt() {
+                if (idx >= urls.length) {
+                    console.log('bat-torrserver: All URLs failed for', urls);
+                    resolve({ ok: false, xhr: null, url: null, network: true });
+                    return;
+                }
+
+                var url = urls[idx++];
+                console.log('bat-torrserver: Trying URL:', url);
+
+                Lampa.Request.get(url, null, function (data) {
+                    console.log('bat-torrserver: Success for URL:', url);
+                    resolve({ ok: true, xhr: null, url: url, data: data });
+                }, function (error) {
+                    console.log('bat-torrserver: Error for URL:', url, 'Error:', error);
+                    var status = error && error.status ? error.status : 0;
+                    var isNetwork = (status === 0);
+                    if (isNetwork) attempt();
+                    else resolve({ ok: false, xhr: null, url: url, network: false });
+                }, { timeout: timeout });
+            }
+
+            attempt();
         });
-      }
-      next();
-    });
-  }
+    }
 
-  function runHealthChecks(servers) {
-    var map = {};
-    return new Promise(function (resolve) {
-      var idx = 0;
-      function next() {
-        if (idx >= servers.length) return resolve(map);
-        var s = servers[idx++];
-        ajaxTryUrls(healthUrlCandidates(s), 5000).then(function (res) {
-          map[s.base] = res.ok
-            ? { color: COLOR_OK, labelKey: 'bat_status_server_ok', speed: '0.0' }
-            : res.network === false
-            ? { color: COLOR_WARN, labelKey: 'bat_status_server_warn', speed: null }
-            : { color: COLOR_BAD, labelKey: 'bat_status_server_bad', speed: null };
-          setTimeout(next, 100);
+    /* =========================
+     * 5) Перевірки HEALTH
+     * ========================= */
+    function healthUrlCandidates(server) {
+        var url = server.settings.url;
+        var protos = protocolCandidatesFor(url);
+        return protos.map(function (p) { return p + url + '/download/300'; });
+    }
+
+    function runHealthChecks(servers) {
+        var map = {};
+        return new Promise(function (resolve) {
+            var index = 0;
+
+            function checkNext() {
+                if (index >= servers.length) { resolve(map); return; }
+
+                var server = servers[index];
+                var urls = healthUrlCandidates(server);
+                var cacheKey = 'health::' + server.base + '::' + urls.join('|');
+                var cached = cache.get(cacheKey);
+                if (cached) {
+                    map[server.base] = cached.value;
+                    updateServerItemStatus(server.base, cached.value);
+                    index++; checkNext(); return;
+                }
+
+                console.log('bat-torrserver: Checking server:', server.name, 'URLs:', urls);
+
+                ajaxTryUrls(urls, 5000).then(function (res) {
+                    var val;
+                    if (res.ok) val = { color: COLOR_OK, labelKey: 'bat_status_server_ok', speed: '0.0' };
+                    else if (res.network === false) val = { color: COLOR_WARN, labelKey: 'bat_status_server_warn', speed: null };
+                    else val = { color: COLOR_BAD, labelKey: 'bat_status_server_bad', speed: null };
+
+                    map[server.base] = val;
+                    cache.set(cacheKey, val, cache.ttlHealth);
+                    updateServerItemStatus(server.base, val);
+                    index++;
+                    setTimeout(checkNext, 100);
+                });
+            }
+
+            checkNext();
         });
-      }
-      next();
-    });
-  }
+    }
 
-  /* =========================
-   * 5) UI (без змін)
-   * ========================= */
-  function openTorrServerModal() {
-    var modal = $('<div>Плагін працює. Перевірка серверів…</div>');
-    Lampa.Modal.open({
-      title: Lampa.Lang.translate('bat_torrserver'),
-      html: modal,
-      size: 'medium'
-    });
+    function updateServerItemStatus(base, status) {
+        var item = $('.bat-torrserver-modal__item[data-base="' + base + '"]');
+        if (item.length) {
+            setItemStatus(item, status.color, status.labelKey, status.speed);
+        }
+    }
 
-    runHealthChecks(serversInfo).then(function () {
-      Lampa.Noty.show(Lampa.Lang.translate('bat_check_done'));
-    });
-  }
+    /* =========================
+     * 6) UI Модалка
+     * ========================= */
+    function injectStyleOnce() {
+        if (window.__bat_torrserver_modal_style__) return;
+        window.__bat_torrserver_modal_style__ = true;
+        var css = ".bat-torrserver-modal{display:flex;flex-direction:column;gap:1em}" +
+            ".bat-torrserver-modal__head{display:flex;align-items:center;justify-content:space-between;gap:1em}" +
+            ".bat-torrserver-modal__current-label{font-size:.9em;opacity:.7}" +
+            ".bat-torrserver-modal__current-value{font-size:1.1em}" +
+            ".bat-torrserver-modal__list{display:flex;flex-direction:column;gap:.6em}" +
+            ".bat-torrserver-modal__item{display:flex;align-items:center;justify-content:space-between;gap:1em;padding:.8em 1em;border-radius:.7em;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}" +
+            ".bat-torrserver-modal__item.is-selected,.bat-torrserver-modal__item.focus{border-color:#fff}" +
+            ".bat-torrserver-modal__left{display:flex;align-items:center;gap:.65em;min-width:0}" +
+            ".bat-torrserver-modal__dot{width:.55em;height:.55em;border-radius:50%;background:" + COLOR_UNKNOWN + ";box-shadow:0 0 .6em rgba(0,0,0,.35);flex:0 0 auto}" +
+            ".bat-torrserver-modal__name{font-size:1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}" +
+            ".bat-torrserver-modal__speed{font-size:.85em;opacity:.8;margin-left:.3em;color:" + COLOR_UNKNOWN + "}" +
+            ".bat-torrserver-modal__status{font-size:.85em;opacity:.75;text-align:right;flex:0 0 auto}" +
+            ".bat-torrserver-modal__actions{display:flex;gap:.6em;flex-wrap:wrap}" +
+            ".bat-torrserver-modal__action{padding:.55em .9em;border-radius:.6em;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2)}" +
+            ".bat-torrserver-modal__action.focus{border-color:#fff}";
+        var style = document.createElement('style');
+        style.type = 'text/css';
+        style.appendChild(document.createTextNode(css));
+        document.head.appendChild(style);
+    }
 
-  /* =========================
-   * 6) Інтеграція в Settings
-   * ========================= */
-  function torrserverSetting() {
-    Lampa.Settings.listener.follow('open', function (e) {
-      if (e.name === 'server') {
-        var btn = $('<div class="settings-param selector">' +
-          '<div class="settings-param__name">' + Lampa.Lang.translate('bat_torrserver') + '</div>' +
-          '</div>');
-        btn.on('hover:enter', openTorrServerModal);
-        $('[data-name="torrserver_url"]', e.body).after(btn);
-      }
-    });
-  }
+    function buildServerItem(base, name) {
+        var item = $("<div class='bat-torrserver-modal__item selector' data-base='" + base + "'>" +
+            "<div class='bat-torrserver-modal__left'>" +
+            "<span class='bat-torrserver-modal__dot'></span>" +
+            "<div class='bat-torrserver-modal__name'></div>" +
+            "<div class='bat-torrserver-modal__speed'></div>" +
+            "</div>" +
+            "<div class='bat-torrserver-modal__status'></div>" +
+            "</div>");
+        item.find('.bat-torrserver-modal__name').text(name);
+        item.find('.bat-torrserver-modal__status').text(Lampa.Lang.translate('bat_status_unknown'));
+        item.find('.bat-torrserver-modal__dot').css('background-color', COLOR_UNKNOWN);
+        return item;
+    }
 
-  /* =========================
-   * 7) Старт
-   * ========================= */
-  Lampa.Platform.tv();
+    function setItemStatus(item, color, labelKey, speed) {
+        item.find('.bat-torrserver-modal__dot').css('background-color', color);
+        item.find('.bat-torrserver-modal__status').text(Lampa.Lang.translate(labelKey));
+        var speedElement = item.find('.bat-torrserver-modal__speed');
+        if (speed !== null && speed !== undefined) {
+            speedElement.text(' - ' + speed + ' ' + Lampa.Lang.translate('bat_speed_mbps'));
+            if (speed === '0.0') speedElement.css('opacity', '0.6').css('color', COLOR_WARN);
+            else speedElement.css('opacity', '0.8').css('color', COLOR_OK);
+        } else speedElement.text('');
+    }
 
-  function start() {
+    function applySelection(list, base) {
+        list.find('.bat-torrserver-modal__item').removeClass('is-selected');
+        list.find("[data-base='" + base + "']").addClass('is-selected');
+    }
+
+    function updateCurrentLabel(wrapper, base) {
+        var server = getServerByBase(base);
+        var label = server ? server.name : Lampa.Lang.translate('bat_torrserver_none');
+        wrapper.find('.bat-torrserver-modal__current-value').text(label);
+    }
+
+    function openTorrServerModal() {
+        injectStyleOnce();
+        var selected = getSelectedBase();
+        var modal = $("<div class='bat-torrserver-modal'>" +
+            "<div class='bat-torrserver-modal__head'>" +
+            "<div class='bat-torrserver-modal__current'>" +
+            "<div class='bat-torrserver-modal__current-label'></div>" +
+            "<div class='bat-torrserver-modal__current-value'></div>" +
+            "</div>" +
+            "</div>" +
+            "<div class='bat-torrserver-modal__list'></div>" +
+            "<div class='bat-torrserver-modal__actions'></div>" +
+            "</div>");
+        modal.find('.bat-torrserver-modal__current-label').text(Lampa.Lang.translate('bat_torrserver_current'));
+        updateCurrentLabel(modal, selected);
+
+        var list = modal.find('.bat-torrserver-modal__list');
+        var noneItem = buildServerItem(NO_SERVER, Lampa.Lang.translate('bat_torrserver_none'));
+        noneItem.on('hover:enter', function () {
+            Lampa.Storage.set(STORAGE_KEY, NO_SERVER);
+            applySelection(list, NO_SERVER);
+            updateCurrentLabel(modal, NO_SERVER);
+            updateSelectedLabelInSettings();
+        });
+        list.append(noneItem);
+
+        serversInfo.forEach(function (s) {
+            var item = buildServerItem(s.base, s.name);
+            item.on('hover:enter', function () {
+                Lampa.Storage.set(STORAGE_KEY, s.base);
+                applySelectedServer(s.base);
+                applySelection(list, s.base);
+                updateCurrentLabel(modal, s.base);
+                updateSelectedLabelInSettings();
+            });
+            list.append(item);
+        });
+
+        applySelection(list, selected);
+
+        var actions = modal.find('.bat-torrserver-modal__actions');
+        var btnHealth = $("<div class='bat-torrserver-modal__action selector'></div>");
+        btnHealth.text(Lampa.Lang.translate('bat_check_servers'));
+        actions.append(btnHealth);
+
+        function applyMapToList(statusMap) {
+            list.find('.bat-torrserver-modal__item').each(function () {
+                var it = $(this);
+                var base = it.data('base');
+                if (base === NO_SERVER) { setItemStatus(it, COLOR_UNKNOWN, 'bat_status_unknown', null); return; }
+                var status = statusMap[base];
+                if (status) setItemStatus(it, status.color, status.labelKey, status.speed);
+            });
+        }
+
+        btnHealth.on('hover:enter', function () {
+            runHealthChecks(serversInfo).then(function (map) {
+                applyMapToList(map);
+                notifyDone();
+            });
+        });
+
+        Lampa.Modal.open({ title: Lampa.Lang.translate('bat_torrserver'), html: modal });
+    }
+
+    /* =========================
+     * 7) Ініціалізація
+     * ========================= */
     Lang.translate();
-    torrserverSetting();
-  }
+    updateSelectedLabelInSettings();
 
-  if (window.appready) start();
-  else {
-    Lampa.Listener.follow('app', function (e) {
-      if (e.type === 'ready') start();
-    });
-  }
-
+    // Додаємо кнопку у налаштування Lampa
+    $(document).on('hover:enter', '.settings-button-torrserver', openTorrServerModal);
 })();
