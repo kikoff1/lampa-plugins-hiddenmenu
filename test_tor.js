@@ -1,4 +1,4 @@
-// v2 IIFE
+// v3 IIFE - самовикликаюча функція для ізоляції плагіна
 (function () {
   'use strict';
 
@@ -38,13 +38,13 @@
         zh: '已选择：'
       },
       bat_check_servers: {
-        ru: 'Проверить серверы',
-        en: 'Check servers',
-        uk: 'Перевірити сервери',
-        zh: '检查服务器'
+        ru: 'Проверить доступность серверов',
+        en: 'Check servers availability',
+        uk: 'Перевірити доступність серверів',
+        zh: '检查服务器可用性'
       },
       bat_check_done: {
-        ru: 'Проверка завершена',
+        ru: 'Проверку завершено',
         en: 'Check completed',
         uk: 'Перевірку завершено',
         zh: '检查完成'
@@ -56,10 +56,10 @@
         zh: 'Mbps'
       },
       bat_status_checking_server: {
-        ru: 'Проверка…',
-        en: 'Checking…',
-        uk: 'Перевірка…',
-        zh: '检查中…'
+        ru: 'Проверка сервера…',
+        en: 'Checking server…',
+        uk: 'Перевірка сервера…',
+        zh: '检查服务器…'
       },
       bat_status_server_ok: {
         ru: 'Сервер доступен',
@@ -69,9 +69,9 @@
       },
       bat_status_server_warn: {
         ru: 'Сервер отвечает (ограничения)',
-        en: 'Server responds (restricted)',
+        en: 'Server responds (restrictions)',
         uk: 'Сервер відповідає (обмеження)',
-        zh: '服务器响应（受限）'
+        zh: '服务器有响应（受限）'
       },
       bat_status_server_bad: {
         ru: 'Сервер недоступен',
@@ -89,99 +89,113 @@
   }
 
   /* =========================
-   * 2) Список серверів
+   * 2) TorrServers
    * ========================= */
   var serversInfo = [
-    { base: 'ts_maxvol_pro', name: 'ts.maxvol.pro', settings: { url: 'ts.maxvol.pro' } },
     { base: 'lam_maxvol_pro_ts', name: 'lam.maxvol.pro/ts', settings: { url: 'lam.maxvol.pro/ts' } },
-    { base: 'tytowqus_deploy_cx_ts', name: 'tytowqus.deploy.cx/ts', settings: { url: 'tytowqus.deploy.cx/ts' } },
-    { base: '109_120_158_107_8090', name: '109.120.158.107:8090', settings: { url: '109.120.158.107:8090' } },
-    { base: '185_252_215_15_8080', name: '185.252.215.15:8080', settings: { url: '185.252.215.15:8080' } }
+    { base: '109_120_158_107_8090', name: '109.120.158.107:8090', settings: { url: '109.120.158.107:8090' } }
   ];
 
-  var STORAGE_KEY = 'bat_torrserver_selected';
-  var NO_SERVER = 'no_server';
-
+  /* =========================
+   * 3) Helpers / constants
+   * ========================= */
   var COLOR_OK = '#1aff00';
   var COLOR_BAD = '#ff2e36';
   var COLOR_WARN = '#f3d900';
   var COLOR_UNKNOWN = '#8c8c8c';
 
-  var cache = { data: {}, ttl: 30000 };
-
-  function protocolCandidates(url) {
+  function protocolCandidatesFor(url) {
+    if (/^\d+\.\d+\.\d+\.\d+/.test(url)) return ['http://'];
     if (/^https?:\/\//i.test(url)) return [''];
     return ['http://', 'https://'];
   }
 
-  /* =========================
-   * 3) SPEED TEST (як у Lampa)
-   * ========================= */
-  function speedTest(url, timeout) {
-    return new Promise(function (resolve) {
-      var start = Date.now();
-      var last = start;
-      var loaded = 0;
-      var maxSpeed = 0;
+  function healthUrlCandidates(server) {
+    var url = server.settings.url;
+    var protos = protocolCandidatesFor(url);
 
-      Lampa.Request.get(
-        url,
-        {},
-        function () {
-          resolve({ ok: true, speed: maxSpeed.toFixed(1) });
-        },
-        function () {
-          resolve({ ok: false });
-        },
-        {
-          timeout: timeout || 8000,
-          onprogress: function (e) {
-            if (!e || !e.loaded) return;
-
-            var now = Date.now();
-            var dt = (now - last) / 1000;
-            var db = e.loaded - loaded;
-
-            if (dt > 0) {
-              var mbps = (db * 8) / (1024 * 1024 * dt);
-              maxSpeed = Math.max(maxSpeed, mbps);
-            }
-
-            loaded = e.loaded;
-            last = now;
-          }
-        }
-      );
+    return protos.map(function (p) {
+      var direct = p + url + '/download/300';
+      return {
+        direct: direct,
+        proxy: 'https://cub.red/proxy/' + encodeURIComponent(direct)
+      };
     });
   }
 
   /* =========================
-   * 4) HEALTH + SPEED
+   * 4) Hybrid request
    * ========================= */
-  function checkServer(server) {
-    var protos = protocolCandidates(server.settings.url);
-    var size = 5242880; // 5MB
-    var urls = protos.map(p => p + server.settings.url + '/download/' + size);
-
+  function tryHybridRequest(candidates, timeout) {
     return new Promise(function (resolve) {
       var i = 0;
 
       function next() {
-        if (i >= urls.length) {
-          resolve({ color: COLOR_BAD, labelKey: 'bat_status_server_bad', speed: null });
+        if (i >= candidates.length) {
+          resolve({ ok: false, network: true });
           return;
         }
 
-        speedTest(urls[i++], 8000).then(function (res) {
-          if (res.ok && res.speed) {
-            resolve({
-              color: COLOR_OK,
-              labelKey: 'bat_status_server_ok',
-              speed: res.speed
-            });
-          } else {
-            next();
-          }
+        var c = candidates[i++];
+
+        // 1️⃣ Native request (NO CORS)
+        if (Lampa.Request) {
+          Lampa.Request.get({
+            url: c.direct,
+            timeout: timeout,
+            success: function () {
+              resolve({ ok: true });
+            },
+            error: function () {
+              proxyTry();
+            }
+          });
+        } else {
+          proxyTry();
+        }
+
+        // 2️⃣ Proxy fallback
+        function proxyTry() {
+          $.ajax({
+            url: c.proxy,
+            method: 'GET',
+            timeout: timeout,
+            success: function () {
+              resolve({ ok: true });
+            },
+            error: function () {
+              next();
+            }
+          });
+        }
+      }
+
+      next();
+    });
+  }
+
+  /* =========================
+   * 5) Health check
+   * ========================= */
+  function runHealthChecks(servers) {
+    var map = {};
+    var index = 0;
+
+    return new Promise(function (resolve) {
+      function next() {
+        if (index >= servers.length) {
+          resolve(map);
+          return;
+        }
+
+        var server = servers[index++];
+        var urls = healthUrlCandidates(server);
+
+        tryHybridRequest(urls, 5000).then(function (res) {
+          map[server.base] = res.ok
+            ? { color: COLOR_OK, labelKey: 'bat_status_server_ok', speed: '0.0' }
+            : { color: COLOR_BAD, labelKey: 'bat_status_server_bad', speed: null };
+          next();
         });
       }
 
@@ -190,69 +204,11 @@
   }
 
   /* =========================
-   * 5) UI helpers
-   * ========================= */
-  function setItemStatus(item, color, labelKey, speed) {
-    item.find('.bat-dot').css('background', color);
-    item.find('.bat-status').text(Lampa.Lang.translate(labelKey));
-
-    if (speed) {
-      item.find('.bat-speed')
-        .text(' - ' + speed + ' ' + Lampa.Lang.translate('bat_speed_mbps'))
-        .css('color', COLOR_OK);
-    } else {
-      item.find('.bat-speed').text('');
-    }
-  }
-
-  /* =========================
-   * 6) Modal
-   * ========================= */
-  function openModal() {
-    var modal = $('<div></div>');
-    var list = $('<div></div>');
-    modal.append(list);
-
-    serversInfo.forEach(function (s) {
-      var item = $(
-        "<div class='selector' data-base='" + s.base + "'>" +
-        "<span class='bat-dot'></span> " +
-        s.name +
-        "<span class='bat-speed'></span> " +
-        "<span class='bat-status'></span>" +
-        "</div>"
-      );
-
-      setItemStatus(item, COLOR_WARN, 'bat_status_checking_server');
-
-      list.append(item);
-
-      checkServer(s).then(function (res) {
-        setItemStatus(item, res.color, res.labelKey, res.speed);
-      });
-    });
-
-    Lampa.Modal.open({
-      title: Lampa.Lang.translate('bat_torrserver'),
-      html: modal,
-      size: 'medium'
-    });
-  }
-
-  /* =========================
-   * 7) Init
+   * 6) Init
    * ========================= */
   function start() {
     translate();
-
-    Lampa.Settings.listener.follow('open', function (e) {
-      if (e.name === 'server') {
-        var btn = $('<div class="settings-param selector"></div>');
-        btn.text(Lampa.Lang.translate('bat_torrserver'));
-        btn.on('hover:enter', openModal);
-        e.body.append(btn);
-      }
-    });
+    runHealthChecks(serversInfo);
   }
 
   if (window.appready) start();
