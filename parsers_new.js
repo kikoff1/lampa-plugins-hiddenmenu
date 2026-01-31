@@ -155,7 +155,7 @@
     },
         {
       base: 'spawnum_duckdns_org_59117',
-      name: 'SpawnUA 2 (toloka, mazepa)',
+      name: 'SpawnUA 3 (toloka, mazepa)',
       settings: { url: 'https://parserbridge.lampame.v6.rocks/spawnum.duckdns.org:49117', key: '2', parser_torrent_type: 'jackett' }
     },
     {
