@@ -1,4 +1,4 @@
-// IIFE - самовикликаюча функція для ізоляції плагіна  
+// v3 IIFE - самовикликаюча функція для ізоляції плагіна  
 (function () {  
   'use strict';  
   
@@ -114,83 +114,48 @@
    * 2) Список TorrServers  
    * ========================= */  
   var serversInfo = [  
-    {  
-      base: 'ts_maxvol_pro',  
-      name: 'ts.maxvol.pro',  
-      settings: { url: 'ts.maxvol.pro', login: '', password: '' }  
-    },  
-    {  
-      base: 'lam_maxvol_pro_ts',  
-      name: 'lam.maxvol.pro/ts',  
-      settings: { url: 'lam.maxvol.pro/ts', login: '', password: '' }  
-    },  
-    {  
-      base: 'tytowqus_deploy_cx_ts',  
-      name: 'tytowqus.deploy.cx/ts',  
-      settings: { url: 'tytowqus.deploy.cx/ts', login: '', password: '' }  
-    },  
-    {  
-      base: '109_120_158_107_8090',  
-      name: '109.120.158.107:8090',  
-      settings: { url: '109.120.158.107:8090', login: '', password: '' }  
-    },  
-    {  
-      base: '185_252_215_15_8080',  
-      name: '185.252.215.15:8080',  
-      settings: { url: '185.252.215.15:8080', login: '', password: '' }  
-    },  
-    {  
-      base: '78_40_195_218_9118_ts',  
-      name: '78.40.195.218:9118/ts',  
-      settings: { url: '78.40.195.218:9118/ts', login: '', password: '' }  
-    },  
-    {  
-      base: '45_144_154_144_8090',  
-      name: '45.144.154.144:8090',  
-      settings: { url: '45.144.154.144:8090', login: '', password: '' }  
-    },  
-    {  
-      base: '77_238_228_41_8290',  
-      name: '77.238.228.41:8290',  
-      settings: { url: '77.238.228.41:8290', login: '', password: '' }  
-    },  
-    {  
-      base: '178_150_255_251_8090',  
-      name: '178.150.255.251:8090',  
-      settings: { url: '178.150.255.251:8090', login: '', password: '' }  
-    },  
-    {  
-      base: '46_174_120_237_8090',  
-      name: '46.174.120.237:8090',  
-      settings: { url: '46.174.120.237:8090', login: '', password: '' }  
-    }  
+    { base: 'ts_maxvol_pro', name: 'ts.maxvol.pro', settings: { url: 'ts.maxvol.pro', login: '', password: '' } },  
+    { base: 'lam_maxvol_pro_ts', name: 'lam.maxvol.pro/ts', settings: { url: 'lam.maxvol.pro/ts', login: '', password: '' } },  
+    { base: 'tytowqus_deploy_cx_ts', name: 'tytowqus.deploy.cx/ts', settings: { url: 'tytowqus.deploy.cx/ts', login: '', password: '' } },  
+    { base: '109_120_158_107_8090', name: '109.120.158.107:8090', settings: { url: '109.120.158.107:8090', login: '', password: '' } },  
+    { base: '185_252_215_15_8080', name: '185.252.215.15:8080', settings: { url: '185.252.215.15:8080', login: '', password: '' } },  
+    { base: '78_40_195_218_9118_ts', name: '78.40.195.218:9118/ts', settings: { url: '78.40.195.218:9118/ts', login: '', password: '' } },  
+    { base: '45_144_154_144_8090', name: '45.144.154.144:8090', settings: { url: '45.144.154.144:8090', login: '', password: '' } },  
+    { base: '77_238_228_41_8290', name: '77.238.228.41:8290', settings: { url: '77.238.228.41:8290', login: '', password: '' } },  
+    { base: '178_150_255_251_8090', name: '178.150.255.251:8090', settings: { url: '178.150.255.251:8090', login: '', password: '' } },  
+    { base: '46_174_120_237_8090', name: '46.174.120.237:8090', settings: { url: '46.174.120.237:8090', login: '', password: '' } }  
   ];  
   
   /* =========================  
-   * 3) Константи/хелпери  
+   * 3) Константи та хелпери  
    * ========================= */  
   var STORAGE_KEY = 'bat_torrserver_selected';  
   var NO_SERVER = 'no_server';  
+    
+  var COLOR_OK = '#4CAF50';  
+  var COLOR_WARN = '#FF9800';  
+  var COLOR_BAD = '#F44336';  
+  var COLOR_UNKNOWN = '#9E9E9E';  
   
-  // Кольори  
-  var COLOR_OK = '#1aff00';  
-  var COLOR_BAD = '#ff2e36';  
-  var COLOR_WARN = '#f3d900';  
-  var COLOR_UNKNOWN = '#8c8c8c';  
-  
-  // Кеш: health 30 сек, connection 15 хв  
   var cache = {  
     data: {},  
-    ttlHealth: 30 * 1000,  
-    ttlConnection: 15 * 60 * 1000,  
     get: function (key) {  
-      var v = this.data[key];  
-      if (v && Date.now() < v.expiresAt) return v;  
-      return null;  
+      var item = this.data[key];  
+      if (!item) return null;  
+      if (Date.now() > item.exp) {  
+        delete this.data[key];  
+        return null;  
+      }  
+      return item;  
     },  
     set: function (key, value, ttl) {  
-      this.data[key] = { value: value, expiresAt: Date.now() + ttl };  
-    }  
+      this.data[key] = {  
+        value: value,  
+        exp: Date.now() + ttl  
+      };  
+    },  
+    ttlHealth: 30 * 1000,  
+    ttlConnection: 15 * 60 * 1000  
   };  
   
   function notifyDone() {  
@@ -276,7 +241,7 @@
       attempt();  
     });  
   }  
-     * 4) Перевірки  
+   * 4) Перевірки  
    * ========================= */  
   
   // HEALTH candidates для TorrServer  
@@ -439,15 +404,21 @@
             "<div class='bat-torrserver-modal__current-label'></div>" +  
             "<div class='bat-torrserver-modal__current-value'></div>" +  
           "</div>" +  
+          "<div class='bat-torrserver-modal__actions'>" +  
+            "<div class='bat-torrserver-modal__action selector' data-action='health'>" +  
+              Lampa.Lang.translate('bat_check_servers') +  
+            "</div>" +  
+            "<div class='bat-torrserver-modal__action selector' data-action='connection'>" +  
+              Lampa.Lang.translate('bat_check_connection') +  
+            "</div>" +  
+          "</div>" +  
         "</div>" +  
         "<div class='bat-torrserver-modal__list'></div>" +  
-        "<div class='bat-torrserver-modal__actions'></div>" +  
       "</div>"  
     );  
   
-    var head = modal.find('.bat-torrserver-modal__head');  
     var list = modal.find('.bat-torrserver-modal__list');  
-    var actions = modal.find('.bat-torrserver-modal__actions');  
+    var head = modal.find('.bat-torrserver-modal__head');  
   
     // Додаємо "Не вибрано"  
     list.append(buildServerItem(NO_SERVER, Lampa.Lang.translate('bat_torrserver_none')));  
@@ -457,51 +428,48 @@
       list.append(buildServerItem(server.base, server.name));  
     });  
   
-    // Кнопки дій  
-    var btnHealth = $("<div class='bat-torrserver-modal__action selector'></div>");  
-    btnHealth.text(Lampa.Lang.translate('bat_check_servers'));  
+    // Встановлюємо поточний вибір  
+    applySelection(list, selected);  
+    updateCurrentLabel(head, selected);  
   
-    var btnConnection = $("<div class='bat-torrserver-modal__action selector'></div>");  
-    btnConnection.text(Lampa.Lang.translate('bat_check_connection'));  
+    // Обробники кліків  
+    list.on('hover:enter', '.bat-torrserver-modal__item', function () {  
+      var base = $(this).data('base');  
+      applySelection(list, base);  
+      updateCurrentLabel(head, base);  
+    });  
   
-    actions.append(btnHealth).append(btnConnection);  
+    // Обробники кнопок  
+    modal.on('hover:enter', '.bat-torrserver-modal__action', function () {  
+      var action = $(this).data('action');  
   
-    function applyMapToList(statusMap) {  
-      list.find('.bat-torrserver-modal__item').each(function () {  
-        var it = $(this);  
-        var base = it.data('base');  
-  
-        if (base === NO_SERVER) {  
-          setItemStatus(it, COLOR_UNKNOWN, 'bat_status_unknown');  
-          return;  
-        }  
-  
-        var st = statusMap[base];  
-        if (!st) {  
-          setItemStatus(it, COLOR_UNKNOWN, 'bat_status_unknown');  
-          return;  
-        }  
-  
-        setItemStatus(it, st.color, st.labelKey);  
-      });  
-    }  
+      if (action === 'health') {  
+        runHealthUI();  
+      } else if (action === 'connection') {  
+        runConnectionUI();  
+      }  
+    });  
   
     // HEALTH UI  
     function runHealthUI() {  
       list.find('.bat-torrserver-modal__item').each(function () {  
         var it = $(this);  
         var base = it.data('base');  
-        if (base === NO_SERVER) setItemStatus(it, COLOR_UNKNOWN, 'bat_status_unknown');  
-        else setItemStatus(it, COLOR_WARN, 'bat_status_checking_server');  
+        if (base === NO_SERVER) return;  
+        setItemStatus(it, COLOR_WARN, 'bat_status_checking_server');  
       });  
   
       return runHealthChecks(serversInfo).then(function (map) {  
-        applyMapToList(map);  
-        notifyDone();  
+        Object.keys(map).forEach(function (base) {  
+          var item = list.find("[data-base='" + base + "']");  
+          var status = map[base];  
+          setItemStatus(item, status.color, status.labelKey);  
+        });  
+        Lampa.Noty.show(Lampa.Lang.translate('bat_check_done'));  
       });  
     }  
   
-    // CONNECTION UI (для всіх)  
+    // CONNECTION UI  
     function runConnectionUI() {  
       list.find('.bat-torrserver-modal__item').each(function () {  
         var it = $(this);  
@@ -511,37 +479,14 @@
       });  
   
       return runConnectionChecks(serversInfo).then(function (map) {  
-        applyMapToList(map);  
-        notifyDone();  
+        Object.keys(map).forEach(function (base) {  
+          var item = list.find("[data-base='" + base + "']");  
+          var status = map[base];  
+          setItemStatus(item, status.color, status.labelKey);  
+        });  
+        Lampa.Noty.show(Lampa.Lang.translate('bat_check_done'));  
       });  
     }  
-  
-    btnHealth.on('hover:enter', function () {  
-      runHealthUI();  
-    });  
-  
-    btnConnection.on('hover:enter', function () {  
-      runConnectionUI();  
-    });  
-  
-    // Вибір сервера  
-    list.on('hover:enter', '.bat-torrserver-modal__item', function () {  
-      var it = $(this);  
-      var base = it.data('base');  
-  
-      applySelection(list, base);  
-      updateCurrentLabel(head, base);  
-  
-      if (base !== NO_SERVER) {  
-        Lampa.Storage.set(STORAGE_KEY, base);  
-        applySelectedServer(base);  
-        updateSelectedLabelInSettings();  
-      }  
-    });  
-  
-    // Встановлюємо поточний вибір  
-    applySelection(list, selected);  
-    updateCurrentLabel(head, selected);  
   
     // Відкрити модалку  
     var firstSelectable = list.find('.bat-torrserver-modal__item').first();  
@@ -553,6 +498,10 @@
       scroll_to_center: true,  
       select: firstSelectable,  
       onBack: function () {  
+        var selectedBase = head.find('.bat-torrserver-modal__current-value').data('base') || NO_SERVER;  
+        applySelectedServer(selectedBase);  
+        updateSelectedLabelInSettings();  
+          
         Lampa.Modal.close();  
         Lampa.Controller.toggle('settings_component');  
       }  
@@ -563,11 +512,9 @@
   }  
   
   /* =========================  
-   * 6) Спрощена інтеграція в Налаштування → TorrServer (як у speedtest.js)  
+   * 6) Інтеграція в Налаштування → TorrServer (робочий варіант)  
    * ========================= */  
-  function torrserverSetting() {  
-    applySelectedServer(getSelectedBase());  
-  
+  function init() {  
     Lampa.Settings.listener.follow('open', function (e) {  
       if (e.name == 'server') {  
         let btn = $(`<div class="settings-param selector" data-type="button">  
@@ -592,24 +539,16 @@
   /* =========================  
    * 7) Запуск плагіна  
    * ========================= */  
-  Lampa.Platform.tv();  
-  
-  function add() {  
-    Lang.translate();  
-    torrserverSetting();  
+  function start() {  
+    translate();  
+    init();  
   }  
   
-  function startPlugin() {  
-    window.plugin_bat_torrserver_ready = true;  
-  
-    if (window.appready) add();  
-    else {  
-      Lampa.Listener.follow('app', function (e) {  
-        if (e.type === 'ready') add();  
-      });  
-    }  
+  if (window.appready) start();  
+  else {  
+    Lampa.Listener.follow('app', function (e) {  
+      if (e.type === 'ready') start();  
+    });  
   }  
   
-  if (!window.plugin_bat_torrserver_ready) startPlugin();  
-  
-})();
+})();  
