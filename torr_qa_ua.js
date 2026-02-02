@@ -1,7 +1,19 @@
 (function () {
     'use strict';
 
-    // Polyfills for TV Compatibility
+    // --- ПОЛІФІЛИ ДЛЯ ТЕЛЕВІЗОРІВ (Tizen, WebOS, Android) ---
+    if (typeof Promise === 'undefined') {
+        window.Promise = function(exec) {
+            var handlers = [];
+            this.then = function(f) { handlers.push(f); return this; };
+            exec(function(res) {
+                setTimeout(function() {
+                    handlers.forEach(function(h) { h(res); });
+                }, 1);
+            });
+        };
+    }
+
     if (typeof AbortController === 'undefined') {
         window.AbortController = function () {
             this.signal = {
@@ -17,73 +29,93 @@
         };
     }
 
-    if (!window.performance || !window.performance.now) {
-        window.performance = { now: function () { return new Date().getTime(); } };
-    }
-
-    // --- CONFIGURATION ---
-    var ENABLE_LOGGING = true;
+    // --- КОНФІГУРАЦІЯ ---
     var JACRED_PROTOCOL = 'http://';
     var JACRED_URL = Lampa.Storage.get('jacred.xyz') || 'jacred.xyz';
+    
     var PROXY_LIST = [
         'http://well-informed-normal-function.anvil.app/_/api/jackett_proxy?u=',
         'http://my-finder.kozak-bohdan.workers.dev/?url=',
         'http://api.allorigins.win/raw?url=',
         'http://cors.bwa.workers.dev/'
     ];
-    var PROXY_TIMEOUT = 10000;
+    var PROXY_TIMEOUT = 3000;
 
-    var SURS_QUALITY = {
-        log: function (msg) {
-            if (ENABLE_LOGGING) console.log("[SURS_UA_ULTRA] " + msg);
-        }
-    };
+    var ICON_UA = 'https://yarikrazor-star.github.io/lmp/ua.svg';
+    var ICON_NONE = 'https://yarikrazor-star.github.io/lmp/dontknow.svg';
+    var ICON_STREAM = 'https://yarikrazor-star.github.io/lmp/stream.svg';
 
-    // Іконки
-    var UA_FLAG_EMOJI = '<span style="margin-right: 4px; font-size: 1.2em; vertical-align: middle;">🇺🇦</span>';
-    var PROJECTOR_EMOJI = '<span style="margin: 0 4px; font-size: 1.1em; vertical-align: middle;">📽️</span>';
-
-    // --- STYLES ---
+    // --- СТИЛІ ---
     var style = document.createElement('style');
     style.textContent = [
-        '.full-start__status.surs_quality {',
-        '    padding: 0.1em 0.3em;',
-        '    font-weight: bold;',
-        '    margin-left: 0.8em;',
-        '    display: inline-flex;',
-        '    align-items: center;',
-        '    background: transparent !important;',
-        '    text-shadow: none !important;',
-        '    color: inherit !important;',
+        '.surs_quality_row {',
+        '    width: 100% !important;',
+        '    display: block !important;',
+        '    position: relative !important;',
+        '    clear: both !important;',
+        '    margin: 0.4em 0 !important;',
+        '    padding: 0 !important;',
+        '    float: none !important;',
+        '    text-align: left !important;',
         '}',
-        '.surs_quality span { white-space: nowrap; color: inherit !important; }',
-        '.surs_quality .seeds_info { margin-left: 3px; font-size: 0.8em; opacity: 0.8; font-weight: normal; color: inherit !important; }'
+        '.surs_quality_box {',
+        '    display: inline-flex !important;',
+        '    align-items: center !important;',
+        '    background: rgba(255, 255, 255, 0.08);',
+        '    padding: 4px 10px !important;',
+        '    border-radius: 6px !important;',
+        '    border: 1px solid rgba(255, 255, 255, 0.1);',
+        '    font-size: 1.2em;',
+        '    line-height: 1;',
+        '}',
+        '.surs_quality_box img { vertical-align: middle; }',
+        '.surs_quality_box .icon-main { width: 1.6em; height: 1.1em; margin-right: 8px; object-fit: contain; }',
+        '.surs_quality_box .icon-stream { width: 1.2em; height: 1.2em; margin: 0 8px 0 12px; opacity: 0.8; }',
+        '.surs_quality_box .quality-item { display: flex; align-items: center; white-space: nowrap; }',
+        '.surs_quality_box .seeds_info { margin-left: 5px; font-size: 0.8em; color: #2ecc71 !important; }',
+        '.surs_quality_box .pop-tag { text-transform: uppercase; font-size: 0.9em; font-weight: 500; }',
+        '.surs_quality_box .ua_not_found { opacity: 0.4; display: flex; align-items: center; }',
+        '.surs_quality_box .icon-none { width: 1.4em; height: 1.4em; }'
     ].join('\n');
     document.head.appendChild(style);
 
-    // --- ANALYTICS LOGIC ---
+    // --- ЛОГІКА ---
 
-    function parseQualityFromText(text) {
+    function parseQuality(text) {
         if (!text) return 0;
         var t = text.toLowerCase();
-        
-        // 1. Екранки
-        if (/\b(ts|tc|telesync|camrip|cam|hdtc|dvdscr)\b/i.test(t)) return -1;
-
-        // 2. Висока якість
-        if (/\b(2160p|4k|uhd|ultra hd)\b/i.test(t)) return 2160;
-        if (/\b(1080p|fhd|full hd|1080i|bdremux|remux)\b/i.test(t)) return 1080;
-        if (/\b(720p|hd|720i)\b/i.test(t)) return 720;
-        
-        // 3. Старі формати та SD
-        if (/\b(bdrip|brrip|bluray|blu-ray)\b/i.test(t)) return 1079;
-        if (/\b(dvdrip|dvd|dvdr|dvd9|dvd5)\b/i.test(t)) return 481;
-        if (/\b(480p|360p|sd|hdtv|webrip|web-dl|rip|mkv|avi)\b/i.test(t)) return 480;
-        
+        if (/\b(ts|tc|telesync|camrip|cam|hdtc|dvdscr)\b/.test(t)) return -1;
+        if (/\b(2160p|4k|uhd|ultra hd)\b/.test(t)) return 2160;
+        if (/\b(1080p|fhd|full hd|1080i|bdremux|remux)\b/.test(t)) return 1080;
+        if (/\b(720p|hd|720i)\b/.test(t)) return 720;
+        if (/\b(bdrip|brrip|bluray|blu-ray)\b/.test(t)) return 1079;
+        if (/\b(dvdrip|dvd|dvdr|dvd9|dvd5)\b/.test(t)) return 481;
+        if (/\b(480p|360p|sd|hdtv|webrip|web-dl|rip|mkv|avi)\b/.test(t)) return 480;
         return 0;
     }
 
-    function getQualityStyle(qVal) {
+    function extractReleaseType(title) {
+        if (!title) return "";
+        var t = title.toLowerCase();
+        var types = [];
+        if (/\b(bdremux|remux)\b/.test(t)) types.push("Remux");
+        else if (/\b(bluray|blu-ray)\b/.test(t)) types.push("BluRay");
+        else if (/\b(bdrip|brrip)\b/.test(t)) types.push("BDRip");
+        else if (/\b(web-dl|webdl)\b/.test(t)) types.push("WEB-DL");
+        else if (/\b(webrip)\b/.test(t)) types.push("WEBRip");
+        else if (/\b(hdtv)\b/.test(t)) types.push("HDTV");
+        else if (/\b(dvdrip)\b/.test(t)) types.push("DVDRip");
+
+        if (/\b(hevc|x265|h265)\b/.test(t)) types.push("HEVC");
+        else if (/\b(avc|x264|h264)\b/.test(t)) types.push("AVC");
+
+        var res = t.match(/\b(2160p|1080p|720p|4k)\b/i);
+        if (res) types.push(res[0].toUpperCase());
+
+        return types.length > 0 ? types.join(" ") : "Rip";
+    }
+
+    function getQualityMeta(qVal) {
         if (qVal === -1) return { text: 'CAM', css: 'q_cam_text' };
         if (qVal >= 2160) return { text: '4K', css: 'q_4k_text' };
         if (qVal >= 1080) return { text: '1080p', css: 'q_1080_text' };
@@ -94,135 +126,171 @@
         return { text: '??', css: 'q_sd_text' };
     }
 
-    function fetchWithProxy(url, callback) {
-        var currentProxy = 0;
-        var called = false;
+    function fastFetch(url) {
+        return new Promise(function(resolve, reject) {
+            var proxyIdx = -1; 
+            function tryReq() {
+                var currentUrl = (proxyIdx === -1) ? url : PROXY_LIST[proxyIdx] + encodeURIComponent(url);
+                var controller = new AbortController();
+                var tid = setTimeout(function() { controller.abort(); }, PROXY_TIMEOUT);
 
-        function tryNext() {
-            if (currentProxy >= PROXY_LIST.length) {
-                if (!called) { called = true; callback(new Error('Fail')); }
-                return;
+                fetch(currentUrl, { signal: controller.signal })
+                    .then(function(r) { return r.text(); })
+                    .then(function(d) {
+                        clearTimeout(tid);
+                        resolve(d);
+                    })
+                    .catch(function(e) {
+                        clearTimeout(tid);
+                        proxyIdx++;
+                        if (proxyIdx < PROXY_LIST.length) tryReq();
+                        else reject(e);
+                    });
             }
-            var pUrl = PROXY_LIST[currentProxy] + encodeURIComponent(url);
-            var controller = new AbortController();
-            var tid = setTimeout(function() { controller.abort(); }, PROXY_TIMEOUT);
-
-            fetch(pUrl, { signal: controller.signal }).then(function(r) { return r.text(); }).then(function(d) {
-                clearTimeout(tid);
-                if (!called) { called = true; callback(null, d); }
-            }).catch(function() {
-                clearTimeout(tid);
-                currentProxy++;
-                tryNext();
-            });
-        }
-        fetch(url).then(function(r) { return r.text(); }).then(function(d) {
-            if (!called) { called = true; callback(null, d); }
-        }).catch(function() { tryNext(); });
-    }
-
-    function searchUaDual(card, callback) {
-        var year = (card.release_date || '').substring(0, 4);
-        var title = card.original_title || card.title;
-        if (!title || !year) return callback(null);
-
-        var url = JACRED_PROTOCOL + JACRED_URL + '/api/v1.0/torrents?search=' + encodeURIComponent(title) + '&year=' + year;
-
-        fetchWithProxy(url, function(err, data) {
-            if (err || !data) return callback(null);
-            try {
-                var json = JSON.parse(data);
-                if (!Array.isArray(json)) return callback(null);
-
-                var uaRegex = /(?:^|[\s\.\-\/\(\[])(ukr|ua|ukrainian|укр|україн|toloka|mazepa|hurtom|uafilm|бабай|гуртом)(?:$|[\s\.\-\/\)\]])/i;
-                var uaList = [];
-
-                json.forEach(function(item) {
-                    var fullInfo = (item.title + " " + (item.details || "") + " " + (item.tracker || "")).toLowerCase();
-                    if (uaRegex.test(fullInfo)) {
-                        uaList.push({
-                            val: parseQualityFromText(item.title),
-                            seeds: parseInt(item.seeders || item.seeds || 0),
-                            title: item.title
-                        });
-                    }
-                });
-
-                if (uaList.length > 0) {
-                    var bestQual = uaList.slice().sort(function(a,b){ return b.val - a.val; })[0];
-                    var mostPop = uaList.slice().sort(function(a,b){ return b.seeds - a.seeds; })[0];
-
-                    callback({ best: bestQual, popular: mostPop, hasUa: true });
-                } else {
-                    callback({ hasUa: false });
-                }
-            } catch(e) { callback(null); }
+            tryReq();
         });
     }
 
-    // --- UI ---
+    function runSearch(movie, callback) {
+        var year = (movie.release_date || movie.first_air_date || '').substring(0, 4);
+        var tUkr = movie.title || movie.name;
+        var tEng = movie.original_title || movie.original_name;
 
-    function createHtml(item) {
-        var meta = getQualityStyle(item.val);
-        return '<span class="' + meta.css + '">' + meta.text + '</span>';
+        if (!tUkr || !year) return callback(null);
+
+        var queries = [];
+        if (tUkr) queries.push(tUkr);
+        if (tEng && tEng !== tUkr) queries.push(tEng);
+
+        var promises = queries.map(function(q) {
+            var u = JACRED_PROTOCOL + JACRED_URL + '/api/v1.0/torrents?search=' + encodeURIComponent(q) + '&year=' + year;
+            return fastFetch(u).catch(function() { return "[]"; });
+        });
+
+        Promise.all(promises).then(function(results) {
+            var all = [];
+            results.forEach(function(r) {
+                try {
+                    var j = JSON.parse(r);
+                    if (Array.isArray(j)) all = all.concat(j);
+                } catch(e) {}
+            });
+
+            if (all.length === 0) return callback({ hasUa: false });
+
+            var uaRx = /(ukr|ua|ukrainian|укр|україн|toloka|mazepa|hurtom|uafilm|бабай|гуртом)/i;
+            var yearRx = new RegExp('(^|\\D)' + year + '(\\D|$|\\s)');
+
+            var filtered = all.filter(function(i) {
+                var t = (i.title || "").toLowerCase();
+                return uaRx.test(t + (i.details || "")) && yearRx.test(t);
+            });
+
+            if (filtered.length > 0) {
+                var best = filtered.slice().sort(function(a, b) {
+                    var qA = parseQuality(a.title), qB = parseQuality(b.title);
+                    if (qB !== qA) return qB - qA;
+                    return (parseInt(b.seeders || 0)) - (parseInt(a.seeders || 0));
+                })[0];
+
+                var pop = filtered.slice().sort(function(a, b) {
+                    return (parseInt(b.seeders || b.seeds || 0)) - (parseInt(a.seeders || a.seeds || 0));
+                })[0];
+
+                callback({
+                    best: { val: parseQuality(best.title), seeds: (best.seeders || best.seeds || 0) },
+                    pop: { 
+                        fullText: extractReleaseType(pop.title), 
+                        seeds: (pop.seeders || pop.seeds || 0),
+                        val: parseQuality(pop.title)
+                    },
+                    hasUa: true
+                });
+            } else {
+                callback({ hasUa: false });
+            }
+        }).catch(function() { callback({ hasUa: false }); });
     }
 
-    function injectUI(data, render) {
+    // Допоміжна функція для вставки елемента у правильне місце
+    function injectToUI(targetRow, render) {
+        var slogan = $('.full-start__slogan', render);
+        var ratings = $('.full-start-new__rate-line', render);
+
+        if (slogan.length) {
+            slogan.after(targetRow);
+        } else if (ratings.length) {
+            ratings.before(targetRow);
+        } else {
+            $('.full-start__info', render).prepend(targetRow);
+        }
+    }
+
+    function renderUI(data, render) {
         if (!render) return;
-        var rateLine = $('.full-start-new__rate-line', render);
-        $('.surs_quality', render).remove();
+        $('.surs_quality_row', render).remove();
+
+        var row = $('<div class="surs_quality_row"></div>');
+        var box = $('<div class="surs_quality_box"></div>');
 
         if (!data || !data.hasUa) {
-            rateLine.append('<div class="full-start__status surs_quality" style="opacity: 0.6">UA 🚫</div>');
+            box.html('<div class="ua_not_found"><img src="' + ICON_NONE + '" class="icon-none"></div>');
+            row.append(box);
+            injectToUI(row, render);
             return;
         }
 
-        var container = $('<div class="full-start__status surs_quality"></div>');
-        var html = UA_FLAG_EMOJI + createHtml(data.best);
+        var html = '<img src="' + ICON_UA + '" class="icon-main">';
+        var bestMeta = getQualityMeta(data.best.val);
+        html += '<div class="quality-item"><span class="' + bestMeta.css + '">' + bestMeta.text + '</span>';
+        if (data.best.seeds > 0) html += '<span class="seeds_info">(' + data.best.seeds + ')</span>';
+        html += '</div>';
 
-        if (data.popular) {
-            html += PROJECTOR_EMOJI;
-            html += createHtml(data.popular);
-            if (data.popular.seeds > 0) {
-                html += '<span class="seeds_info">(' + data.popular.seeds + ')</span>';
-            }
-        }
+        html += '<img src="' + ICON_STREAM + '" class="icon-stream">';
 
-        container.html(html);
-        rateLine.append(container);
+        var popMeta = getQualityMeta(data.pop.val);
+        html += '<div class="quality-item"><span class="pop-tag ' + popMeta.css + '">' + data.pop.fullText + '</span>';
+        if (data.pop.seeds > 0) html += '<span class="seeds_info">(' + data.pop.seeds + ')</span>';
+        html += '</div>';
+
+        box.html(html);
+        row.append(box);
+        injectToUI(row, render);
     }
 
-    function startProcess(movie, render) {
-        if (!movie || movie.number_of_seasons || movie.first_air_date) return;
+    function process(movie, render) {
+        if (!movie) return;
+        $('.surs_quality_row', render).remove();
+        
+        var ldRow = $('<div class="surs_quality_row"><div class="surs_quality_box" style="opacity:0.5">Пошук UA...</div></div>');
+        injectToUI(ldRow, render);
 
-        $('.surs_quality', render).remove();
-        var ph = $('<div class="full-start__status surs_quality" style="opacity:0.5">...</div>');
-        $('.full-start-new__rate-line', render).append(ph);
-
-        searchUaDual(movie, function(result) {
-            ph.remove();
-            injectUI(result, render);
+        runSearch(movie, function(res) {
+            ldRow.remove();
+            renderUI(res, render);
         });
     }
 
     function init() {
-        if (window.sursQualityUA_Ultimate) return;
-        window.sursQualityUA_Ultimate = true;
-
-        SURS_QUALITY.log("Ultimate UA Quality (Projector & Emoji Edition) Loaded");
+        if (window.sursQualityUA_V6) return;
+        window.sursQualityUA_V6 = true;
 
         Lampa.Listener.follow('full', function (e) {
             if (e.type === 'complite') {
-                startProcess(e.data.movie, e.object.activity.render());
+                process(e.data.movie, e.object.activity.render());
             }
         });
     }
 
-    var waitLampa = setInterval(function() {
-        if (typeof Lampa !== 'undefined' && Lampa.Listener) {
-            clearInterval(waitLampa);
-            init();
-        }
-    }, 500);
-
+    if (window.Lampa) {
+        init();
+    } else {
+        $(document).on('lampa:ready', init);
+        var wait = setInterval(function() {
+            if (typeof Lampa !== 'undefined' && Lampa.Listener) {
+                clearInterval(wait);
+                init();
+            }
+        }, 100);
+    }
 })();
