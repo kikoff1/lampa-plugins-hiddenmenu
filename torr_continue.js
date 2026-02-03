@@ -1,21 +1,18 @@
 (function () {  
     'use strict';  
-
-        // ========================================================================  
-    // локалізація
-    // ========================================================================  
-Lampa.Lang.add({  
-    continue_watch_continue: { uk: 'Продовжити', ru: 'Продолжить', en: 'Continue' },  
-    continue_watch_no_history: { uk: 'Немає історії', ru: 'Нет истории', en: 'No history' },  
-    continue_watch_torrserver_not_configured: { uk: 'TorrServer не налаштовано', ru: 'TorrServer не настроен', en: 'TorrServer not configured' },  
-    continue_watch_restoring: { uk: 'Відновлюємо: ', ru: 'Восстанавливаем: ', en: 'Restoring: ' },  
-    continue_watch_loading_playlist: { uk: 'Завантаження списку...', ru: 'Загрузка списка...', en: 'Loading playlist...' },  
-    continue_watch_playlist_loaded: { uk: 'Плейлист завантажено (', ru: 'Плейлист загружен (', en: 'Playlist loaded (' },  
-    continue_watch_preparing: { uk: 'Підготовка...', ru: 'Подготовка...', en: 'Preparing...' },  
-    continue_watch_waiting_files: { uk: 'Очікування файлів (', ru: 'Ожидание файлов (', en: 'Waiting files (' }  
-});
-
-    
+  
+    // Реєстрація локалізації (самодостатній плагін)  
+    Lampa.Lang.add({  
+        continue_watch_continue: { uk: 'Продовжити', ru: 'Продолжить', en: 'Continue' },  
+        continue_watch_no_history: { uk: 'Немає історії', ru: 'Нет истории', en: 'No history' },  
+        continue_watch_torrserver_not_configured: { uk: 'TorrServer не налаштовано', ru: 'TorrServer не настроен', en: 'TorrServer not configured' },  
+        continue_watch_restoring: { uk: 'Відновлюємо: ', ru: 'Восстанавливаем: ', en: 'Restoring: ' },  
+        continue_watch_loading_playlist: { uk: 'Завантаження списку...', ru: 'Загрузка списка...', en: 'Loading playlist...' },  
+        continue_watch_playlist_loaded: { uk: 'Плейлист завантажено (', ru: 'Плейлист загружен (', en: 'Playlist loaded (' },  
+        continue_watch_preparing: { uk: 'Підготовка...', ru: 'Подготовка...', en: 'Preparing...' },  
+        continue_watch_waiting_files: { uk: 'Очікування файлів (', ru: 'Ожидание файлов (', en: 'Waiting files (' }  
+    });  
+  
     // ========================================================================  
     // КОНФИГУРАЦИЯ И КЭШ  
     // ========================================================================  
@@ -303,6 +300,7 @@ Lampa.Lang.add({
         };  
         timeline._wrapped_continue = true;  
         return timeline;  
+    }
         // ========================================================================  
     // 4. ПЛЕЙЛИСТ И ЗАГРУЗКА  
     // ========================================================================  
@@ -519,7 +517,7 @@ Lampa.Lang.add({
             }  
         }  
     }
-            // ========================================================================  
+        // ========================================================================  
     // 5. ЛОГИКА ПЛЕЕРА И ХУКИ (С ИСПРАВЛЕНИЕМ СИНХРОНИЗАЦИИ) — продовження  
     // ========================================================================  
   
