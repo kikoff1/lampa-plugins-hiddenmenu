@@ -1,296 +1,231 @@
 (function () {
-    'use strict';
+  'use strict';
 
-    // --- ПОЛІФІЛИ ДЛЯ ТЕЛЕВІЗОРІВ (Tizen, WebOS, Android) ---
-    if (typeof Promise === 'undefined') {
-        window.Promise = function(exec) {
-            var handlers = [];
-            this.then = function(f) { handlers.push(f); return this; };
-            exec(function(res) {
-                setTimeout(function() {
-                    handlers.forEach(function(h) { h(res); });
-                }, 1);
-            });
-        };
-    }
+  var icons = {
+    ua: 'https://yarikrazor-star.github.io/lmp/ua.svg',
+    none: 'https://yarikrazor-star.github.io/lmp/dontknow.svg',
+    top: 'https://yarikrazor-star.github.io/lmp/stream.svg',
+    seeds: 'https://yarikrazor-star.github.io/lmp/upload.svg',
+    audio: 'https://yarikrazor-star.github.io/lmp/zvuk.svg'
+  };
 
-    if (typeof AbortController === 'undefined') {
-        window.AbortController = function () {
-            this.signal = {
-                aborted: false,
-                addEventListener: function (event, callback) {
-                    if (event === 'abort') this._onabort = callback;
-                }
-            };
-            this.abort = function () {
-                this.signal.aborted = true;
-                if (typeof this.signal._onabort === 'function') this.signal._onabort();
-            };
-        };
-    }
+  var resultsCache = {};
 
-    // --- КОНФІГУРАЦІЯ ---
-    var JACRED_PROTOCOL = 'http://';
-    var JACRED_URL = Lampa.Storage.get('jacred.xyz') || 'jacred.xyz';
+  function getResolutionLabel(width) {
+    var w = parseInt(width || 0);
+    if (w >= 3800) return '4K';
+    if (w >= 2500) return '2K';
+    if (w >= 1900) return 'FHD';
+    if (w >= 1200) return 'HD';
+    return 'SD';
+  }
+
+  function getBestAndPopular(results, movie) {
+    if (!results || !Array.isArray(results)) return { ukr: false };
     
-    var PROXY_LIST = [
-        'http://well-informed-normal-function.anvil.app/_/api/jackett_proxy?u=',
-        'http://my-finder.kozak-bohdan.workers.dev/?url=',
-        'http://api.allorigins.win/raw?url=',
-        'http://cors.bwa.workers.dev/'
-    ];
-    var PROXY_TIMEOUT = 3000;
+    var ukrPattern = /(ukr|ua|ukrainian|СѓРєСЂР°С—РЅСЃСЊРє|СѓРєСЂ|[^a-z]uk[^a-z])/i;
+    var ukrResults = [];
+    var movieYear = parseInt(movie.release_date || movie.first_air_date || movie.year || 0);
 
-    var ICON_UA = 'https://yarikrazor-star.github.io/lmp/ua.svg';
-    var ICON_NONE = 'https://yarikrazor-star.github.io/lmp/dontknow.svg';
-    var ICON_STREAM = 'https://yarikrazor-star.github.io/lmp/stream.svg';
-
-    // --- СТИЛІ ---
-    var style = document.createElement('style');
-    style.textContent = [
-        '.surs_quality_row {',
-        '    width: 100% !important;',
-        '    display: block !important;',
-        '    position: relative !important;',
-        '    clear: both !important;',
-        '    margin: 0.4em 0 !important;',
-        '    padding: 0 !important;',
-        '    float: none !important;',
-        '    text-align: left !important;',
-        '}',
-        '.surs_quality_box {',
-        '    display: inline-flex !important;',
-        '    align-items: center !important;',
-        '    background: rgba(255, 255, 255, 0.08);',
-        '    padding: 4px 10px !important;',
-        '    border-radius: 6px !important;',
-        '    border: 1px solid rgba(255, 255, 255, 0.1);',
-        '    font-size: 1.2em;',
-        '    line-height: 1;',
-        '}',
-        '.surs_quality_box img { vertical-align: middle; }',
-        '.surs_quality_box .icon-main { width: 1.6em; height: 1.1em; margin-right: 8px; object-fit: contain; }',
-        '.surs_quality_box .icon-stream { width: 1.2em; height: 1.2em; margin: 0 8px 0 12px; opacity: 0.8; }',
-        '.surs_quality_box .quality-item { display: flex; align-items: center; white-space: nowrap; }',
-        '.surs_quality_box .seeds_info { margin-left: 5px; font-size: 0.8em; color: #2ecc71 !important; }',
-        '.surs_quality_box .pop-tag { text-transform: uppercase; font-size: 0.9em; font-weight: 500; }',
-        '.surs_quality_box .ua_not_found { opacity: 0.4; display: flex; align-items: center; }',
-        '.surs_quality_box .icon-none { width: 1.4em; height: 1.4em; }'
-    ].join('\n');
-    document.head.appendChild(style);
-
-    // --- ЛОГІКА ---
-
-    function parseQuality(text) {
-        if (!text) return 0;
-        var t = text.toLowerCase();
-        if (/\b(ts|tc|telesync|camrip|cam|hdtc|dvdscr)\b/.test(t)) return -1;
-        if (/\b(2160p|4k|uhd|ultra hd)\b/.test(t)) return 2160;
-        if (/\b(1080p|fhd|full hd|1080i|bdremux|remux)\b/.test(t)) return 1080;
-        if (/\b(720p|hd|720i)\b/.test(t)) return 720;
-        if (/\b(bdrip|brrip|bluray|blu-ray)\b/.test(t)) return 1079;
-        if (/\b(dvdrip|dvd|dvdr|dvd9|dvd5)\b/.test(t)) return 481;
-        if (/\b(480p|360p|sd|hdtv|webrip|web-dl|rip|mkv|avi)\b/.test(t)) return 480;
-        return 0;
-    }
-
-    function extractReleaseType(title) {
-        if (!title) return "";
-        var t = title.toLowerCase();
-        var types = [];
-        if (/\b(bdremux|remux)\b/.test(t)) types.push("Remux");
-        else if (/\b(bluray|blu-ray)\b/.test(t)) types.push("BluRay");
-        else if (/\b(bdrip|brrip)\b/.test(t)) types.push("BDRip");
-        else if (/\b(web-dl|webdl)\b/.test(t)) types.push("WEB-DL");
-        else if (/\b(webrip)\b/.test(t)) types.push("WEBRip");
-        else if (/\b(hdtv)\b/.test(t)) types.push("HDTV");
-        else if (/\b(dvdrip)\b/.test(t)) types.push("DVDRip");
-
-        if (/\b(hevc|x265|h265)\b/.test(t)) types.push("HEVC");
-        else if (/\b(avc|x264|h264)\b/.test(t)) types.push("AVC");
-
-        var res = t.match(/\b(2160p|1080p|720p|4k)\b/i);
-        if (res) types.push(res[0].toUpperCase());
-
-        return types.length > 0 ? types.join(" ") : "Rip";
-    }
-
-    function getQualityMeta(qVal) {
-        if (qVal === -1) return { text: 'CAM', css: 'q_cam_text' };
-        if (qVal >= 2160) return { text: '4K', css: 'q_4k_text' };
-        if (qVal >= 1080) return { text: '1080p', css: 'q_1080_text' };
-        if (qVal === 1079) return { text: 'BD', css: 'q_1080_text' };
-        if (qVal >= 720) return { text: '720p', css: 'q_720_text' };
-        if (qVal === 481) return { text: 'DVD', css: 'q_sd_text' };
-        if (qVal > 0) return { text: 'SD', css: 'q_sd_text' };
-        return { text: '??', css: 'q_sd_text' };
-    }
-
-    function fastFetch(url) {
-        return new Promise(function(resolve, reject) {
-            var proxyIdx = -1; 
-            function tryReq() {
-                var currentUrl = (proxyIdx === -1) ? url : PROXY_LIST[proxyIdx] + encodeURIComponent(url);
-                var controller = new AbortController();
-                var tid = setTimeout(function() { controller.abort(); }, PROXY_TIMEOUT);
-
-                fetch(currentUrl, { signal: controller.signal })
-                    .then(function(r) { return r.text(); })
-                    .then(function(d) {
-                        clearTimeout(tid);
-                        resolve(d);
-                    })
-                    .catch(function(e) {
-                        clearTimeout(tid);
-                        proxyIdx++;
-                        if (proxyIdx < PROXY_LIST.length) tryReq();
-                        else reject(e);
-                    });
-            }
-            tryReq();
-        });
-    }
-
-    function runSearch(movie, callback) {
-        var year = (movie.release_date || movie.first_air_date || '').substring(0, 4);
-        var tUkr = movie.title || movie.name;
-        var tEng = movie.original_title || movie.original_name;
-
-        if (!tUkr || !year) return callback(null);
-
-        var queries = [];
-        if (tUkr) queries.push(tUkr);
-        if (tEng && tEng !== tUkr) queries.push(tEng);
-
-        var promises = queries.map(function(q) {
-            var u = JACRED_PROTOCOL + JACRED_URL + '/api/v1.0/torrents?search=' + encodeURIComponent(q) + '&year=' + year;
-            return fastFetch(u).catch(function() { return "[]"; });
-        });
-
-        Promise.all(promises).then(function(results) {
-            var all = [];
-            results.forEach(function(r) {
-                try {
-                    var j = JSON.parse(r);
-                    if (Array.isArray(j)) all = all.concat(j);
-                } catch(e) {}
-            });
-
-            if (all.length === 0) return callback({ hasUa: false });
-
-            var uaRx = /(ukr|ua|ukrainian|укр|україн|toloka|mazepa|hurtom|uafilm|бабай|гуртом)/i;
-            var yearRx = new RegExp('(^|\\D)' + year + '(\\D|$|\\s)');
-
-            var filtered = all.filter(function(i) {
-                var t = (i.title || "").toLowerCase();
-                return uaRx.test(t + (i.details || "")) && yearRx.test(t);
-            });
-
-            if (filtered.length > 0) {
-                var best = filtered.slice().sort(function(a, b) {
-                    var qA = parseQuality(a.title), qB = parseQuality(b.title);
-                    if (qB !== qA) return qB - qA;
-                    return (parseInt(b.seeders || 0)) - (parseInt(a.seeders || 0));
-                })[0];
-
-                var pop = filtered.slice().sort(function(a, b) {
-                    return (parseInt(b.seeders || b.seeds || 0)) - (parseInt(a.seeders || a.seeds || 0));
-                })[0];
-
-                callback({
-                    best: { val: parseQuality(best.title), seeds: (best.seeders || best.seeds || 0) },
-                    pop: { 
-                        fullText: extractReleaseType(pop.title), 
-                        seeds: (pop.seeders || pop.seeds || 0),
-                        val: parseQuality(pop.title)
-                    },
-                    hasUa: true
-                });
-            } else {
-                callback({ hasUa: false });
-            }
-        }).catch(function() { callback({ hasUa: false }); });
-    }
-
-    // Допоміжна функція для вставки елемента у правильне місце
-    function injectToUI(targetRow, render) {
-        var slogan = $('.full-start__slogan', render);
-        var ratings = $('.full-start-new__rate-line', render);
-
-        if (slogan.length) {
-            slogan.after(targetRow);
-        } else if (ratings.length) {
-            ratings.before(targetRow);
-        } else {
-            $('.full-start__info', render).prepend(targetRow);
+    results.forEach(function(item) {
+      var title = (item.Title || '').toLowerCase();
+      
+      if (movieYear > 0) {
+        var yearMatch = title.match(/\b(19|20)\d{2}\b/g);
+        if (yearMatch) {
+          var correctYear = yearMatch.some(function(y) { return Math.abs(parseInt(y) - movieYear) <= 1; });
+          if (!correctYear) return;
         }
-    }
+      }
 
-    function renderUI(data, render) {
-        if (!render) return;
-        $('.surs_quality_row', render).remove();
+      var hasUkr = ukrPattern.test(title);
+      if (!hasUkr && item.ffprobe && Array.isArray(item.ffprobe)) {
+        hasUkr = item.ffprobe.some(function(s) {
+          if (s.codec_type !== 'audio') return false;
+          var l = (s.tags && s.tags.language ? s.tags.language : '').toLowerCase();
+          var t = (s.tags && s.tags.title ? s.tags.title : '').toLowerCase();
+          return l.indexOf('uk') === 0 || ukrPattern.test(t);
+        });
+      }
 
-        var row = $('<div class="surs_quality_row"></div>');
-        var box = $('<div class="surs_quality_box"></div>');
-
-        if (!data || !data.hasUa) {
-            box.html('<div class="ua_not_found"><img src="' + ICON_NONE + '" class="icon-none"></div>');
-            row.append(box);
-            injectToUI(row, render);
-            return;
+      if (hasUkr) {
+        var width = 0;
+        if (item.ffprobe) {
+          item.ffprobe.forEach(function(s) {
+            if (s.codec_type === 'video' && s.width) width = Math.max(width, parseInt(s.width));
+          });
         }
+        if (width === 0) {
+          if (/2160|4k/i.test(title)) width = 3840;
+          else if (/1080|fhd/i.test(title)) width = 1920;
+          else if (/720|hd/i.test(title)) width = 1280;
+          else width = 720;
+        }
+        item.detectedWidth = width;
+        item.seedersCount = parseInt(item.Seeders || 0);
+        ukrResults.push(item);
+      }
+    });
 
-        var html = '<img src="' + ICON_UA + '" class="icon-main">';
-        var bestMeta = getQualityMeta(data.best.val);
-        html += '<div class="quality-item"><span class="' + bestMeta.css + '">' + bestMeta.text + '</span>';
-        if (data.best.seeds > 0) html += '<span class="seeds_info">(' + data.best.seeds + ')</span>';
-        html += '</div>';
+    if (ukrResults.length === 0) return { ukr: false };
 
-        html += '<img src="' + ICON_STREAM + '" class="icon-stream">';
+    var best = ukrResults.reduce(function(p, c) { return (p.detectedWidth > c.detectedWidth) ? p : c; });
+    var popular = ukrResults.reduce(function(p, c) { return (p.seedersCount > c.seedersCount) ? p : c; });
+    
+    var tech = { hdr: false, dv: false, audio: null };
+    var maxChannels = 0;
 
-        var popMeta = getQualityMeta(data.pop.val);
-        html += '<div class="quality-item"><span class="pop-tag ' + popMeta.css + '">' + data.pop.fullText + '</span>';
-        if (data.pop.seeds > 0) html += '<span class="seeds_info">(' + data.pop.seeds + ')</span>';
-        html += '</div>';
-
-        box.html(html);
-        row.append(box);
-        injectToUI(row, render);
-    }
-
-    function process(movie, render) {
-        if (!movie) return;
-        $('.surs_quality_row', render).remove();
-        
-        var ldRow = $('<div class="surs_quality_row"><div class="surs_quality_box" style="opacity:0.5">Пошук UA...</div></div>');
-        injectToUI(ldRow, render);
-
-        runSearch(movie, function(res) {
-            ldRow.remove();
-            renderUI(res, render);
+    ukrResults.forEach(function(item) {
+      if (item.ffprobe) {
+        item.ffprobe.forEach(function(s) {
+          if (s.codec_type === 'audio' && s.channels) {
+            maxChannels = Math.max(maxChannels, parseInt(s.channels));
+          }
         });
+      }
+      var t = item.Title.toLowerCase();
+      if (t.match(/7\.1|8ch/)) maxChannels = Math.max(maxChannels, 8);
+      else if (t.match(/5\.1|6ch/)) maxChannels = Math.max(maxChannels, 6);
+      else if (t.match(/2\.0/)) maxChannels = Math.max(maxChannels, 2);
+    });
+
+    if (maxChannels > 0) {
+      tech.audio = (maxChannels >= 8) ? '7.1' : (maxChannels >= 6) ? '5.1' : (maxChannels >= 4) ? '4.0' : '2.0';
     }
 
-    function init() {
-        if (window.sursQualityUA_V6) return;
-        window.sursQualityUA_V6 = true;
-
-        Lampa.Listener.follow('full', function (e) {
-            if (e.type === 'complite') {
-                process(e.data.movie, e.object.activity.render());
-            }
-        });
+    if (best.ffprobe) {
+      best.ffprobe.forEach(function(s) {
+        if (s.codec_type === 'video') {
+          var side = JSON.stringify(s.side_data_list || []);
+          if (/vision|dovi/i.test(side)) tech.dv = true;
+          if (s.color_transfer === 'smpte2084') tech.hdr = true;
+        }
+      });
     }
+    var bTitle = best.Title.toLowerCase();
+    if (!tech.dv && /vision|dovi/i.test(bTitle)) tech.dv = true;
+    if (!tech.hdr && /hdr/i.test(bTitle)) tech.hdr = true;
 
-    if (window.Lampa) {
-        init();
+    return { 
+      ukr: true, 
+      bestRes: getResolutionLabel(best.detectedWidth),
+      popRes: getResolutionLabel(popular.detectedWidth),
+      popSeeds: popular.seedersCount, 
+      tech: tech 
+    };
+  }
+
+  function render(container, data, isCard) {
+    container.find('.qb-unified-block').remove();
+    if (!data) return;
+
+    var block = $('<div class="qb-unified-block"></div>');
+    if (!data.ukr) {
+      block.append('<div class="quality-badge"><img src="'+icons.none+'" class="qb-prefix-icon"><span class="qb-text">UA РЅРµ Р·РЅР°Р№РґРµРЅРѕ</span></div>');
     } else {
-        $(document).on('lampa:ready', init);
-        var wait = setInterval(function() {
-            if (typeof Lampa !== 'undefined' && Lampa.Listener) {
-                clearInterval(wait);
-                init();
-            }
-        }, 100);
+      var items = [
+        {i: icons.ua, t: data.bestRes},
+        {i: icons.top, t: data.popRes},
+        {i: icons.seeds, t: data.popSeeds}
+      ];
+      if (data.tech.audio) items.push({i: icons.audio, t: data.tech.audio});
+      if (data.tech.dv) items.push({i: null, t: 'Dolby Vision'});
+      if (data.tech.hdr) items.push({i: null, t: 'HDR'});
+      
+      items.forEach(function(it) {
+        var icon = it.i ? '<img src="'+it.i+'" class="qb-prefix-icon">' : '';
+        block.append('<div class="quality-badge">' + icon + '<span class="qb-text">' + it.t + '</span></div>');
+      });
     }
+    container.append(block);
+  }
+
+  function processCards() {
+    $('.card:not(.qb-processed)').each(function() {
+      var card = $(this);
+      var movie = card.data('item');
+      if (movie && movie.id) {
+        card.addClass('qb-processed');
+        var key = movie.id + '_' + (movie.title || movie.name);
+        if (resultsCache[key] && resultsCache[key].ukr) {
+          render(card.find('.card__view'), resultsCache[key], true);
+        } else {
+          Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
+            if (res && res.Results) {
+              var data = getBestAndPopular(res.Results, movie);
+              if (data.ukr) { resultsCache[key] = data; render(card.find('.card__view'), data, true); }
+            }
+          }, function() { });
+        }
+      }
+    });
+  }
+
+  Lampa.Listener.follow('full', function(e) {
+    if (e.type !== 'complite') return;
+    
+    var renderTarget = e.object.activity.render();
+    var rateLine = $('.full-start-new__rate-line', renderTarget);
+    
+    if (rateLine.length) {
+        var cont = $('.quality-badges-container', renderTarget);
+        if (!cont.length) { 
+            cont = $('<div class="quality-badges-container"></div>'); 
+            // Р’СЃС‚Р°РІР»СЏС”РјРѕ Р’РќРЈРўР Р†РЁРќР¬Рћ РІ СЂСЏРґРѕРє СЂРµР№С‚РёРЅРіС–РІ Сѓ РєС–РЅРµС†СЊ
+            rateLine.append(cont); 
+        }
+        Lampa.Parser.get({ search: e.data.movie.title || e.data.movie.name, movie: e.data.movie, page: 1 }, function(res) {
+            if (res && res.Results) render(cont, getBestAndPopular(res.Results, e.data.movie), false);
+        }, function() { });
+    }
+  });
+
+  setInterval(processCards, 2000);
+
+  $('body').append('<style>\
+    .full-start-new__rate-line { display: flex !important; flex-wrap: wrap !important; align-items: center !important; gap: 8px !important; }\
+    .quality-badges-container { \
+        display: inline-flex; \
+        vertical-align: middle; \
+        margin-left: 4px; \
+    }\
+    .qb-unified-block { \
+        display: flex; \
+        gap: 6px; \
+        align-items: center; \
+    }\
+    .quality-badge { \
+      display: flex; \
+      align-items: center; \
+      gap: 5px; \
+      color: #fff; \
+      padding: 0px 8px; \
+      height: 2.2em; \
+      background: rgba(255, 255, 255, 0.08); \
+      border: 1px solid rgba(255, 255, 255, 0.15); \
+      border-radius: 6px; \
+      white-space: nowrap; \
+      box-sizing: border-box; \
+    }\
+    .qb-text { font-size: 1.1em; font-weight: bold; }\
+    .qb-prefix-icon { height: 1em; width: auto; display: block; }\
+    \
+    .card .qb-unified-block { \
+      position: absolute; \
+      top: 5px; \
+      left: 5px; \
+      z-index: 10; \
+      flex-direction: column; \
+      align-items: flex-start; \
+      gap: 3px; \
+    }\
+    .card .quality-badge { \
+      padding: 2px 4px; \
+      height: auto; \
+      background: rgba(0, 0, 0, 0.7); \
+      border: 1px solid rgba(255, 255, 255, 0.3); \
+    }\
+    .card .qb-text { font-size: 0.8em; }\
+    .card .qb-prefix-icon { height: 0.8em; }\
+  </style>');
 })();
