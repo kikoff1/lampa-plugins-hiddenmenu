@@ -114,9 +114,9 @@
       settings: { url: 'lam.maxvol.pro/ts', login: '', password: '' }      
     },      
     {      
-      base: 'tytowqus_deploy_cx_ts',      
-      name: 'tytowqus.deploy.cx/ts',      
-      settings: { url: 'tytowqus.deploy.cx/ts', login: '', password: '' }      
+      base: 'lampaua.mooo.com 2',      
+      name: 'lampaua.mooo.com 2',      
+      settings: { url: 146.59.45.143:8090', login: 'bazarnetua', password: 'lampaua' }      
     },      
     {      
       base: '109_120_158_107_8090',      
