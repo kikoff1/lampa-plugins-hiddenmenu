@@ -116,7 +116,7 @@
     {      
       base: 'lampaua.mooo.com 2',      
       name: 'lampaua.mooo.com 2',      
-      settings: { url: 146.59.45.143:8090', login: 'bazarnetua', password: 'lampaua' }      
+      settings: { url: '146.59.45.143:8090', login: 'bazarnetua', password: 'lampaua' }      
     },      
     {      
       base: '109_120_158_107_8090',      
