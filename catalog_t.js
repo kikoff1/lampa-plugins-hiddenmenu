@@ -106,7 +106,7 @@
         {      
       base: 'lampaua.mooo.com',      
       name: 'lampaua.mooo.com',      
-      settings: { url: '91.238.105.72:8090', login: 'lampaua', password: 'bazarnetua' }      
+      settings: { url: '91.238.105.72:8090', login: 'stepan', password: 'bandera' }      
     },     
     {      
       base: 'lam_maxvol_pro_ts',      
