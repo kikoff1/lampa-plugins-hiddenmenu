@@ -136,7 +136,7 @@
     {
       base: 'lampa_ua',
       name: 'LampaUA jackett (toloka, mazepa)',
-      settings: { url: 'https://parserbridge.lampame.v6.rocks/https://jackettua.mooo.com', key: 'ua', parser_torrent_type: 'jackett' }
+      settings: { url: 'https://parserbridge.lampame.v6.rocks/http://jackettua.mooo.com', key: 'ua', parser_torrent_type: 'jackett' }
     },
         {
       base: 'lampa_ua2',
