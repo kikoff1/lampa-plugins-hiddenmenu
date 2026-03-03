@@ -9,7 +9,11 @@
         [
 
           "https://kikoff1.github.io/lampa-plugins/popular_actors.js",  // популярні актори
-          "https://kikoff1.github.io/lampa-plugins/favorite_actors.js" , // улюьлені актори
+          "https://kikoff1.github.io/lampa-plugins/edit_menu.js" ,  // редактор меню
+      "http://cub.red/plugin/iptv" ,  // ІПТВ
+      
+      
+      "https://kikoff1.github.io/lampa-plugins/favorite_actors.js" , // улюьлені актори
 
           
         ],
